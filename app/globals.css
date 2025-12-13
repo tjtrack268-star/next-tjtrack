@@ -1,0 +1,219 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* TJ-Track Custom Theme - Turquoise & Dark Modern */
+:root {
+  /* Primary Turquoise */
+  --primary: #1fad9f;
+  --primary-foreground: #ffffff;
+  --primary-hover: #166f69;
+
+  /* Dark Theme Base */
+  --background: #f0f3fb;
+  --foreground: #212529;
+
+  /* Cards & Surfaces */
+  --card: #ffffff;
+  --card-foreground: #212529;
+  --popover: #ffffff;
+  --popover-foreground: #212529;
+
+  /* Secondary & Muted */
+  --secondary: #f6f6f6;
+  --secondary-foreground: #212529;
+  --muted: #e9ecef;
+  --muted-foreground: #6c757d;
+
+  /* Accent */
+  --accent: #e6f7f5;
+  --accent-foreground: #166f69;
+
+  /* Destructive */
+  --destructive: #dc3545;
+  --destructive-foreground: #ffffff;
+
+  /* Borders & Inputs */
+  --border: #dee2e6;
+  --input: #e9ecef;
+  --ring: #1fad9f;
+
+  /* Chart Colors */
+  --chart-1: #1fad9f;
+  --chart-2: #166f69;
+  --chart-3: #6c757d;
+  --chart-4: #ffc107;
+  --chart-5: #dc3545;
+
+  /* Success & Warning */
+  --success: #28a745;
+  --success-foreground: #ffffff;
+  --warning: #ffc107;
+  --warning-foreground: #212529;
+
+  --radius: 0.75rem;
+
+  /* Sidebar */
+  --sidebar: #212529;
+  --sidebar-foreground: #f0f3fb;
+  --sidebar-primary: #1fad9f;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #2d3339;
+  --sidebar-accent-foreground: #f0f3fb;
+  --sidebar-border: #343a40;
+  --sidebar-ring: #1fad9f;
+}
+
+.dark {
+  --background: #212529;
+  --foreground: #f0f3fb;
+
+  --card: #2d3339;
+  --card-foreground: #f0f3fb;
+  --popover: #2d3339;
+  --popover-foreground: #f0f3fb;
+
+  --primary: #1fad9f;
+  --primary-foreground: #ffffff;
+  --primary-hover: #24c4b4;
+
+  --secondary: #343a40;
+  --secondary-foreground: #f0f3fb;
+  --muted: #343a40;
+  --muted-foreground: #adb5bd;
+
+  --accent: #1a3d3a;
+  --accent-foreground: #1fad9f;
+
+  --destructive: #dc3545;
+  --destructive-foreground: #ffffff;
+
+  --border: #495057;
+  --input: #343a40;
+  --ring: #1fad9f;
+
+  --sidebar: #1a1d21;
+  --sidebar-foreground: #f0f3fb;
+  --sidebar-primary: #1fad9f;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #2d3339;
+  --sidebar-accent-foreground: #f0f3fb;
+  --sidebar-border: #343a40;
+  --sidebar-ring: #1fad9f;
+}
+
+@theme inline {
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Consolas, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Glassmorphism Utilities */
+@layer utilities {
+  .glass {
+    @apply bg-white/70 dark:bg-card/70 backdrop-blur-xl border border-white/20 dark:border-white/10;
+  }
+
+  .glass-card {
+    @apply bg-white/80 dark:bg-card/80 backdrop-blur-lg border border-white/30 dark:border-white/10 shadow-lg;
+  }
+
+  .glass-sidebar {
+    @apply bg-sidebar/95 backdrop-blur-xl;
+  }
+
+  /* Using CSS gradient instead of Tailwind arbitrary values for better compatibility */
+  .gradient-primary {
+    background: linear-gradient(to right, var(--primary), var(--primary-hover));
+  }
+
+  .text-gradient {
+    background: linear-gradient(to right, var(--primary), var(--primary-hover));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hover-lift {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Added marquee animation for announcement banner */
+  .animate-marquee {
+    animation: marquee 30s linear infinite;
+  }
+
+  @keyframes marquee {
+    0% {
+      transform: translateX(0%);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+}

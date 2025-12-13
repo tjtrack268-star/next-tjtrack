@@ -1,0 +1,16 @@
+{
+  "name": "TJ-Track",
+  "short_name": "TJ-Track",
+  "description": "Plateforme de gestion de stock et e-commerce",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0f3fb",
+  "theme_color": "#1fad9f",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "32x32",
+      "type": "image/x-icon"
+    }
+  ]
+}
