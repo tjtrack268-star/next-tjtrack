@@ -1,7 +1,8 @@
 "use client"
 
 import { QueryClientProvider } from "@tanstack/react-query"
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
+import dynamic from "next/dynamic"
+
 import { type ReactNode } from "react"
 import { AuthProvider } from "@/contexts/auth-context"
 import { CartProvider } from "@/contexts/cart-context"
@@ -11,6 +12,18 @@ import { ApiErrorBoundary } from "@/components/api-error-boundary"
 import { DebugWrapper } from "@/components/debug-wrapper"
 import { queryClient } from "@/lib/query-client"
 
+
+
+const ReactQueryDevtools =
+  process.env.NODE_ENV === "development"
+    ? dynamic(
+        () =>
+          import("@tanstack/react-query-devtools").then(
+            (mod) => mod.ReactQueryDevtools
+          ),
+        { ssr: false }
+      )
+    : () => null
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
@@ -25,7 +38,7 @@ export function Providers({ children }: { children: ReactNode }) {
           </AuthProvider>
         </DebugWrapper>
       </ApiErrorBoundary>
-      {process.env.NODE_ENV === 'development' && <ReactQueryDevtools />}
+    <ReactQueryDevtools />
     </QueryClientProvider>
   )
 }
