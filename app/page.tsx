@@ -11,7 +11,6 @@ import {
   Star,
   Eye,
   Sparkles,
-  Globe,
   Menu,
   User,
   LogOut,
@@ -19,6 +18,7 @@ import {
   ChevronRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ThemeToggle } from "@/components/theme/theme-toggle"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -30,7 +30,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
 import { useCart } from "@/contexts/cart-context"
 import { useAuth } from "@/contexts/auth-context"
 import { CartDrawer } from "@/components/cart/cart-drawer"
@@ -40,6 +40,8 @@ import { useQuery } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api"
 import type { ProduitEcommerceDto } from "@/types/api"
 import { CheckoutModal } from "@/components/checkout/checkout-modal"
+import { ProductModal } from "@/components/product/product-modal"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 // Hook pour récupérer les produits e-commerce
 function useEcommerceProducts() {
@@ -58,6 +60,8 @@ export default function HomePage() {
   const { toast } = useToast()
   const { data: apiProducts, isLoading, error } = useEcommerceProducts()
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState<ProduitEcommerceDto | null>(null)
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false)
 
   console.log('HomePage - Auth state:', { user: user ? 'logged in' : 'not logged in', isAuthenticated })
   
@@ -122,8 +126,16 @@ export default function HomePage() {
     setVisibleProducts((prev) => Math.min(prev + 4, sortedProducts.length))
   }
 
+  const handleProductClick = (product: ProduitEcommerceDto) => {
+    setSelectedProduct(product)
+    setIsProductModalOpen(true)
+  }
+
   const ProductCard = ({ product }: { product: ProduitEcommerceDto }) => (
-    <Card className="group glass-card overflow-hidden hover:border-primary/50 transition-all duration-300">
+    <Card 
+      className="group glass-card overflow-hidden hover:border-primary/50 transition-all duration-300 cursor-pointer"
+      onClick={() => handleProductClick(product)}
+    >
       <div className="relative aspect-square bg-muted/30 overflow-hidden">
         <img
           src={product.images?.[0] || "/placeholder.svg"}
@@ -309,6 +321,7 @@ export default function HomePage() {
                   </Button>
                 </Link>
               )}
+              <ThemeToggle />
               <Button variant="ghost" size="icon" className="relative" onClick={openCart}>
                 <ShoppingCart className="h-5 w-5" />
                 {totalItems > 0 && (
@@ -433,6 +446,7 @@ export default function HomePage() {
                     <div
                       key={product.id}
                       className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => handleProductClick(product)}
                     >
                       <span className="text-lg font-bold text-muted-foreground w-5">{idx + 1}</span>
                       <img
@@ -484,128 +498,69 @@ export default function HomePage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t bg-card mt-12">
+      <footer className="mt-20 bg-gradient-to-b from-primary to-primary/80 text-white dark:from-primary dark:to-primary/80">
         <div className="container mx-auto px-4 py-12">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
             <div>
-              <h3 className="font-semibold mb-4">Aide</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>
-                  <Link href="#" className="hover:text-primary">
-                    Centre d'aide
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-primary">
-                    Contact
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-primary">
-                    FAQ
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-primary">
-                    Livraison
-                  </Link>
-                </li>
+              <h3 className="font-semibold mb-4">Objet de l'aide</h3>
+              <ul className="space-y-2 text-sm text-white/70">
+                <li className="hover:text-white cursor-pointer transition-colors">Paiements</li>
+                <li className="hover:text-white cursor-pointer transition-colors">Expédition</li>
+                <li className="hover:text-white cursor-pointer transition-colors">Annulation et retour</li>
+                <li className="hover:text-white cursor-pointer transition-colors">Signaler un acquisi</li>
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold mb-4">Tableau de bord</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>
-                  <Link href="/dashboard" className="hover:text-primary">
-                    Mon compte
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/dashboard/commandes" className="hover:text-primary">
-                    Mes commandes
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/dashboard/favoris" className="hover:text-primary">
-                    Mes favoris
-                  </Link>
-                </li>
+              <h3 className="font-semibold mb-4">Votre édition de lien</h3>
+              <ul className="space-y-2 text-sm text-white/70">
+                <li className="hover:text-white cursor-pointer transition-colors">Point relais</li>
+                <li className="hover:text-white cursor-pointer transition-colors">Information d'achat</li>
+                <li className="hover:text-white cursor-pointer transition-colors">Politique de livraison</li>
+                <li className="hover:text-white cursor-pointer transition-colors">Vérifier le statut de livraison</li>
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold mb-4">Programme Partenaire</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>
-                  <Link href="/inscription" className="hover:text-primary">
-                    Devenir vendeur
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/inscription" className="hover:text-primary">
-                    Devenir fournisseur
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-primary">
-                    Publicité
-                  </Link>
-                </li>
+              <h3 className="font-semibold mb-4">Programme partenaire</h3>
+              <ul className="space-y-2 text-sm text-white/70">
+                <Link href="/inscription">
+                  <li className="hover:text-white cursor-pointer transition-colors">Devenir vendeur</li>
+                </Link>
+                <li className="hover:text-white cursor-pointer transition-colors">Ouverture vitrine</li>
+                <Link href="/inscription">
+                  <li className="hover:text-white cursor-pointer transition-colors">Devenir partenaire</li>
+                </Link>
+                <li className="hover:text-white cursor-pointer transition-colors">Faire de la publicité</li>
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold mb-4">À propos</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>
-                  <Link href="#" className="hover:text-primary">
-                    Qui sommes-nous
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-primary">
-                    Carrières
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-primary">
-                    Blog
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Légal</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>
-                  <Link href="#" className="hover:text-primary">
-                    CGU
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-primary">
-                    Confidentialité
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-primary">
-                    Cookies
-                  </Link>
-                </li>
+              <h3 className="font-semibold mb-4">Mentions légales</h3>
+              <ul className="space-y-2 text-sm text-white/70">
+                <li className="hover:text-white cursor-pointer transition-colors">Politique de retour</li>
+                <li className="hover:text-white cursor-pointer transition-colors">Conditions d'utilisation</li>
+                <li className="hover:text-white cursor-pointer transition-colors">Sécurité</li>
+                <li className="hover:text-white cursor-pointer transition-colors">Politique de confidentialité</li>
               </ul>
             </div>
           </div>
-          <div className="flex items-center justify-between mt-8 pt-8 border-t">
-            <p className="text-sm text-muted-foreground">© 2025 TJ-Track. Tous droits réservés.</p>
+
+          <div className="pt-8 border-t border-white/20 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <Globe className="h-4 w-4 text-muted-foreground" />
-              <Select defaultValue="fr">
-                <SelectTrigger className="w-32 h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fr">Français</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="h-8 w-8 rounded bg-white flex items-center justify-center">
+                <span className="text-primary font-bold text-sm italic">TJ</span>
+              </div>
+              <span className="font-bold text-xl">TRACK</span>
+            </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="h-8 w-12 bg-white rounded flex items-center justify-center">
+                <span className="text-xs font-bold text-gray-700">CB</span>
+              </div>
+              <img src="/mastercard-logo.png" alt="Mastercard" className="h-8" />
+              <img src="/visa-logo.png" alt="Visa" className="h-8" />
+              <div className="h-8 w-16 bg-yellow-400 rounded flex items-center justify-center">
+                <span className="text-xs font-bold text-primary">E-CARD</span>
+              </div>
+              <img src="/apple-pay-logo.png" alt="Apple Pay" className="h-8" />
+              <img src="/paypal-logo.png" alt="PayPal" className="h-8" />
             </div>
           </div>
         </div>
@@ -618,6 +573,16 @@ export default function HomePage() {
       <CheckoutModal 
         isOpen={isCheckoutOpen} 
         onClose={() => setIsCheckoutOpen(false)} 
+      />
+      
+      {/* Product Modal */}
+      <ProductModal
+        product={selectedProduct}
+        isOpen={isProductModalOpen}
+        onClose={() => {
+          setIsProductModalOpen(false)
+          setSelectedProduct(null)
+        }}
       />
     </div>
   )

@@ -139,7 +139,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl max-h-[95vh] overflow-y-auto">
+      <DialogContent className="max-w-7xl w-[95vw] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">Confirmation de la commande</DialogTitle>
         </DialogHeader>
