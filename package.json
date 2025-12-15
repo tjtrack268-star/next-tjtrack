@@ -62,8 +62,8 @@
     "zod": "3.25.76"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.9",
-    "@tanstack/react-query-devtools": "latest",
+    "@tailwindcss/postcss": "^4.1.18",
+    "@tanstack/react-query-devtools": "^5.91.1",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
