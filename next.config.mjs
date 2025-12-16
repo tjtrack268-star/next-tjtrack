@@ -5,14 +5,14 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
-    domains: ['localhost'], // Add your backend domain here
+    domains: ['147.93.9.170'], // Add your backend domain here
   },
   // API routes configuration
   async rewrites() {
     return [
       {
         source: '/api/proxy/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1.0'}/:path*`,
+        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://147.93.9.170:8080/api/v1.0'}/:path*`,
       },
     ]
   },

@@ -80,7 +80,7 @@ export default function TestConnectionPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-2 text-sm">
-            <p><strong>API URL:</strong> {process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1.0"}</p>
+            <p><strong>API URL:</strong> {process.env.NEXT_PUBLIC_API_URL || "http://147.93.9.170:8080/api/v1.0"}</p>
             <p><strong>Expected Backend:</strong> Spring Boot on port 8080</p>
             <p><strong>Expected Database:</strong> PostgreSQL on port 5432</p>
           </div>
@@ -97,7 +97,7 @@ export default function TestConnectionPage() {
             <li>Create database: <code className="bg-gray-100 px-1 rounded">createdb tjtrack_dev</code></li>
             <li>Start Spring Boot backend: <code className="bg-gray-100 px-1 rounded">mvn spring-boot:run</code></li>
             <li>Check backend logs for any errors</li>
-            <li>Verify CORS configuration allows localhost:3000</li>
+            <li>Verify CORS configuration allows 147.93.9.170:3000</li>
           </ol>
         </CardContent>
       </Card>

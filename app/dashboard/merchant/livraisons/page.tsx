@@ -19,7 +19,7 @@ function DeliveryAssignmentComponent({ commandeId, onAssigned }: { commandeId: n
 
   const loadLivreurs = async () => {
     try {
-      const response = await fetch(`http://localhost:8080/api/v1.0/commandes/livreurs-disponibles?lat=48.8566&lon=2.3522`)
+      const response = await fetch(`http://147.93.9.170:8080/api/v1.0/commandes/livreurs-disponibles?lat=48.8566&lon=2.3522`)
       const data = await response.json()
       if (data.success) {
         setLivreurs(data.data || [])
@@ -34,7 +34,7 @@ function DeliveryAssignmentComponent({ commandeId, onAssigned }: { commandeId: n
   const assignerLivreur = async (livreurId: number) => {
     try {
       const response = await fetch(
-        `http://localhost:8080/api/v1.0/commandes/${commandeId}/assigner-livreur?clientId=1&merchantId=1`,
+        `http://147.93.9.170:8080/api/v1.0/commandes/${commandeId}/assigner-livreur?clientId=1&merchantId=1`,
         { method: 'POST' }
       )
       const data = await response.json()
