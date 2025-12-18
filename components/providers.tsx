@@ -9,7 +9,6 @@ import { CartProvider } from "@/contexts/cart-context"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "sonner"
 import { ApiErrorBoundary } from "@/components/api-error-boundary"
-import { DebugWrapper } from "@/components/debug-wrapper"
 import { queryClient } from "@/lib/query-client"
 
 
@@ -28,7 +27,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <ApiErrorBoundary>
-        <DebugWrapper>
+        
           <AuthProvider>
             <CartProvider>
               {children}
@@ -36,7 +35,7 @@ export function Providers({ children }: { children: ReactNode }) {
               <SonnerToaster position="top-right" richColors />
             </CartProvider>
           </AuthProvider>
-        </DebugWrapper>
+        
       </ApiErrorBoundary>
     <ReactQueryDevtools />
     </QueryClientProvider>

@@ -153,16 +153,18 @@ export default function InscriptionPage() {
 
   const handleVerifyOtp = async () => {
     try {
-      await verifyOtp(formData.email, otp)
+      console.log("Frontend: Verifying OTP", { email: formData.email, otp: otp.trim() })
+      await verifyOtp(formData.email, otp.trim())
       toast({
         title: "Compte vérifié",
         description: "Votre compte a été créé avec succès !",
       })
       router.push("/")
     } catch (error) {
+      console.error("Frontend: OTP verification error:", error)
       toast({
         title: "Erreur",
-        description: "Code de vérification incorrect",
+        description: error instanceof Error ? error.message : "Code de vérification incorrect",
         variant: "destructive",
       })
     }

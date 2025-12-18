@@ -25,7 +25,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
-import { useCommandesFournisseur, useFournisseursActifs } from "@/hooks/use-api"
+import { useCommandesFournisseur, useFournisseursActifs, useCreateCommandeFournisseur } from "@/hooks/use-api"
 import { cn } from "@/lib/utils"
 import type { CommandeFournisseur, Fournisseur } from "@/types/api"
 
@@ -36,9 +36,11 @@ export default function CommandesFournisseurPage() {
   const [filterStatus, setFilterStatus] = useState("all")
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [selectedFournisseur, setSelectedFournisseur] = useState("")
+  const [dateLivraison, setDateLivraison] = useState("")
 
   const { data: apiCommandes, isLoading: isLoadingCommandes } = useCommandesFournisseur()
   const { data: apiFournisseurs, isLoading: isLoadingFournisseurs } = useFournisseursActifs()
+  const createCommandeMutation = useCreateCommandeFournisseur()
 
   const commandes = apiCommandes || []
   const fournisseurs = apiFournisseurs || []
@@ -93,6 +95,27 @@ export default function CommandesFournisseurPage() {
       month: "short",
       year: "numeric",
     })
+  }
+
+  const handleCreateCommande = async () => {
+    if (!selectedFournisseur) return
+    
+    try {
+      await createCommandeMutation.mutateAsync({
+        merchantId: 1, // TODO: Get from auth context
+        supplierId: parseInt(selectedFournisseur),
+        commande: {
+          dateLivraisonPrevue: dateLivraison || null,
+          statut: "EN_ATTENTE"
+        }
+      })
+      
+      setIsCreateDialogOpen(false)
+      setSelectedFournisseur("")
+      setDateLivraison("")
+    } catch (error) {
+      console.error("Erreur lors de la création de la commande:", error)
+    }
   }
 
   return (
@@ -356,7 +379,11 @@ export default function CommandesFournisseurPage() {
             </div>
             <div className="space-y-2">
               <Label>Date de livraison souhaitée</Label>
-              <Input type="date" />
+              <Input 
+                type="date" 
+                value={dateLivraison}
+                onChange={(e) => setDateLivraison(e.target.value)}
+              />
             </div>
             <div className="p-4 rounded-lg bg-secondary/30 text-sm text-muted-foreground">
               <p>Après création, vous pourrez ajouter les articles à commander.</p>
@@ -366,8 +393,12 @@ export default function CommandesFournisseurPage() {
             <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
               Annuler
             </Button>
-            <Button className="gradient-primary text-white" disabled={!selectedFournisseur}>
-              Créer la commande
+            <Button 
+              className="gradient-primary text-white" 
+              disabled={!selectedFournisseur || createCommandeMutation.isPending}
+              onClick={handleCreateCommande}
+            >
+              {createCommandeMutation.isPending ? "Création..." : "Créer la commande"}
             </Button>
           </DialogFooter>
         </DialogContent>
