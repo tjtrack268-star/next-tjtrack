@@ -535,6 +535,17 @@ export function useCommandeFournisseurLignes(id: number) {
   })
 }
 
+export function useCreateCommandeFournisseur() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ merchantId, supplierId, commande }: { merchantId: number; supplierId: number; commande: any }) =>
+      apiClient.post<CommandeFournisseur>("/stock/commandes-fournisseur", { commande }, { merchantId, supplierId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.commandesFournisseur })
+    },
+  })
+}
+
 export function useShipCommandeFournisseur() {
   const queryClient = useQueryClient()
   return useMutation({

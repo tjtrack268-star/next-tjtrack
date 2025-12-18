@@ -105,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log("Verify OTP for:", email)
 
     try {
-      const response = await apiClient.post<{ token: string; email: string; name: string; roles: string[] }>("/login-verify-otp", { email, otp })
+      const response = await apiClient.post<{ token: string; email: string; name: string; roles: string[] }>("/verify-otp", { email, otp })
 
       if (response.token) {
         const user: ProfileResponse = {
