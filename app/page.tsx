@@ -179,6 +179,21 @@ export default function HomePage() {
   const FilterSidebar = () => (
     <div className="space-y-6">
       <div>
+        <h3 className="font-semibold mb-3">Catégories</h3>
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {categories.map((cat) => (
+              <SelectItem key={cat} value={cat}>
+                {cat}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
         <h3 className="font-semibold mb-3">Prix</h3>
         <div className="flex gap-2">
           <div className="flex-1">
@@ -246,7 +261,7 @@ export default function HomePage() {
 
       {/* Header */}
       <header className="sticky top-0 z-50 glass-card border-b">
-        <div className="container mx-auto px-4 py-3">
+        <div className="max-w-[1600px] mx-auto px-1 sm:px-2 py-3">
           <div className="flex items-center gap-4">
             {/* Mobile Menu */}
             <Sheet>
@@ -334,24 +349,12 @@ export default function HomePage() {
           </div>
 
           {/* Categories */}
-          <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-2">
-            {categories.map((cat) => (
-              <Button
-                key={cat}
-                variant={selectedCategory === cat ? "default" : "ghost"}
-                size="sm"
-                className={selectedCategory === cat ? "gradient-primary text-white" : ""}
-                onClick={() => setSelectedCategory(cat)}
-              >
-                {cat}
-              </Button>
-            ))}
-          </div>
+          {/* Moved to sidebar */}
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-6">
+      <main className="container mx-auto px-2 sm:px-3 py-6">
         <div className="flex gap-6">
           {/* Left Sidebar - Filters */}
           <aside className="hidden lg:block w-64 shrink-0">
@@ -499,7 +502,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="mt-20 bg-gradient-to-b from-primary to-primary/80 text-white dark:from-primary dark:to-primary/80">
-        <div className="container mx-auto px-4 py-12">
+        <div className="container mx-auto px-2 sm:px-3 py-12">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
             <div>
               <h3 className="font-semibold mb-4">Objet de l'aide</h3>
