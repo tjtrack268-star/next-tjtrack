@@ -51,7 +51,11 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
 
   const handleAddToCart = async () => {
     try {
-      await addItem(product.id!, quantity, {
+      // Use the article ID from the product, not the product ID itself
+      const articleId = product.articleId || product.id!
+      console.log('Adding to cart - product:', product)
+      console.log('Using articleId:', articleId)
+      await addItem(articleId, quantity, {
         name: product.nom!,
         price: Number(product.prix || 0),
         image: images[0],

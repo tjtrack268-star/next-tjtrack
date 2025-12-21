@@ -178,14 +178,84 @@ export function CartProvider({ children }: { children: ReactNode }) {
     )
   }, [removeItemLocally])
 
+  const mergeGuestCartAndRefresh = useCallback(async () => {
+    if (!user?.email) return
+    
+    // Get guest cart from localStorage before refreshCart clears localItems
+    let guestCartItems: LocalCartItem[] = []
+    try {
+      const cached = localStorage.getItem(LOCAL_CART_KEY)
+      if (cached) {
+        guestCartItems = JSON.parse(cached)
+      }
+    } catch {
+      guestCartItems = []
+    }
+    
+    console.log('=== MERGE CART DEBUG ===')
+    console.log('Guest cart items:', guestCartItems.length)
+    console.log('Guest cart data:', guestCartItems)
+    
+    // If there are guest items, merge them BEFORE refreshing
+    if (guestCartItems.length > 0) {
+      setIsLoading(true)
+      let mergedCount = 0
+      
+      try {
+        // Add each guest item to the user's cart
+        for (const guestItem of guestCartItems) {
+          try {
+            console.log(`Merging item: ${guestItem.articleNom} (ID: ${guestItem.articleId}, Qty: ${guestItem.quantite})`)
+            await apiClient.post("/panier/ajouter", 
+              { articleId: guestItem.articleId, quantite: guestItem.quantite }, 
+              { userEmail: user.email }
+            )
+            mergedCount++
+            console.log(`Successfully merged item ${guestItem.articleNom}`)
+          } catch (error: any) {
+            console.error(`Failed to merge item ${guestItem.articleNom}:`, error)
+            // Skip invalid articles (article not found or other 400 errors)
+            if (error?.message?.includes('400') || error?.message?.includes('Article non trouvé')) {
+              console.warn(`Article ${guestItem.articleNom} (ID: ${guestItem.articleId}) no longer exists or is invalid, skipping...`)
+              continue
+            }
+            // If user doesn't exist in database (404), keep items locally
+            if (error?.message?.includes('404') || error?.message?.includes('Utilisateur non trouvé')) {
+              console.warn('User not found in database, keeping guest cart locally')
+              setLocalItems(guestCartItems)
+              setIsLoading(false)
+              return
+            }
+          }
+        }
+        
+        console.log(`Merged ${mergedCount} items successfully`)
+        
+        // Clear guest cart only if at least one item was merged
+        if (mergedCount > 0) {
+          localStorage.removeItem(LOCAL_CART_KEY)
+          console.log('Guest cart cleared from localStorage')
+        }
+      } catch (error) {
+        console.error('Error merging guest cart:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    // Now refresh to get the merged cart from server
+    await refreshCart()
+    console.log('=== END MERGE CART DEBUG ===')
+  }, [user?.email, refreshCart])
+
   useEffect(() => {
     if (isAuthenticated && user?.email) {
-      refreshCart()
+      mergeGuestCartAndRefresh()
     } else {
       // Load guest cart from localStorage
       loadGuestCart()
     }
-  }, [isAuthenticated, user?.email, refreshCart])
+  }, [isAuthenticated, user?.email, mergeGuestCartAndRefresh, loadGuestCart])
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -238,7 +308,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           await apiClient.post("/panier/ajouter", request, { userEmail: user.email })
         } catch (error: any) {
           if (error?.message?.includes('400')) {
-            console.warn('User not found, working offline')
+            console.warn('Article not found or user not found, working offline')
             return // Keep local changes
           }
           console.error('Erreur ajout panier:', error)
@@ -288,7 +358,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         await apiClient.post("/panier/ajouter", request, { userEmail: user.email })
       } catch (error: any) {
         if (error?.message?.includes('400')) {
-          console.warn('User not found, working offline')
+          console.warn('Article not found or user not found, working offline')
           return // Keep local changes
         }
         console.error('Erreur ajout panier:', error)

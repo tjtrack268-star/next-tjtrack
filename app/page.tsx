@@ -104,7 +104,8 @@ export default function HomePage() {
 
   const handleAddToCart = async (product: ProduitEcommerceDto) => {
     try {
-      await addItem(product.id!, 1, {
+      const articleId = product.articleId || product.id!
+      await addItem(articleId, 1, {
         name: product.nom!,
         price: Number(product.prix || 0),
         image: product.images?.[0] || "/placeholder.svg",
@@ -558,7 +559,7 @@ export default function HomePage() {
                 <span className="text-xs font-bold text-gray-700">CB</span>
               </div>
               <img src="/mastercard-logo.png" alt="Mastercard" className="h-8" />
-              <img src="/visa-logo.png" alt="Visa" className="h-8" />
+              <img src="/visa-logo-generic.png" alt="Visa" className="h-8" />
               <div className="h-8 w-16 bg-yellow-400 rounded flex items-center justify-center">
                 <span className="text-xs font-bold text-primary">E-CARD</span>
               </div>
