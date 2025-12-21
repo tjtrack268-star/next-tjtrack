@@ -81,12 +81,109 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [isAuthenticated, user?.email])
 
+  const loadGuestCart = useCallback(() => {
+    try {
+      const cached = localStorage.getItem(LOCAL_CART_KEY)
+      if (cached) {
+        const cachedItems = JSON.parse(cached)
+        setLocalItems(cachedItems)
+      } else {
+        setLocalItems([])
+      }
+    } catch {
+      setLocalItems([])
+    }
+  }, [])
+
+  const addItemLocally = useCallback(
+    (
+      articleIdOrItem: number | PanierItemDto,
+      quantite?: number,
+      productInfo?: { name: string; price: number; image?: string }
+    ) => {
+      // Handle object parameter (PanierItemDto)
+      if (typeof articleIdOrItem === 'object') {
+        const item = articleIdOrItem
+        if (!item.articleId || !item.quantite || !item.prixUnitaire) {
+          throw new Error('Données article incomplètes')
+        }
+        
+        setLocalItems((prev) => {
+          const existingIndex = prev.findIndex((i) => i.articleId === item.articleId)
+          if (existingIndex >= 0) {
+            const updated = [...prev]
+            const newQuantite = updated[existingIndex].quantite + item.quantite
+            updated[existingIndex] = {
+              ...updated[existingIndex],
+              quantite: newQuantite,
+              sousTotal: newQuantite * item.prixUnitaire,
+            }
+            return updated
+          }
+          return [...prev, { ...item, id: Date.now() } as LocalCartItem]
+        })
+        return
+      }
+
+      // Handle separate parameters
+      const articleId = articleIdOrItem
+      if (!quantite || !productInfo || quantite <= 0) {
+        throw new Error("Quantité et informations produit requises")
+      }
+
+      const newItem = {
+        id: Date.now(),
+        articleId,
+        articleCode: `ART-${articleId}`,
+        articleNom: productInfo.name,
+        articlePhoto: productInfo.image,
+        quantite,
+        prixUnitaire: productInfo.price,
+        sousTotal: quantite * productInfo.price,
+        stockDisponible: 100,
+        disponible: true,
+      }
+
+      setLocalItems((prev) => {
+        const existingIndex = prev.findIndex((i) => i.articleId === articleId)
+        if (existingIndex >= 0) {
+          const updated = [...prev]
+          const newQuantite = updated[existingIndex].quantite + quantite
+          updated[existingIndex] = {
+            ...updated[existingIndex],
+            quantite: newQuantite,
+            sousTotal: newQuantite * productInfo.price,
+          }
+          return updated
+        }
+        return [...prev, newItem]
+      })
+    },
+    []
+  )
+
+  const removeItemLocally = useCallback((articleId: number) => {
+    setLocalItems((prev) => prev.filter((i) => i.articleId !== articleId))
+  }, [])
+
+  const updateQuantityLocally = useCallback((articleId: number, quantite: number) => {
+    if (quantite <= 0) {
+      return removeItemLocally(articleId)
+    }
+
+    setLocalItems((prev) =>
+      prev.map((item) =>
+        item.articleId === articleId ? { ...item, quantite, sousTotal: quantite * item.prixUnitaire } : item,
+      ),
+    )
+  }, [removeItemLocally])
+
   useEffect(() => {
     if (isAuthenticated && user?.email) {
       refreshCart()
     } else {
-      setLocalItems([])
-      localStorage.removeItem(LOCAL_CART_KEY)
+      // Load guest cart from localStorage
+      loadGuestCart()
     }
   }, [isAuthenticated, user?.email, refreshCart])
 
@@ -108,8 +205,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       quantite?: number,
       productInfo?: { name: string; price: number; image?: string }
     ) => {
+      // For guest users, work with local storage only
       if (!isAuthenticated || !user?.email) {
-        throw new Error('Vous devez être connecté pour ajouter au panier')
+        return addItemLocally(articleIdOrItem, quantite, productInfo)
       }
 
       // Handle object parameter (PanierItemDto)
@@ -203,8 +301,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const removeItem = useCallback(
     async (articleId: number) => {
+      // For guest users, work with local storage only
       if (!isAuthenticated || !user?.email) {
-        throw new Error('Vous devez être connecté')
+        return removeItemLocally(articleId)
       }
 
       const previousItems = [...localItems]
@@ -227,8 +326,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return removeItem(articleId)
       }
 
+      // For guest users, work with local storage only
       if (!isAuthenticated || !user?.email) {
-        throw new Error('Vous devez être connecté')
+        return updateQuantityLocally(articleId, quantite)
       }
 
       const previousItems = [...localItems]

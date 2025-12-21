@@ -60,10 +60,11 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
         title: "Ajouté au panier",
         description: `${quantity}x ${product.nom} ajouté(s) à votre panier`,
       })
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Erreur ajout panier:', error)
       toast({
         title: "Erreur",
-        description: "Impossible d'ajouter au panier",
+        description: error.message || "Impossible d'ajouter au panier",
         variant: "destructive",
       })
     }
