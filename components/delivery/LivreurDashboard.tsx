@@ -109,7 +109,7 @@ export default function LivreurDashboard() {
 
   const acceptOrderMutation = useMutation({
     mutationFn: async (orderId: number) => {
-      return await apiClient.put(`/livraisons/${orderId}/accepter`)
+      return await apiClient.put(`/commandes/livraisons/${orderId}/accepter`)
     },
     onSuccess: () => {
       toast({
@@ -129,7 +129,7 @@ export default function LivreurDashboard() {
 
   const refuseOrderMutation = useMutation({
     mutationFn: async ({ orderId, reason }: { orderId: number, reason: string }) => {
-      return await apiClient.put(`/livraisons/${orderId}/refuser`, { motif: reason })
+      return await apiClient.put(`/commandes/livraisons/${orderId}/refuser`, { motif: reason })
     },
     onSuccess: () => {
       toast({
@@ -152,7 +152,7 @@ export default function LivreurDashboard() {
 
   const startDeliveryMutation = useMutation({
     mutationFn: async (orderId: number) => {
-      return await apiClient.put(`/livraisons/${orderId}/demarrer`)
+      return await apiClient.put(`/commandes/livraisons/${orderId}/demarrer`)
     },
     onSuccess: () => {
       toast({
@@ -165,7 +165,7 @@ export default function LivreurDashboard() {
 
   const completeDeliveryMutation = useMutation({
     mutationFn: async (orderId: number) => {
-      return await apiClient.put(`/livraisons/${orderId}/terminer`)
+      return await apiClient.put(`/commandes/livraisons/${orderId}/terminer`)
     },
     onSuccess: () => {
       toast({
