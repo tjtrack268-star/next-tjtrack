@@ -142,6 +142,26 @@ const getMenuItems = (role?: string) => {
     ]
   }
 
+  if (role === "LIVREUR") {
+    return [
+      ...baseItems,
+      {
+        title: "Mes Livraisons",
+        items: [
+          { name: "Dashboard Livreur", href: "/dashboard/livreur", icon: Truck },
+          { name: "Nouvelles Assignations", href: "/dashboard/livreur?tab=nouvelles", icon: Package, badge: 3 },
+          { name: "En Cours", href: "/dashboard/livreur?tab=en-cours", icon: Truck },
+          { name: "Historique", href: "/dashboard/livreur?tab=terminees", icon: FileText },
+        ],
+      },
+      {
+        title: "Configuration",
+        href: "/dashboard/parametres",
+        icon: Settings,
+      },
+    ]
+  }
+
   if (role === "FOURNISSEUR") {
     return [
       ...baseItems,

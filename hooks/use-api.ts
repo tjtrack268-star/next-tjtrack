@@ -816,6 +816,18 @@ export function useCommandesMerchant(merchantUserId: string) {
   })
 }
 
+export function useCommandesLivreur(livreurEmail: string) {
+  return useQuery({
+    queryKey: ["commandesLivreur", livreurEmail],
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<any[]>>("/commandes/livreur")
+      console.log('Livreur orders API response:', JSON.stringify(response, null, 2))
+      return response
+    },
+    enabled: !!livreurEmail,
+  })
+}
+
 export function useLogin() {
   return useMutation({
     mutationFn: (data: AuthRequest) => apiClient.post<Record<string, unknown>>("/login", data),

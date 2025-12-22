@@ -28,7 +28,10 @@ import type { Commande } from "@/types/api"
 function useUserOrders() {
   return useQuery({
     queryKey: ["userOrders"],
-    queryFn: () => apiClient.get<Commande[]>("/ecommerce/mes-commandes"),
+    queryFn: async () => {
+      const response = await apiClient.get("/commandes/client") as any
+      return Array.isArray(response) ? response : (response.data || [])
+    },
   })
 }
 
@@ -57,7 +60,7 @@ export default function MyOrdersPage() {
   const formatPrice = (price: number) => new Intl.NumberFormat("fr-FR").format(price) + " XAF"
   const formatDate = (date: string) => new Date(date).toLocaleDateString("fr-FR")
 
-  const filteredOrders = orders?.filter(order => {
+  const filteredOrders = orders?.filter((order: any) => {
     if (selectedTab === "all") return true
     if (selectedTab === "pending") return ["EN_ATTENTE", "CONFIRMEE", "EN_PREPARATION"].includes(order.statut)
     if (selectedTab === "shipped") return ["EXPEDIEE"].includes(order.statut)
@@ -138,16 +141,16 @@ export default function MyOrdersPage() {
               Toutes ({orders?.length || 0})
             </TabsTrigger>
             <TabsTrigger value="pending">
-              En cours ({filteredOrders.filter(o => ["EN_ATTENTE", "CONFIRMEE", "EN_PREPARATION"].includes(o.statut)).length})
+              En cours ({filteredOrders.filter((o: any) => ["EN_ATTENTE", "CONFIRMEE", "EN_PREPARATION"].includes(o.statut)).length})
             </TabsTrigger>
             <TabsTrigger value="shipped">
-              Expédiées ({filteredOrders.filter(o => o.statut === "EXPEDIEE").length})
+              Expédiées ({filteredOrders.filter((o: any) => o.statut === "EXPEDIEE").length})
             </TabsTrigger>
             <TabsTrigger value="delivered">
-              Livrées ({filteredOrders.filter(o => o.statut === "LIVREE").length})
+              Livrées ({filteredOrders.filter((o: any) => o.statut === "LIVREE").length})
             </TabsTrigger>
             <TabsTrigger value="cancelled">
-              Annulées ({filteredOrders.filter(o => o.statut === "ANNULEE").length})
+              Annulées ({filteredOrders.filter((o: any) => o.statut === "ANNULEE").length})
             </TabsTrigger>
           </TabsList>
 
@@ -169,13 +172,13 @@ export default function MyOrdersPage() {
                 </CardContent>
               </Card>
             ) : (
-              filteredOrders.map((order) => {
-                const StatusIcon = statusConfig[order.statut]?.icon || Package
-                const statusColor = statusConfig[order.statut]?.color || "bg-gray-500"
-                const statusLabel = statusConfig[order.statut]?.label || order.statut
+              filteredOrders.map((order: any) => {
+                const StatusIcon = (statusConfig as any)[order.statut]?.icon || Package
+                const statusColor = (statusConfig as any)[order.statut]?.color || "bg-gray-500"
+                const statusLabel = (statusConfig as any)[order.statut]?.label || order.statut
                 
-                const paymentStatusColor = paymentStatusConfig[order.statutPaiement || "EN_ATTENTE"]?.color || "bg-gray-500"
-                const paymentStatusLabel = paymentStatusConfig[order.statutPaiement || "EN_ATTENTE"]?.label || "En attente"
+                const paymentStatusColor = (paymentStatusConfig as any)[order.statutPaiement || "EN_ATTENTE"]?.color || "bg-gray-500"
+                const paymentStatusLabel = (paymentStatusConfig as any)[order.statutPaiement || "EN_ATTENTE"]?.label || "En attente"
 
                 return (
                   <Card key={order.id} className="overflow-hidden">
@@ -204,7 +207,7 @@ export default function MyOrdersPage() {
                     <CardContent className="space-y-4">
                       {/* Order Items */}
                       <div className="space-y-3">
-                        {order.items?.map((item) => (
+                        {order.items?.map((item: any) => (
                           <div key={item.id} className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg">
                             <img
                               src={item.article.photo || "/placeholder.svg"}

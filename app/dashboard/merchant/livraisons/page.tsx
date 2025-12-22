@@ -14,6 +14,8 @@ function DeliveryAssignmentComponent({ commandeId, onAssigned }: { commandeId: n
   const [loading, setLoading] = useState(true)
   const [location, setLocation] = useState<{lat: number, lon: number} | null>(null)
   const [locationError, setLocationError] = useState<string | null>(null)
+  const [isAssigning, setIsAssigning] = useState(false)
+  const [assignmentError, setAssignmentError] = useState<string | null>(null)
   const { user } = useAuth()
 
   useEffect(() => {
@@ -89,7 +91,7 @@ function DeliveryAssignmentComponent({ commandeId, onAssigned }: { commandeId: n
     
     try {
       const token = localStorage.getItem('tj-track-token')
-      const response = await fetch(`http://localhost:8080/api/v1.0/livreur/disponibles?lat=${location.lat}&lon=${location.lon}`, {
+      const response = await fetch(`http://localhost:8080/api/v1.0/ecommerce/livreur/disponibles?lat=${location.lat}&lon=${location.lon}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -107,25 +109,43 @@ function DeliveryAssignmentComponent({ commandeId, onAssigned }: { commandeId: n
   }
 
   const assignerLivreur = async (livreurId: number) => {
+    if (isAssigning) return
+    
+    setIsAssigning(true)
+    setAssignmentError(null)
+    
     try {
+      if (!user?.userId) {
+        throw new Error('Utilisateur non connecté')
+      }
+      
       const token = localStorage.getItem('tj-track-token')
-      const response = await fetch(
-        `http://localhost:8080/api/v1.0/commandes/${commandeId}/assigner-livreur`,
-        { 
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ livreurId, merchantId: user?.userId })
+      const url = `http://localhost:8080/api/v1.0/commandes/${commandeId}/assigner-livreur?clientId=1&merchantEmail=${encodeURIComponent(user.userId)}&livreurId=${livreurId}`
+      
+      const response = await fetch(url, { 
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      )
+      })
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Assignment failed:', response.status, errorText)
+        throw new Error(`Erreur HTTP: ${response.status}`)
+      }
+      
       const data = await response.json()
       if (data.success) {
         onAssigned(data.data)
+      } else {
+        throw new Error(data.message || 'Échec de l\'assignation')
       }
-    } catch (error) {
-      console.error('Erreur assignation:', error)
+    } catch (error: any) {
+      setAssignmentError(error.message)
+    } finally {
+      setIsAssigning(false)
     }
   }
 
@@ -174,6 +194,12 @@ function DeliveryAssignmentComponent({ commandeId, onAssigned }: { commandeId: n
 
   return (
     <div className="space-y-3">
+      {assignmentError && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          {assignmentError}
+        </div>
+      )}
+      
       {location && (
         <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg text-sm">
           <div className="flex items-center gap-2">
@@ -238,8 +264,11 @@ function DeliveryAssignmentComponent({ commandeId, onAssigned }: { commandeId: n
                   )}
                 </div>
               </div>
-              <Button onClick={() => assignerLivreur(livreur.id)}>
-                Assigner
+              <Button 
+                onClick={() => assignerLivreur(livreur.id)}
+                disabled={isAssigning}
+              >
+                {isAssigning ? 'Attribution...' : 'Assigner'}
               </Button>
             </div>
           ))}
@@ -256,6 +285,8 @@ interface Commande {
   statut: string
   montantTotal: number
   dateCommande: string
+  livreurId?: number
+  livreurNom?: string
 }
 
 export default function LivraisonsPage() {
@@ -276,7 +307,9 @@ export default function LivraisonsPage() {
       client: c.client as { name: string } || { name: 'Client inconnu' },
       statut: String(c.statut || "EN_ATTENTE"),
       montantTotal: Number(c.montantTotal || c.totalTtc) || 0,
-      dateCommande: String(c.dateCommande || new Date().toISOString())
+      dateCommande: String(c.dateCommande || new Date().toISOString()),
+      livreurId: c.livreurId ? Number(c.livreurId) : undefined,
+      livreurNom: c.livreurNom ? String(c.livreurNom) : undefined
     }
   }).filter((c) => ['CONFIRMEE', 'EN_PREPARATION', 'EXPEDIEE'].includes(c.statut))
 
@@ -284,7 +317,7 @@ export default function LivraisonsPage() {
     switch (statut) {
       case 'CONFIRMEE': return 'bg-blue-500'
       case 'EN_PREPARATION': return 'bg-yellow-500'
-      case 'EXPEDIEE': return 'bg-green-500'
+      case 'EXPEDIEE': return 'bg-orange-500'
       case 'LIVREE': return 'bg-emerald-500'
       default: return 'bg-gray-500'
     }
@@ -372,17 +405,32 @@ export default function LivraisonsPage() {
                             </p>
                           </div>
                         </div>
+                        {commande.livreurId && (
+                          <div className="mt-3 p-2 bg-green-50 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <Truck className="h-4 w-4 text-green-600" />
+                              <span className="text-sm text-green-700">
+                                Livreur assigné: <strong>{commande.livreurNom || 'Livreur #' + commande.livreurId}</strong>
+                              </span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                       <div className="ml-6">
-                        {commande.statut === 'CONFIRMEE' || commande.statut === 'EN_PREPARATION' ? (
+                        {commande.statut === 'CONFIRMEE' && !commande.livreurId ? (
                           <Button onClick={() => handleAssignDelivery(commande)}>
                             <Truck className="h-4 w-4 mr-2" />
                             Assigner Livreur
                           </Button>
+                        ) : commande.statut === 'EN_PREPARATION' && commande.livreurId ? (
+                          <Badge variant="outline" className="text-yellow-600">
+                            <Clock className="h-4 w-4 mr-1" />
+                            En préparation
+                          </Badge>
                         ) : commande.statut === 'EXPEDIEE' ? (
-                          <Badge variant="outline" className="text-green-600">
+                          <Badge variant="outline" className="text-orange-600">
                             <Truck className="h-4 w-4 mr-1" />
-                            En livraison
+                            En cours de livraison
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="text-emerald-600">

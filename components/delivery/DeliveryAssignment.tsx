@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { MapPin, Phone, Clock, Truck } from 'lucide-react'
+import { MapPin, Phone, Clock, Truck, Star, MessageCircle } from 'lucide-react'
 import { deliveryApi } from '@/lib/delivery-api'
+import { useToast } from '@/hooks/use-toast'
 
 interface Livreur {
   id: number
@@ -14,6 +15,9 @@ interface Livreur {
   latitude: number
   longitude: number
   distance: number
+  rating?: number
+  totalDeliveries?: number
+  status: "DISPONIBLE" | "OCCUPE" | "HORS_LIGNE"
 }
 
 interface DeliveryAssignmentProps {
@@ -28,6 +32,7 @@ interface DeliveryAssignmentProps {
 export default function DeliveryAssignment({ 
   commandeId, clientId, merchantId, merchantLat, merchantLon, onAssigned 
 }: DeliveryAssignmentProps) {
+  const { toast } = useToast()
   const [livreurs, setLivreurs] = useState<Livreur[]>([])
   const [loading, setLoading] = useState(false)
   const [assigning, setAssigning] = useState<number | null>(null)
@@ -39,7 +44,7 @@ export default function DeliveryAssignment({
   const loadLivreurs = async () => {
     setLoading(true)
     try {
-      const response = await deliveryApi.getLivreursDisponibles(merchantLat, merchantLon)
+      const response = await deliveryApi.getLivreursDisponibles(merchantLat, merchantLon) as any
       const livreurs = Array.isArray(response) ? response : (response.data || [])
       
       // Si pas de livreurs, ajouter des données de démonstration
@@ -48,26 +53,35 @@ export default function DeliveryAssignment({
           {
             id: 1,
             nom: 'Ahmed Benali',
-            telephone: '+33 6 12 34 56 78',
+            telephone: '+237 6 12 34 56 78',
             latitude: merchantLat + 0.005,
             longitude: merchantLon + 0.005,
-            distance: 1.2
+            distance: 1.2,
+            rating: 4.8,
+            totalDeliveries: 156,
+            status: "DISPONIBLE"
           },
           {
             id: 2,
             nom: 'Sophie Dubois',
-            telephone: '+33 6 98 76 54 32',
+            telephone: '+237 6 98 76 54 32',
             latitude: merchantLat - 0.003,
             longitude: merchantLon + 0.008,
-            distance: 2.1
+            distance: 2.1,
+            rating: 4.6,
+            totalDeliveries: 89,
+            status: "DISPONIBLE"
           },
           {
             id: 3,
             nom: 'Carlos Rodriguez',
-            telephone: '+33 7 11 22 33 44',
+            telephone: '+237 7 11 22 33 44',
             latitude: merchantLat + 0.008,
             longitude: merchantLon - 0.004,
-            distance: 1.8
+            distance: 1.8,
+            rating: 4.9,
+            totalDeliveries: 203,
+            status: "DISPONIBLE"
           }
         ]
         setLivreurs(demoLivreurs)
@@ -81,18 +95,24 @@ export default function DeliveryAssignment({
         {
           id: 1,
           nom: 'Ahmed Benali',
-          telephone: '+33 6 12 34 56 78',
+          telephone: '+237 6 12 34 56 78',
           latitude: merchantLat + 0.005,
           longitude: merchantLon + 0.005,
-          distance: 1.2
+          distance: 1.2,
+          rating: 4.8,
+          totalDeliveries: 156,
+          status: "DISPONIBLE"
         },
         {
           id: 2,
           nom: 'Sophie Dubois',
-          telephone: '+33 6 98 76 54 32',
+          telephone: '+237 6 98 76 54 32',
           latitude: merchantLat - 0.003,
           longitude: merchantLon + 0.008,
-          distance: 2.1
+          distance: 2.1,
+          rating: 4.6,
+          totalDeliveries: 89,
+          status: "DISPONIBLE"
         }
       ]
       setLivreurs(demoLivreurs)
@@ -104,8 +124,15 @@ export default function DeliveryAssignment({
   const assignerLivreur = async (livreurId: number) => {
     setAssigning(livreurId)
     try {
-      const response = await deliveryApi.assignerLivreur(commandeId, clientId, merchantId)
+      const response = await deliveryApi.assignerLivreur(commandeId, clientId, merchantId) as any
       const data = response.data || response
+      
+      // Notify the delivery person
+      toast({
+        title: "Livreur assigné",
+        description: "Le livreur a été notifié de la nouvelle assignation",
+      })
+      
       onAssigned(data)
     } catch (error) {
       console.error('Erreur assignation:', error)
@@ -119,6 +146,12 @@ export default function DeliveryAssignment({
           telephone: livreur.telephone,
           tempsEstime: '30-45 min'
         }
+        
+        toast({
+          title: "Livreur assigné",
+          description: `${livreur.nom} a été assigné à cette commande`,
+        })
+        
         onAssigned(simulatedResult)
       }
     } finally {
@@ -126,19 +159,41 @@ export default function DeliveryAssignment({
     }
   }
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "DISPONIBLE": return "bg-green-500"
+      case "OCCUPE": return "bg-orange-500"
+      case "HORS_LIGNE": return "bg-gray-500"
+      default: return "bg-gray-500"
+    }
+  }
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "DISPONIBLE": return "Disponible"
+      case "OCCUPE": return "Occupé"
+      case "HORS_LIGNE": return "Hors ligne"
+      default: return status
+    }
+  }
+
+  const callPhone = (phone: string) => {
+    window.open(`tel:${phone}`)
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Truck className="h-5 w-5" />
-          Livreurs Disponibles ({livreurs.length})
+          Livreurs Disponibles ({livreurs.filter(l => l.status === "DISPONIBLE").length})
         </CardTitle>
       </CardHeader>
       <CardContent>
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="ml-2">Recherche...</span>
+            <span className="ml-2">Recherche des livreurs...</span>
           </div>
         ) : livreurs.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
@@ -149,21 +204,36 @@ export default function DeliveryAssignment({
             </Button>
           </div>
         ) : (
-          <div className="space-y-4">
-            {livreurs.map((livreur) => (
-              <div key={livreur.id} className="flex items-center justify-between p-4 border rounded-lg">
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            {livreurs
+              .sort((a, b) => {
+                // Prioritize available drivers, then by distance
+                if (a.status === "DISPONIBLE" && b.status !== "DISPONIBLE") return -1
+                if (b.status === "DISPONIBLE" && a.status !== "DISPONIBLE") return 1
+                return a.distance - b.distance
+              })
+              .map((livreur) => (
+              <div key={livreur.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/30 transition-colors">
                 <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                      <Truck className="h-5 w-5 text-blue-600" />
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Truck className="h-6 w-6 text-blue-600" />
                     </div>
-                    <div>
-                      <h4 className="font-medium">{livreur.nom}</h4>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-medium">{livreur.nom}</h4>
+                        <Badge className={`${getStatusColor(livreur.status)} text-white text-xs`}>
+                          {getStatusLabel(livreur.status)}
+                        </Badge>
+                      </div>
                       <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <span className="flex items-center gap-1">
+                        <button 
+                          onClick={() => callPhone(livreur.telephone)}
+                          className="flex items-center gap-1 hover:text-blue-600 transition-colors"
+                        >
                           <Phone className="h-4 w-4" />
                           {livreur.telephone}
-                        </span>
+                        </button>
                         <span className="flex items-center gap-1">
                           <MapPin className="h-4 w-4" />
                           {livreur.distance.toFixed(1)} km
@@ -171,22 +241,58 @@ export default function DeliveryAssignment({
                       </div>
                     </div>
                   </div>
-                  <Badge variant="secondary" className="text-xs">
-                    <Clock className="h-3 w-3 mr-1" />
-                    ~{Math.round(livreur.distance * 3 + 15)} min
-                  </Badge>
+                  
+                  <div className="flex items-center gap-4 text-xs text-gray-500">
+                    {livreur.rating && (
+                      <div className="flex items-center gap-1">
+                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                        <span>{livreur.rating.toFixed(1)}</span>
+                      </div>
+                    )}
+                    {livreur.totalDeliveries && (
+                      <span>{livreur.totalDeliveries} livraisons</span>
+                    )}
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      ~{Math.round(livreur.distance * 3 + 15)} min
+                    </div>
+                  </div>
                 </div>
-                <Button
-                  onClick={() => assignerLivreur(livreur.id)}
-                  disabled={assigning === livreur.id}
-                  className="ml-4"
-                >
-                  {assigning === livreur.id ? 'Attribution...' : 'Assigner'}
-                </Button>
+                
+                <div className="ml-4 flex flex-col gap-2">
+                  <Button
+                    onClick={() => assignerLivreur(livreur.id)}
+                    disabled={assigning === livreur.id || livreur.status !== "DISPONIBLE"}
+                    size="sm"
+                    className="min-w-[100px]"
+                  >
+                    {assigning === livreur.id ? 'Attribution...' : 
+                     livreur.status !== "DISPONIBLE" ? 'Indisponible' : 'Assigner'}
+                  </Button>
+                  
+                  {livreur.status === "DISPONIBLE" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => callPhone(livreur.telephone)}
+                      className="min-w-[100px]"
+                    >
+                      <MessageCircle className="h-3 w-3 mr-1" />
+                      Contacter
+                    </Button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         )}
+        
+        <div className="mt-4 pt-4 border-t">
+          <Button onClick={loadLivreurs} variant="outline" className="w-full">
+            <Truck className="h-4 w-4 mr-2" />
+            Actualiser la liste
+          </Button>
+        </div>
       </CardContent>
     </Card>
   )

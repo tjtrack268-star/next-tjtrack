@@ -31,7 +31,7 @@ function useClientDashboard() {
 function useUserOrders() {
   return useQuery({
     queryKey: ["userOrders"],
-    queryFn: () => apiClient.get<Commande[]>("/ecommerce/mes-commandes"),
+    queryFn: () => apiClient.get<Commande[]>("/commandes/client"),
   })
 }
 

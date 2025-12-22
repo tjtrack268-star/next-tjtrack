@@ -194,7 +194,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
     
     console.log('=== MERGE CART DEBUG ===')
     console.log('Guest cart items:', guestCartItems.length)
-    console.log('Guest cart data:', guestCartItems)
     
     // If there are guest items, merge them BEFORE refreshing
     if (guestCartItems.length > 0) {
@@ -202,32 +201,32 @@ export function CartProvider({ children }: { children: ReactNode }) {
       let mergedCount = 0
       
       try {
-        // Add each guest item to the user's cart
-        for (const guestItem of guestCartItems) {
+        // Batch merge items to reduce API calls
+        const mergePromises = guestCartItems.map(async (guestItem) => {
           try {
-            console.log(`Merging item: ${guestItem.articleNom} (ID: ${guestItem.articleId}, Qty: ${guestItem.quantite})`)
+            console.log(`Merging item: ${guestItem.articleNom} (ID: ${guestItem.articleId})`)
             await apiClient.post("/panier/ajouter", 
               { articleId: guestItem.articleId, quantite: guestItem.quantite }, 
               { userEmail: user.email }
             )
-            mergedCount++
-            console.log(`Successfully merged item ${guestItem.articleNom}`)
+            return true
           } catch (error: any) {
             console.error(`Failed to merge item ${guestItem.articleNom}:`, error)
-            // Skip invalid articles (article not found or other 400 errors)
             if (error?.message?.includes('400') || error?.message?.includes('Article non trouvé')) {
-              console.warn(`Article ${guestItem.articleNom} (ID: ${guestItem.articleId}) no longer exists or is invalid, skipping...`)
-              continue
+              console.warn(`Article ${guestItem.articleNom} no longer exists, skipping...`)
+              return false
             }
-            // If user doesn't exist in database (404), keep items locally
             if (error?.message?.includes('404') || error?.message?.includes('Utilisateur non trouvé')) {
               console.warn('User not found in database, keeping guest cart locally')
               setLocalItems(guestCartItems)
-              setIsLoading(false)
-              return
+              throw new Error('USER_NOT_FOUND')
             }
+            return false
           }
-        }
+        })
+        
+        const results = await Promise.allSettled(mergePromises)
+        mergedCount = results.filter(r => r.status === 'fulfilled' && r.value === true).length
         
         console.log(`Merged ${mergedCount} items successfully`)
         
@@ -236,7 +235,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem(LOCAL_CART_KEY)
           console.log('Guest cart cleared from localStorage')
         }
-      } catch (error) {
+      } catch (error: any) {
+        if (error.message === 'USER_NOT_FOUND') {
+          setIsLoading(false)
+          return
+        }
         console.error('Error merging guest cart:', error)
       } finally {
         setIsLoading(false)
@@ -250,7 +253,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (isAuthenticated && user?.email) {
-      mergeGuestCartAndRefresh()
+      // Use requestIdleCallback or setTimeout to defer heavy operations
+      const timeoutId = setTimeout(() => {
+        mergeGuestCartAndRefresh()
+      }, 100) // Small delay to prevent blocking the main thread
+      
+      return () => clearTimeout(timeoutId)
     } else {
       // Load guest cart from localStorage
       loadGuestCart()
