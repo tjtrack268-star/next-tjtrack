@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
@@ -16,14 +16,17 @@ import {
   ArrowRight,
   Loader2,
   Check,
+  Navigation,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
+import { StaticLocationSelector } from "@/components/ui/static-location-selector"
 import type { ProfileRequest } from "@/types/api"
 
 const roles = [
@@ -49,20 +52,28 @@ export default function InscriptionPage() {
     // Role-specific info
     shopName: "",
     town: "",
+    customTown: "",
     address: "",
+    customAddress: "",
     phoneNumber: "",
     // Client-specific fields
     firstName: "",
     lastName: "",
     cniNumber: "",
+    // Geolocation preference
+    enableGeolocation: false,
   })
 
   const [otpSent, setOtpSent] = useState(false)
   const [otp, setOtp] = useState("")
 
-  const updateFormData = (field: string, value: string) => {
+  const updateFormData = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
+
+
+
+
 
   const validateStep1 = () => {
     if (!formData.name || !formData.email || !formData.password || !formData.role) {
@@ -103,8 +114,11 @@ export default function InscriptionPage() {
   }
 
   const validateStep2 = () => {
+    const finalTown = formData.town
+    const finalAddress = formData.address
+    
     if (formData.role === "CLIENT") {
-      if (!formData.firstName || !formData.lastName || !formData.cniNumber || !formData.town || !formData.address || !formData.phoneNumber) {
+      if (!formData.firstName || !formData.lastName || !formData.cniNumber || !finalTown || !finalAddress || !formData.phoneNumber) {
         toast({
           title: "Erreur",
           description: "Veuillez remplir tous les champs obligatoires",
@@ -113,7 +127,7 @@ export default function InscriptionPage() {
         return false
       }
     } else if (formData.role === "COMMERCANT" || formData.role === "FOURNISSEUR") {
-      if (!formData.shopName || !formData.town || !formData.address || !formData.phoneNumber) {
+      if (!formData.shopName || !finalTown || !finalAddress || !formData.phoneNumber) {
         toast({
           title: "Erreur",
           description: "Veuillez remplir tous les champs obligatoires",
@@ -122,7 +136,7 @@ export default function InscriptionPage() {
         return false
       }
     } else if (formData.role === "LIVREUR") {
-      if (!formData.town || !formData.address || !formData.phoneNumber) {
+      if (!finalTown || !finalAddress || !formData.phoneNumber) {
         toast({
           title: "Erreur",
           description: "Veuillez remplir tous les champs obligatoires",
@@ -172,26 +186,28 @@ export default function InscriptionPage() {
 
       // Clean phone number (remove spaces)
       const cleanPhone = formData.phoneNumber.replace(/\s+/g, '')
+      const finalTown = formData.town
+      const finalAddress = formData.address
 
       // Add role-specific info
       if (formData.role === "COMMERCANT") {
         request.merchantInfo = {
           shopName: formData.shopName,
-          town: formData.town,
-          address: formData.address,
+          town: finalTown,
+          address: finalAddress,
           phoneNumber: cleanPhone,
         }
       } else if (formData.role === "FOURNISSEUR") {
         request.supplierInfo = {
           shopName: formData.shopName,
-          town: formData.town,
-          address: formData.address,
+          town: finalTown,
+          address: finalAddress,
           phoneNumber: cleanPhone,
         }
       } else if (formData.role === "LIVREUR") {
         request.deliveryInfo = {
-          town: formData.town,
-          address: formData.address,
+          town: finalTown,
+          address: finalAddress,
           phoneNumber: cleanPhone,
         }
       } else if (formData.role === "CLIENT") {
@@ -199,8 +215,8 @@ export default function InscriptionPage() {
           firstName: formData.firstName || "N/A",
           lastName: formData.lastName || "N/A",
           cniNumber: formData.cniNumber || "N/A",
-          town: formData.town || "N/A",
-          address: formData.address || "N/A",
+          town: finalTown || "N/A",
+          address: finalAddress || "N/A",
           phoneNumber: cleanPhone || "+237000000000",
         }
       }
@@ -488,31 +504,33 @@ export default function InscriptionPage() {
                   <p className="text-xs text-muted-foreground">Format: +237612345678 (8-15 chiffres)</p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="town">Ville *</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="town"
-                      placeholder="Douala"
-                      value={formData.town}
-                      onChange={(e) => updateFormData("town", e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
+                <StaticLocationSelector
+                  selectedVille={formData.town}
+                  selectedQuartier={formData.address}
+                  onVilleChange={(ville) => updateFormData("town", ville)}
+                  onQuartierChange={(quartier) => updateFormData("address", quartier)}
+                  required
+                />
 
-                <div className="space-y-2">
-                  <Label htmlFor="address">Adresse *</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="address"
-                      placeholder="Rue de la Liberté, Akwa"
-                      value={formData.address}
-                      onChange={(e) => updateFormData("address", e.target.value)}
-                      className="pl-10"
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="enableGeolocation"
+                      checked={formData.enableGeolocation}
+                      onCheckedChange={(checked) => updateFormData("enableGeolocation", checked as boolean)}
                     />
+                    <div className="grid gap-1.5 leading-none">
+                      <Label
+                        htmlFor="enableGeolocation"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2"
+                      >
+                        <Navigation className="h-4 w-4" />
+                        Activer la géolocalisation (optionnel)
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Permet de vous localiser automatiquement pour les livraisons et services à proximité
+                      </p>
+                    </div>
                   </div>
                 </div>
               </>

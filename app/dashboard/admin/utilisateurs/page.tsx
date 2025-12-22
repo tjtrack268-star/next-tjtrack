@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import { AdminGuard } from "@/components/admin-guard"
 import { useConfirm } from "@/hooks/use-confirm"
 import { useDebounce } from "@/hooks/use-debounce"
+import { useQueryClient } from "@tanstack/react-query"
 
 const roleConfig = {
   CLIENT: { label: "Client", icon: Users, color: "bg-blue-500" },
@@ -31,6 +32,7 @@ export default function AdminUsersPage() {
   const { toast } = useToast()
   const { user } = useAuth()
   const { confirm, isOpen, options, handleConfirm, handleCancel } = useConfirm()
+  const queryClient = useQueryClient()
   
   const debouncedSearch = useDebounce(searchQuery, 300)
   
@@ -64,7 +66,10 @@ export default function AdminUsersPage() {
         title: "Utilisateur approuvé",
         description: `${userName} a été approuvé avec succès`,
       })
-      refetch()
+      // Force refresh of data
+      await refetch()
+      // Also refresh user analytics
+      queryClient.invalidateQueries({ queryKey: ["userAnalytics"] })
     } catch (err) {
       toast({
         title: "Erreur",
@@ -164,6 +169,7 @@ export default function AdminUsersPage() {
                   <SelectItem value="all">Tous les statuts</SelectItem>
                   <SelectItem value="approved">Approuvé</SelectItem>
                   <SelectItem value="pending">En attente</SelectItem>
+                  <SelectItem value="rejected">Rejeté</SelectItem>
                   <SelectItem value="verified">Vérifié</SelectItem>
                 </SelectContent>
               </Select>
@@ -250,10 +256,15 @@ export default function AdminUsersPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-center">
-                        {userItem.isApproved ? (
+                        {userItem.isApproved === true ? (
                           <Badge variant="default" className="bg-blue-100 text-blue-800">
                             <UserCheck className="h-3 w-3 mr-1" />
                             Approuvé
+                          </Badge>
+                        ) : userItem.isApproved === false ? (
+                          <Badge variant="destructive">
+                            <UserX className="h-3 w-3 mr-1" />
+                            Rejeté
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="border-orange-200 text-orange-800">
@@ -275,7 +286,7 @@ export default function AdminUsersPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {!userItem.isApproved && (
+                            {!userItem.isApproved && userItem.isApproved !== false && (
                               <DropdownMenuItem
                                 onClick={() => handleApprove(userItem.userId || userItem.email, userItem.name || userItem.email)}
                                 disabled={approveUserMutation.isPending}

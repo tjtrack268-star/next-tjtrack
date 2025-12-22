@@ -5,21 +5,96 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Package, Truck, Clock, CheckCircle } from 'lucide-react'
+import { Package, Truck, Clock, CheckCircle, MapPin } from 'lucide-react'
 import { useCommandesMerchant } from '@/hooks/use-api'
 import { useAuth } from '@/contexts/auth-context'
 
 function DeliveryAssignmentComponent({ commandeId, onAssigned }: { commandeId: number, onAssigned: (result: any) => void }) {
   const [livreurs, setLivreurs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [location, setLocation] = useState<{lat: number, lon: number} | null>(null)
+  const [locationError, setLocationError] = useState<string | null>(null)
+  const { user } = useAuth()
 
   useEffect(() => {
-    loadLivreurs()
+    getMerchantLocation()
   }, [])
 
-  const loadLivreurs = async () => {
+  useEffect(() => {
+    if (location) {
+      loadLivreurs()
+    }
+  }, [location])
+
+  const getMerchantLocation = async () => {
     try {
-      const response = await fetch(`http://147.93.9.170:8080/api/v1.0/commandes/livreurs-disponibles?lat=48.8566&lon=2.3522`)
+      // Essayer d'abord de récupérer la localisation du marchand depuis le backend
+      const token = localStorage.getItem('tj-track-token')
+      const response = await fetch(`http://localhost:8080/api/v1.0/merchants/${user?.userId}/location`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.data?.latitude && data.data?.longitude) {
+          setLocation({ lat: data.data.latitude, lon: data.data.longitude })
+          return
+        }
+      }
+      
+      // Si endpoint non disponible (404) ou pas de localisation sauvegardée, utiliser la géolocalisation du navigateur
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords
+            setLocation({ lat: latitude, lon: longitude })
+          },
+          (error) => {
+            console.error('Erreur géolocalisation:', error)
+            setLocationError('Impossible d\'obtenir votre localisation')
+            // Utiliser Yaoundé, Cameroun (Etoudi) par défaut en cas d'erreur
+            setLocation({ lat: 3.8480, lon: 11.5021 })
+          }
+        )
+      } else {
+        setLocationError('Géolocalisation non supportée')
+        setLocation({ lat: 3.8480, lon: 11.5021 })
+      }
+    } catch (error) {
+      console.error('Erreur récupération localisation:', error)
+      // En cas d'erreur (endpoint non disponible), utiliser géolocalisation ou défaut
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords
+            setLocation({ lat: latitude, lon: longitude })
+          },
+          () => {
+            setLocationError('Erreur de localisation')
+            setLocation({ lat: 3.8480, lon: 11.5021 })
+          }
+        )
+      } else {
+        setLocationError('Erreur de localisation')
+        setLocation({ lat: 3.8480, lon: 11.5021 })
+      }
+    }
+  }
+
+  const loadLivreurs = async () => {
+    if (!location) return
+    
+    try {
+      const token = localStorage.getItem('tj-track-token')
+      const response = await fetch(`http://localhost:8080/api/v1.0/livreur/disponibles?lat=${location.lat}&lon=${location.lon}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
       const data = await response.json()
       if (data.success) {
         setLivreurs(data.data || [])
@@ -33,9 +108,17 @@ function DeliveryAssignmentComponent({ commandeId, onAssigned }: { commandeId: n
 
   const assignerLivreur = async (livreurId: number) => {
     try {
+      const token = localStorage.getItem('tj-track-token')
       const response = await fetch(
-        `http://147.93.9.170:8080/api/v1.0/commandes/${commandeId}/assigner-livreur?clientId=1&merchantId=1`,
-        { method: 'POST' }
+        `http://localhost:8080/api/v1.0/commandes/${commandeId}/assigner-livreur`,
+        { 
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ livreurId, merchantId: user?.userId })
+        }
       )
       const data = await response.json()
       if (data.success) {
@@ -46,36 +129,121 @@ function DeliveryAssignmentComponent({ commandeId, onAssigned }: { commandeId: n
     }
   }
 
-  if (loading) {
-    return <div className="text-center py-8">Chargement des livreurs...</div>
+  if (loading || !location) {
+    return (
+      <div className="text-center py-8">
+        {!location ? (
+          <div className="space-y-2">
+            <MapPin className="h-8 w-8 mx-auto text-blue-500 animate-pulse" />
+            <p>Détection de votre localisation...</p>
+            {locationError && <p className="text-red-500 text-sm">{locationError}</p>}
+          </div>
+        ) : (
+          <p>Chargement des livreurs...</p>
+        )}
+      </div>
+    )
+  }
+
+  const saveMerchantLocation = async () => {
+    if (!location) return
+    
+    try {
+      const token = localStorage.getItem('tj-track-token')
+      const response = await fetch(`http://localhost:8080/api/v1.0/merchants/${user?.userId}/location`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          latitude: location.lat,
+          longitude: location.lon
+        })
+      })
+      
+      if (response.ok) {
+        console.log('Localisation sauvegardée avec succès')
+      } else {
+        console.log('Endpoint de sauvegarde non disponible')
+      }
+    } catch (error) {
+      console.log('Endpoint de sauvegarde non encore déployé:', error)
+    }
   }
 
   return (
     <div className="space-y-3">
+      {location && (
+        <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg text-sm">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-blue-600" />
+            <span>Position: {location.lat.toFixed(4)}, {location.lon.toFixed(4)}</span>
+          </div>
+          <Button size="sm" variant="outline" onClick={saveMerchantLocation}>
+            Sauvegarder position
+          </Button>
+        </div>
+      )}
+      
       {livreurs.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
-          <p>Aucun livreur disponible dans votre zone</p>
+          <p>Aucun livreur disponible</p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="mt-2" 
+            onClick={getMerchantLocation}
+          >
+            Actualiser la position
+          </Button>
         </div>
       ) : (
-        livreurs.map((livreur) => (
-          <div key={livreur.id} className="flex items-center justify-between p-4 border rounded-lg">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <Truck className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <h4 className="font-medium">{livreur.nom}</h4>
-                <div className="flex items-center gap-4 text-sm text-gray-600">
-                  <span>{livreur.telephone}</span>
-                  <span>{livreur.distance?.toFixed(1)} km</span>
+        <div className="space-y-3">
+          {livreurs.some(l => l.zone === 'Proximité') && (
+            <div className="text-sm font-medium text-green-600 mb-2">
+              ✓ Livreurs à proximité disponibles
+            </div>
+          )}
+          {livreurs.some(l => l.zone === 'Autre ville') && !livreurs.some(l => l.zone === 'Proximité') && (
+            <div className="text-sm font-medium text-orange-600 mb-2">
+              ⚠️ Aucun livreur à proximité - Livreurs d'autres zones disponibles
+            </div>
+          )}
+          {livreurs.map((livreur) => (
+            <div key={livreur.id} className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  livreur.zone === 'Proximité' ? 'bg-green-100' : 'bg-orange-100'
+                }`}>
+                  <Truck className={`h-5 w-5 ${
+                    livreur.zone === 'Proximité' ? 'text-green-600' : 'text-orange-600'
+                  }`} />
+                </div>
+                <div>
+                  <h4 className="font-medium">{livreur.nom}</h4>
+                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                    <span>{livreur.telephone}</span>
+                    <span>{livreur.distance?.toFixed(1)} km</span>
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      livreur.zone === 'Proximité' 
+                        ? 'bg-green-100 text-green-700' 
+                        : 'bg-orange-100 text-orange-700'
+                    }`}>
+                      {livreur.zone}
+                    </span>
+                  </div>
+                  {livreur.note && (
+                    <p className="text-xs text-gray-500 mt-1">{livreur.note}</p>
+                  )}
                 </div>
               </div>
+              <Button onClick={() => assignerLivreur(livreur.id)}>
+                Assigner
+              </Button>
             </div>
-            <Button onClick={() => assignerLivreur(livreur.id)}>
-              Assigner
-            </Button>
-          </div>
-        ))
+          ))}
+        </div>
       )}
     </div>
   )
@@ -245,19 +413,10 @@ export default function LivraisonsPage() {
                       Fermer
                     </Button>
                   </div>
-                  <div className="space-y-4">
-                    <div className="text-center py-8">
-                      <Truck className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                      <h3 className="text-lg font-medium mb-2">Livreurs Disponibles</h3>
-                      <p className="text-gray-600 mb-6">Sélectionnez un livreur pour cette commande</p>
-                      
-                      <DeliveryAssignmentComponent 
-                        commandeId={selectedCommande.id}
-                        onAssigned={handleDeliveryAssigned}
-                      />
-
-                    </div>
-                  </div>
+                  <DeliveryAssignmentComponent 
+                    commandeId={selectedCommande.id}
+                    onAssigned={handleDeliveryAssigned}
+                  />
                 </div>
               </div>
             </div>
@@ -282,7 +441,6 @@ export default function LivraisonsPage() {
                       <span className="text-sm">{assignedDelivery.telephone}</span>
                     </div>
                   </div>
-                  
                   <div className="bg-blue-50 rounded-lg p-6 text-center">
                     <Truck className="h-8 w-8 mx-auto mb-2 text-blue-600" />
                     <p className="text-sm text-gray-600">
@@ -290,7 +448,6 @@ export default function LivraisonsPage() {
                       <span className="text-xs">Temps estimé: {assignedDelivery.tempsEstime}</span>
                     </p>
                   </div>
-                  
                   <Badge className="w-full justify-center bg-green-500 text-white">
                     <CheckCircle className="h-4 w-4 mr-1" />
                     Livraison en cours

@@ -750,7 +750,7 @@ export function useCreateCommandeClient() {
 export function useDeleteCommandeClient() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: number) => apiClient.delete<void>(`/api/v1.0/commandes-client/${id}`),
+    mutationFn: (id: number) => apiClient.delete<void>(`/commandes/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.commandesClient })
       queryClient.invalidateQueries({ queryKey: ["commandesMerchant"] })
@@ -783,12 +783,24 @@ export function useExpedierCommande() {
 export function useUpdateCommandeStatus() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, statut }: { id: number; statut: string }) => 
-      apiClient.put<ApiResponse<Commande>>(`/commandes/${id}/statut`, { statut }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["commandes"] })
-      queryClient.invalidateQueries({ queryKey: ["commandesMerchant"] })
+    mutationFn: ({ id, statut }: { id: number; statut: string }) => {
+      console.log(`Updating order ${id} to status ${statut}`);
+      return apiClient.put<ApiResponse<Commande>>(`/commandes/${id}/statut`, { statut });
     },
+    onSuccess: (data, variables) => {
+      console.log(`Order ${variables.id} status updated successfully`);
+      // Invalidate and refetch related queries
+      queryClient.invalidateQueries({ queryKey: ["commandes"] });
+      queryClient.invalidateQueries({ queryKey: ["commandesMerchant"] });
+      // Force immediate refetch for better UX
+      queryClient.refetchQueries({ queryKey: ["commandesMerchant"] });
+    },
+    onError: (error, variables) => {
+      console.error(`Failed to update order ${variables.id}:`, error);
+    },
+    // Reduce timeout for better UX
+    retry: 2,
+    retryDelay: 1000,
   })
 }
 
@@ -882,8 +894,12 @@ export function useApproveUser() {
     mutationFn: ({ userId, approvedBy }: { userId: string; approvedBy: string }) =>
       apiClient.post<Record<string, unknown>>(`/admin/approve-user/${userId}`, undefined, { approvedBy }),
     onSuccess: () => {
+      // Invalider toutes les queries liées aux utilisateurs
       queryClient.invalidateQueries({ queryKey: queryKeys.pendingUsers })
       queryClient.invalidateQueries({ queryKey: queryKeys.allUsers })
+      queryClient.invalidateQueries({ queryKey: ["userAnalytics"] })
+      // Forcer un refetch immédiat
+      queryClient.refetchQueries({ queryKey: queryKeys.allUsers })
     },
   })
 }
