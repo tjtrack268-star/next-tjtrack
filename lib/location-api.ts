@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8080/api/v1.0/locations'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1.0"
 
 export interface Ville {
   id: number
@@ -20,7 +20,7 @@ export interface Quartier {
 
 export const locationApi = {
   async getVilles(): Promise<Ville[]> {
-    const response = await fetch(`${API_BASE_URL}/villes`)
+    const response = await fetch(`${API_BASE_URL}/locations/villes`)
     if (!response.ok) {
       throw new Error('Erreur lors de la récupération des villes')
     }
@@ -29,7 +29,7 @@ export const locationApi = {
   },
 
   async getQuartiersByVille(villeId: number): Promise<Quartier[]> {
-    const response = await fetch(`${API_BASE_URL}/quartiers/${villeId}`)
+    const response = await fetch(`${API_BASE_URL}/locations/quartiers/${villeId}`)
     if (!response.ok) {
       throw new Error('Erreur lors de la récupération des quartiers')
     }

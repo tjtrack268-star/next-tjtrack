@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useMerchantProduits, useModifierVisibiliteProduit, useAjouterProduitMerchant, useAllCategories } from "@/hooks/use-api"
 import { useAuth } from "@/contexts/auth-context"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { buildImageUrl } from "@/lib/image-utils"
 
 export default function MerchantProductsPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -334,9 +335,12 @@ export default function MerchantProductsPage() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <img
-                        src={product.images?.[0] || "/placeholder.svg?height=48&width=48&query=product"}
+                        src={buildImageUrl(product.images?.[0]) || "/placeholder.svg?height=48&width=48&query=product"}
                         alt={product.nom}
                         className="h-12 w-12 rounded-lg object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg"
+                        }}
                       />
                       <div>
                         <p className="font-medium">{product.nom}</p>

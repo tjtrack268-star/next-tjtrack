@@ -28,6 +28,7 @@ import {
 } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
 import { useToast } from "@/hooks/use-toast"
+import { buildImageUrl } from "@/lib/image-utils"
 import type { ProduitEcommerceDto } from "@/types/api"
 
 interface ProductModalProps {
@@ -47,7 +48,9 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
 
   const formatPrice = (price: number) => new Intl.NumberFormat("fr-FR").format(price) + " XAF"
   
-  const images = product.images && product.images.length > 0 ? product.images : ["/placeholder.svg"]
+  const images = product.images && product.images.length > 0 
+    ? product.images.map(img => buildImageUrl(img) || "/placeholder.svg")
+    : ["/placeholder.svg"]
 
   const handleAddToCart = async () => {
     try {
@@ -58,7 +61,7 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
       await addItem(articleId, quantity, {
         name: product.nom!,
         price: Number(product.prix || 0),
-        image: images[0],
+        image: images[0] || "/placeholder.svg",
       })
       toast({
         title: "Ajouté au panier",

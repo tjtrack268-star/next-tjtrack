@@ -38,6 +38,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Spinner } from "@/components/ui/spinner"
 import { useQuery } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api"
+import { buildImageUrl } from "@/lib/image-utils"
 import type { ProduitEcommerceDto } from "@/types/api"
 import { CheckoutModal } from "@/components/checkout/checkout-modal"
 import { ProductModal } from "@/components/product/product-modal"
@@ -108,7 +109,7 @@ export default function HomePage() {
       await addItem(articleId, 1, {
         name: product.nom!,
         price: Number(product.prix || 0),
-        image: product.images?.[0] || "/placeholder.svg",
+        image: buildImageUrl(product.images?.[0]) || "/placeholder.svg",
       })
       toast({
         title: "Ajouté au panier",
@@ -139,7 +140,7 @@ export default function HomePage() {
     >
       <div className="relative aspect-square bg-muted/30 overflow-hidden">
         <img
-          src={product.images?.[0] || "/placeholder.svg"}
+          src={buildImageUrl(product.images?.[0]) || "/placeholder.svg"}
           alt={product.nom || "Produit"}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
