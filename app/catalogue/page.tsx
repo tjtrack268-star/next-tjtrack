@@ -15,6 +15,7 @@ import { CartDrawer } from "@/components/cart/cart-drawer"
 import { ProductCard } from "@/components/cards/product-card"
 import { Spinner } from "@/components/ui/spinner"
 import { useCatalogue, useCategories } from "@/hooks/use-api"
+import { ProductSidebar } from "@/components/layout/product-sidebar"
 import { cn } from "@/lib/utils"
 import type { ArticleDto } from "@/types/api"
 
@@ -109,11 +110,14 @@ export default function CataloguePage() {
       <CartDrawer />
 
       <main className="container mx-auto px-4 py-8">
-        {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Catalogue</h1>
-          <p className="text-muted-foreground">Découvrez notre sélection de {sortedProducts.length} produits</p>
-        </div>
+        <div className="flex gap-8">
+          {/* Main Content */}
+          <div className="flex-1 min-w-0">
+            {/* Page Header */}
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold mb-2">Catalogue</h1>
+              <p className="text-muted-foreground">Découvrez notre sélection de {sortedProducts.length} produits</p>
+            </div>
 
         {/* Filters Bar */}
         <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -321,6 +325,11 @@ export default function CataloguePage() {
             ))}
           </div>
         )}
+          </div>
+
+          {/* Sidebar */}
+          <ProductSidebar />
+        </div>
       </main>
     </div>
   )

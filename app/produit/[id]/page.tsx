@@ -29,13 +29,14 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Spinner } from "@/components/ui/spinner"
 import { useToast } from "@/hooks/use-toast"
 import { useCart } from "@/contexts/cart-context"
+import { ProductSidebar } from "@/components/layout/product-sidebar"
 import { apiClient } from "@/lib/api"
 import type { ProduitDetailDto, ProduitEcommerceDto } from "@/types/api"
 
 function useProductDetail(id: string) {
   return useQuery({
     queryKey: ["productDetail", id],
-    queryFn: () => apiClient.get<ProduitDetailDto>(`/ecommerce/produits/${id}`),
+    queryFn: () => apiClient.get<ProduitDetailDto>(`/catalogue/produits/${id}`),
     enabled: !!id,
   })
 }
@@ -143,7 +144,10 @@ export default function ProductPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-6">
-        {/* Breadcrumb */}
+        <div className="flex gap-8">
+          {/* Main Content */}
+          <div className="flex-1 min-w-0">
+            {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
           <Button variant="ghost" size="sm" onClick={() => router.push("/")}>
             Accueil
@@ -446,6 +450,11 @@ export default function ProductPage() {
             </div>
           </div>
         )}
+          </div>
+
+          {/* Sidebar */}
+          <ProductSidebar />
+        </div>
       </div>
     </div>
   )
