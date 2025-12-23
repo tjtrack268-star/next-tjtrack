@@ -68,11 +68,11 @@ export function ClientDashboard() {
     )
   }
 
-  const recentOrders = orders?.slice(0, 5) || []
-  const totalSpent = orders?.reduce((sum, order) => sum + order.montantTotal, 0) || 0
-  const ordersInProgress = orders?.filter(order => 
+  const recentOrders = Array.isArray(orders) ? orders.slice(0, 5) : []
+  const totalSpent = Array.isArray(orders) ? orders.reduce((sum, order) => sum + order.montantTotal, 0) : 0
+  const ordersInProgress = Array.isArray(orders) ? orders.filter(order => 
     ["EN_ATTENTE", "CONFIRMEE", "EN_PREPARATION", "EXPEDIEE"].includes(order.statut)
-  ).length || 0
+  ).length : 0
 
   return (
     <div className="space-y-6">
@@ -97,7 +97,7 @@ export function ClientDashboard() {
             </div>
             <div className="mt-4">
               <p className="text-sm text-muted-foreground">Mes commandes</p>
-              <p className="text-2xl font-bold mt-1">{orders?.length || 0}</p>
+              <p className="text-2xl font-bold mt-1">{Array.isArray(orders) ? orders.length : 0}</p>
               <p className="text-xs text-muted-foreground mt-1">
                 {ordersInProgress} en cours
               </p>

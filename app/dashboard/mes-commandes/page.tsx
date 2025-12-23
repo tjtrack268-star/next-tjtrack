@@ -1,317 +1,351 @@
 "use client"
 
 import { useState } from "react"
-import {
-  Search,
+import { useQuery } from "@tanstack/react-query"
+import { 
+  Package, 
+  Clock, 
+  CheckCircle, 
+  XCircle, 
+  Truck, 
   Eye,
-  Truck,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Package,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  ShoppingBag,
+  Star,
+  Download,
+  RefreshCw
 } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useAuth } from "@/contexts/auth-context"
-import { useCommandesClient } from "@/hooks/use-api"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Spinner } from "@/components/ui/spinner"
+import { useToast } from "@/hooks/use-toast"
+import { apiClient } from "@/lib/api"
 
-interface Commande {
-  id: number
-  numeroCommande: string
-  dateCommande: string
-  statut: "EN_ATTENTE" | "CONFIRMEE" | "EN_PREPARATION" | "EXPEDIEE" | "LIVREE" | "ANNULEE"
-  montantTotal: number
-  articles: number
+function useUserOrders() {
+  return useQuery({
+    queryKey: ["userOrders"],
+    queryFn: async () => {
+      const response = await apiClient.get("/commandes/client") as any
+      return Array.isArray(response) ? response : (response.data || [])
+    },
+  })
 }
 
-const statutStyles = {
-  EN_ATTENTE: { label: "En attente", variant: "secondary" as const, icon: Clock, color: "text-amber-500" },
-  CONFIRMEE: { label: "Confirmée", variant: "default" as const, icon: CheckCircle, color: "text-blue-500" },
-  EN_PREPARATION: { label: "En préparation", variant: "default" as const, icon: Package, color: "text-purple-500" },
-  EXPEDIEE: { label: "Expédiée", variant: "default" as const, icon: Truck, color: "text-primary" },
-  LIVREE: { label: "Livrée", variant: "default" as const, icon: CheckCircle, color: "text-emerald-500" },
-  ANNULEE: { label: "Annulée", variant: "destructive" as const, icon: XCircle, color: "text-red-500" },
+const statusConfig = {
+  "EN_ATTENTE": { label: "En attente", color: "bg-yellow-500", icon: Clock },
+  "CONFIRMEE": { label: "Confirmée", color: "bg-blue-500", icon: CheckCircle },
+  "EN_PREPARATION": { label: "En préparation", color: "bg-orange-500", icon: Package },
+  "EXPEDIEE": { label: "Expédiée", color: "bg-purple-500", icon: Truck },
+  "EN_ATTENTE_CONFIRMATION": { label: "Livrée - À confirmer", color: "bg-amber-500", icon: Clock },
+  "LIVREE": { label: "Livrée", color: "bg-green-500", icon: CheckCircle },
+  "ANNULEE": { label: "Annulée", color: "bg-red-500", icon: XCircle },
 }
 
-export default function MesCommandesPage() {
-  const { user } = useAuth()
-  const [search, setSearch] = useState("")
-  const [statutFilter, setStatutFilter] = useState("all")
-  const [selectedCommande, setSelectedCommande] = useState<Commande | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10
+const paymentStatusConfig = {
+  "EN_ATTENTE": { label: "En attente", color: "bg-yellow-500" },
+  "PAYE": { label: "Payé", color: "bg-green-500" },
+  "PARTIAL": { label: "Partiel", color: "bg-orange-500" },
+  "ECHUE": { label: "Échu", color: "bg-red-500" },
+}
 
-  // Fetch user's orders from API
-  const { data: commandesData = [], isLoading, error, refetch } = useCommandesClient()
+export default function MyOrdersPage() {
+  const { toast } = useToast()
+  const { data: orders, isLoading, error, refetch } = useUserOrders()
+  const [selectedTab, setSelectedTab] = useState("all")
 
-  // Map and filter for current user
-  const commandes: Commande[] = (commandesData as unknown[]).map((cmd: unknown) => {
-    const c = cmd as Record<string, unknown>
-    return {
-      id: (c.id as number) || 0,
-      numeroCommande: (c.code as string) || (c.numeroCommande as string) || `CMD-${c.id}`,
-      dateCommande: (c.dateCommande as string) || new Date().toISOString(),
-      statut: ((c.statut as string) || "EN_ATTENTE") as Commande["statut"],
-      montantTotal: (c.montantTotal as number) || (c.totalTtc as number) || 0,
-      articles: (c.nombreArticles as number) || (c.articles as number) || 0,
+  const formatPrice = (price: number) => new Intl.NumberFormat("fr-FR").format(price) + " XAF"
+  const formatDate = (date: string) => new Date(date).toLocaleDateString("fr-FR")
+
+  const filteredOrders = Array.isArray(orders) ? orders.filter((order: any) => {
+    if (selectedTab === "all") return true
+    if (selectedTab === "pending") return ["EN_ATTENTE", "CONFIRMEE", "EN_PREPARATION"].includes(order.statut)
+    if (selectedTab === "shipped") return ["EXPEDIEE"].includes(order.statut)
+    if (selectedTab === "delivered") return ["LIVREE"].includes(order.statut)
+    if (selectedTab === "cancelled") return ["ANNULEE"].includes(order.statut)
+    return true
+  }) : []
+
+  const handleTrackOrder = (orderNumber: string) => {
+    window.open(`/suivi/${orderNumber}`, '_blank')
+  }
+
+  const handleReorder = async (orderId: number) => {
+    try {
+      toast({
+        title: "Commande ajoutée au panier",
+        description: "Tous les articles ont été ajoutés à votre panier",
+      })
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de recommander",
+        variant: "destructive",
+      })
     }
-  })
+  }
 
-  const filteredCommandes = commandes.filter((cmd) => {
-    const matchSearch = cmd.numeroCommande.toLowerCase().includes(search.toLowerCase())
-    const matchStatut = statutFilter === "all" || cmd.statut === statutFilter
-    return matchSearch && matchStatut
-  })
+  const handleDownloadInvoice = (orderId: number) => {
+    window.open(`/api/factures/${orderId}/pdf`, '_blank')
+  }
 
-  const totalPages = Math.ceil(filteredCommandes.length / itemsPerPage)
-  const paginatedCommandes = filteredCommandes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+  const handleLeaveReview = (orderId: number) => {
+    window.location.href = `/commandes/${orderId}/avis`
+  }
+
+  const handleConfirmDelivery = async (orderId: number) => {
+    try {
+      await apiClient.put(`/commandes/livraisons/${orderId}/confirmer-reception`)
+      toast({
+        title: "Livraison confirmée",
+        description: "Merci d'avoir confirmé la réception de votre commande",
+      })
+      refetch()
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de confirmer la livraison",
+        variant: "destructive",
+      })
+    }
+  }
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center py-12">
+        <Spinner size="lg" />
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <p className="text-destructive">Erreur lors du chargement de vos commandes</p>
-        <Button onClick={() => refetch()}>Réessayer</Button>
+      <div className="text-center py-12">
+        <h1 className="text-2xl font-bold mb-4">Erreur de chargement</h1>
+        <Button onClick={() => refetch()}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Réessayer
+        </Button>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Mes Commandes</h1>
-          <p className="text-muted-foreground">Suivez l'état de vos commandes</p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold">Mes commandes</h1>
+        <p className="text-muted-foreground">
+          Suivez vos commandes et gérez vos achats
+        </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="glass-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <ShoppingBag className="h-4 w-4" />
-              Total
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{commandes.length}</div>
-          </CardContent>
-        </Card>
-        <Card className="glass-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Truck className="h-4 w-4 text-primary" />
-              En cours
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">
-              {commandes.filter((c) => ["CONFIRMEE", "EN_PREPARATION", "EXPEDIEE"].includes(c.statut)).length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="glass-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-emerald-500" />
-              Livrées
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-500">
-              {commandes.filter((c) => c.statut === "LIVREE").length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="glass-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Clock className="h-4 w-4 text-amber-500" />
-              En attente
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-500">
-              {commandes.filter((c) => c.statut === "EN_ATTENTE").length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="all">
+            Toutes ({Array.isArray(orders) ? orders.length : 0})
+          </TabsTrigger>
+          <TabsTrigger value="pending">
+            En cours ({Array.isArray(filteredOrders) ? filteredOrders.filter((o: any) => ["EN_ATTENTE", "CONFIRMEE", "EN_PREPARATION"].includes(o.statut)).length : 0})
+          </TabsTrigger>
+          <TabsTrigger value="shipped">
+            Expédiées ({Array.isArray(filteredOrders) ? filteredOrders.filter((o: any) => o.statut === "EXPEDIEE").length : 0})
+          </TabsTrigger>
+          <TabsTrigger value="delivered">
+            Livrées ({Array.isArray(filteredOrders) ? filteredOrders.filter((o: any) => o.statut === "LIVREE").length : 0})
+          </TabsTrigger>
+          <TabsTrigger value="cancelled">
+            Annulées ({Array.isArray(filteredOrders) ? filteredOrders.filter((o: any) => o.statut === "ANNULEE").length : 0})
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Rechercher par numéro de commande..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={statutFilter} onValueChange={setStatutFilter}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Filtrer par statut" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous les statuts</SelectItem>
-            <SelectItem value="EN_ATTENTE">En attente</SelectItem>
-            <SelectItem value="CONFIRMEE">Confirmée</SelectItem>
-            <SelectItem value="EN_PREPARATION">En préparation</SelectItem>
-            <SelectItem value="EXPEDIEE">Expédiée</SelectItem>
-            <SelectItem value="LIVREE">Livrée</SelectItem>
-            <SelectItem value="ANNULEE">Annulée</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+        <TabsContent value={selectedTab} className="space-y-4">
+          {filteredOrders.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Package className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Aucune commande</h3>
+                <p className="text-muted-foreground text-center mb-4">
+                  {selectedTab === "all" 
+                    ? "Vous n'avez pas encore passé de commande"
+                    : `Aucune commande dans cette catégorie`
+                  }
+                </p>
+                <Button onClick={() => window.location.href = "/"}>
+                  Découvrir nos produits
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredOrders.map((order: any) => {
+              const StatusIcon = (statusConfig as any)[order.statut]?.icon || Package
+              const statusColor = (statusConfig as any)[order.statut]?.color || "bg-gray-500"
+              const statusLabel = (statusConfig as any)[order.statut]?.label || order.statut
+              
+              const paymentStatusColor = (paymentStatusConfig as any)[order.statutPaiement || "EN_ATTENTE"]?.color || "bg-gray-500"
+              const paymentStatusLabel = (paymentStatusConfig as any)[order.statutPaiement || "EN_ATTENTE"]?.label || "En attente"
 
-      {/* Table */}
-      <Card className="glass-card">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>N° Commande</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Articles</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead className="text-right">Montant</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedCommandes.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    Aucune commande trouvée
-                  </TableCell>
-                </TableRow>
-              ) : (
-                paginatedCommandes.map((commande) => {
-                  const statut = statutStyles[commande.statut] || statutStyles.EN_ATTENTE
-                  const StatutIcon = statut.icon
-
-                  return (
-                    <TableRow key={commande.id}>
-                      <TableCell className="font-mono font-medium">{commande.numeroCommande}</TableCell>
-                      <TableCell>
-                        {new Date(commande.dateCommande).toLocaleDateString("fr-FR", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </TableCell>
-                      <TableCell>{commande.articles} article(s)</TableCell>
-                      <TableCell>
-                        <Badge variant={statut.variant} className="gap-1">
-                          <StatutIcon className="h-3 w-3" />
-                          {statut.label}
+              return (
+                <Card key={order.id} className="overflow-hidden">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-lg">
+                          Commande #{order.numeroCommande}
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          Passée le {formatDate(order.dateCommande)}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <Badge className={`${statusColor} text-white`}>
+                          <StatusIcon className="h-3 w-3 mr-1" />
+                          {statusLabel}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {commande.montantTotal.toLocaleString("fr-FR")} XAF
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => setSelectedCommande(commande)}>
-                          <Eye className="h-4 w-4" />
+                        <Badge className={`${paymentStatusColor} text-white`}>
+                          {paymentStatusLabel}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="space-y-4">
+                    {/* Order Items */}
+                    <div className="space-y-3">
+                      {order.items?.map((item: any) => (
+                        <div key={item.id} className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg">
+                          <img
+                            src={item.article.photo || "/placeholder.svg"}
+                            alt={item.article.designation}
+                            className="h-16 w-16 rounded-lg object-cover"
+                          />
+                          <div className="flex-1">
+                            <h4 className="font-medium">{item.article.designation}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              Quantité: {item.quantite} × {formatPrice(item.prixUnitaire)}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold">{formatPrice(item.sousTotal)}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Order Summary */}
+                    <div className="flex items-center justify-between pt-4 border-t">
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">
+                          {order.items?.length || 0} article(s)
+                        </p>
+                        {order.dateLivraisonPrevue && (
+                          <p className="text-sm text-muted-foreground">
+                            Livraison prévue: {formatDate(order.dateLivraisonPrevue)}
+                          </p>
+                        )}
+                        {order.dateLivraisonEffective && (
+                          <p className="text-sm text-green-600">
+                            Livré le: {formatDate(order.dateLivraisonEffective)}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold">
+                          Total: {formatPrice(order.montantTotal)}
+                        </p>
+                        {order.fraisLivraison && order.fraisLivraison > 0 && (
+                          <p className="text-sm text-muted-foreground">
+                            (dont {formatPrice(order.fraisLivraison)} de livraison)
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Delivery Address */}
+                    {order.adresseLivraison && (
+                      <div className="p-3 bg-muted/30 rounded-lg">
+                        <h5 className="font-medium mb-2">Adresse de livraison</h5>
+                        <p className="text-sm text-muted-foreground">
+                          {order.adresseLivraison.nom} {order.adresseLivraison.prenom}<br />
+                          {order.adresseLivraison.adresse}<br />
+                          {order.adresseLivraison.ville}, {order.adresseLivraison.codePostal}<br />
+                          {order.adresseLivraison.telephone}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex flex-wrap gap-2 pt-4 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleTrackOrder(order.numeroCommande)}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Suivre
+                      </Button>
+                      
+                      {order.statut === "EN_ATTENTE_CONFIRMATION" && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleConfirmDelivery(order.id)}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Confirmer réception
                         </Button>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              )}
-            </TableBody>
-          </Table>
-
-          {/* Pagination */}
-          <div className="flex items-center justify-between px-4 py-4 border-t">
-            <div className="text-sm text-muted-foreground">{filteredCommandes.length} commande(s)</div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-sm">
-                Page {currentPage} sur {totalPages || 1}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages || totalPages === 0}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Detail Dialog */}
-      <Dialog open={!!selectedCommande} onOpenChange={() => setSelectedCommande(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Détails de la commande</DialogTitle>
-            <DialogDescription>{selectedCommande?.numeroCommande}</DialogDescription>
-          </DialogHeader>
-          {selectedCommande && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Date de commande</p>
-                  <p className="font-medium">
-                    {new Date(selectedCommande.dateCommande).toLocaleDateString("fr-FR", {
-                      day: "2-digit",
-                      month: "long",
-                      year: "numeric",
-                    })}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Statut</p>
-                  <Badge variant={statutStyles[selectedCommande.statut].variant} className="mt-1">
-                    {statutStyles[selectedCommande.statut].label}
-                  </Badge>
-                </div>
-              </div>
-              <div className="flex justify-between items-center pt-4 border-t">
-                <div>
-                  <p className="text-sm text-muted-foreground">Nombre d'articles</p>
-                  <p className="font-medium">{selectedCommande.articles}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Total</p>
-                  <p className="text-xl font-bold text-primary">
-                    {selectedCommande.montantTotal.toLocaleString("fr-FR")} XAF
-                  </p>
-                </div>
-              </div>
-            </div>
+                      )}
+                      
+                      {order.statut === "LIVREE" && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleLeaveReview(order.id)}
+                          >
+                            <Star className="h-4 w-4 mr-2" />
+                            Évaluer
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleReorder(order.id)}
+                          >
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Recommander
+                          </Button>
+                        </>
+                      )}
+                      
+                      {order.statutPaiement === "PAYE" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownloadInvoice(order.id)}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Facture
+                        </Button>
+                      )}
+                      
+                      {order.statut === "EN_ATTENTE" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Annuler
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })
           )}
-        </DialogContent>
-      </Dialog>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

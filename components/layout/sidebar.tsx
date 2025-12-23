@@ -193,7 +193,7 @@ const getMenuItems = (role?: string) => {
     {
       title: "Mes Achats",
       items: [
-        { name: "Mes Commandes", href: "/mes-commandes", icon: ShoppingBag },
+        { name: "Mes Commandes", href: "/dashboard/mes-commandes", icon: ShoppingBag },
         { name: "Mes Favoris", href: "/favoris", icon: Store },
       ],
     },
