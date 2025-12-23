@@ -9,6 +9,8 @@ import { Package, Truck, Clock, CheckCircle, MapPin } from 'lucide-react'
 import { useCommandesMerchant } from '@/hooks/use-api'
 import { useAuth } from '@/contexts/auth-context'
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1.0"
+
 function DeliveryAssignmentComponent({ commandeId, onAssigned }: { commandeId: number, onAssigned: (result: any) => void }) {
   const [livreurs, setLivreurs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -32,7 +34,7 @@ function DeliveryAssignmentComponent({ commandeId, onAssigned }: { commandeId: n
     try {
       // Essayer d'abord de récupérer la localisation du marchand depuis le backend
       const token = localStorage.getItem('tj-track-token')
-      const response = await fetch(`http://localhost:8080/api/v1.0/merchants/${user?.userId}/location`, {
+      const response = await fetch(`${API_BASE_URL}/merchants/${user?.userId}/location`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -91,7 +93,7 @@ function DeliveryAssignmentComponent({ commandeId, onAssigned }: { commandeId: n
     
     try {
       const token = localStorage.getItem('tj-track-token')
-      const response = await fetch(`http://localhost:8080/api/v1.0/ecommerce/livreur/disponibles?lat=${location.lat}&lon=${location.lon}`, {
+      const response = await fetch(`${API_BASE_URL}/ecommerce/livreur/disponibles?lat=${location.lat}&lon=${location.lon}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -120,7 +122,7 @@ function DeliveryAssignmentComponent({ commandeId, onAssigned }: { commandeId: n
       }
       
       const token = localStorage.getItem('tj-track-token')
-      const url = `http://localhost:8080/api/v1.0/commandes/${commandeId}/assigner-livreur?clientId=1&merchantEmail=${encodeURIComponent(user.userId)}&livreurId=${livreurId}`
+      const url = `${API_BASE_URL}/commandes/${commandeId}/assigner-livreur?clientId=1&merchantEmail=${encodeURIComponent(user.userId)}&livreurId=${livreurId}`
       
       const response = await fetch(url, { 
         method: 'POST',
@@ -170,7 +172,7 @@ function DeliveryAssignmentComponent({ commandeId, onAssigned }: { commandeId: n
     
     try {
       const token = localStorage.getItem('tj-track-token')
-      const response = await fetch(`http://localhost:8080/api/v1.0/merchants/${user?.userId}/location`, {
+      const response = await fetch(`${API_BASE_URL}/merchants/${user?.userId}/location`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
