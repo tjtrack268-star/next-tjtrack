@@ -45,7 +45,7 @@ export default function DeliveryNotifications() {
 
   const fetchNotifications = async () => {
     try {
-      const response = await apiClient.get(`/notifications/livreur/${user?.userId}`)
+      const response = await apiClient.get(`/notifications/livreur/${user?.userId}`) as any
       const notifs = Array.isArray(response) ? response : (response.data || [])
       setNotifications(notifs)
       setUnreadCount(notifs.filter((n: Notification) => !n.read).length)

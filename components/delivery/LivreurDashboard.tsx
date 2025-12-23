@@ -94,11 +94,19 @@ export default function LivreurDashboard() {
     queryKey: ["deliveryOrders", user?.userId],
     queryFn: async () => {
       try {
-        const response = await apiClient.get(`/commandes/livreur`)
-        return Array.isArray(response) ? response : (response.data || [])
+        const response = await apiClient.get(`/commandes/livreur`) as any
+        console.log('Raw API response:', response) // Debug log
+        const ordersData = Array.isArray(response) ? response : (response.data || [])
+        console.log('Processed orders:', ordersData) // Debug log
+        console.log('Orders by status:', {
+          ASSIGNEE: ordersData.filter((o: any) => o.statut === 'ASSIGNEE').length,
+          ACCEPTEE: ordersData.filter((o: any) => o.statut === 'ACCEPTEE').length,
+          EN_COURS: ordersData.filter((o: any) => o.statut === 'EN_COURS').length,
+          LIVREE: ordersData.filter((o: any) => o.statut === 'LIVREE').length
+        })
+        return ordersData
       } catch (error) {
         console.error('Error fetching delivery orders:', error)
-        // Return empty array for now to prevent crashes
         return []
       }
     },
@@ -116,7 +124,10 @@ export default function LivreurDashboard() {
         title: "Commande acceptée",
         description: "Vous avez accepté cette livraison",
       })
+      // Refresh all tabs to update counts
       queryClient.invalidateQueries({ queryKey: ["deliveryOrders"] })
+      // Switch to accepted tab to show the accepted order
+      setSelectedTab("acceptees")
     },
     onError: () => {
       toast({
@@ -186,12 +197,15 @@ export default function LivreurDashboard() {
   })
 
   const filteredOrders = orders?.filter((order: DeliveryOrder) => {
+    console.log(`Filtering order ${order.id} with status ${order.statut} for tab ${selectedTab}`) // Debug log
     if (selectedTab === "nouvelles") return order.statut === "ASSIGNEE"
     if (selectedTab === "acceptees") return order.statut === "ACCEPTEE"
     if (selectedTab === "en-cours") return order.statut === "EN_COURS"
     if (selectedTab === "terminees") return ["LIVREE", "REFUSEE"].includes(order.statut)
     return true
   }) || []
+
+  console.log(`Filtered orders for tab ${selectedTab}:`, filteredOrders) // Debug log
 
   const handleAcceptOrder = (orderId: number) => {
     acceptOrderMutation.mutate(orderId)

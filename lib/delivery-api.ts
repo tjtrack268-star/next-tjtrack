@@ -4,11 +4,17 @@ export const deliveryApi = {
   // Get available delivery personnel near a location
   async getLivreursDisponibles(lat: number, lon: number, radius: number = 10) {
     try {
-      const response = await apiClient.get(`/livreurs/disponibles?lat=${lat}&lon=${lon}&radius=${radius}`)
+      // Use default coordinates if null/undefined
+      const safeLat = lat || 0
+      const safeLon = lon || 0
+      const response = await apiClient.get(`/commandes/livreur/disponibles?lat=${safeLat}&lon=${safeLon}`)
       return response
     } catch (error) {
       console.error('Error fetching available delivery personnel:', error)
-      return apiClient.get(`/ecommerce/livreur/disponibles?lat=${lat}&lon=${lon}`)
+      // Fallback with safe coordinates
+      const safeLat = lat || 0
+      const safeLon = lon || 0
+      return apiClient.get(`/commandes/livreur/disponibles?lat=${safeLat}&lon=${safeLon}`)
     }
   },
 
@@ -24,14 +30,18 @@ export const deliveryApi = {
       return response
     } catch (error) {
       console.error('Error assigning delivery person:', error)
-      return apiClient.post(`/commandes/${commandeId}/assigner-livreur?clientId=1&merchantId=${merchantId}`)
+      return apiClient.post(`/commandes/${commandeId}/assigner-livreur`, {
+        clientId: 1,
+        merchantId,
+        livreurId
+      })
     }
   },
 
   // Get delivery orders for a specific delivery person
   async getCommandesLivreur(livreurId: string) {
     try {
-      const response = await apiClient.get(`/livraisons/livreur/${livreurId}`)
+      const response = await apiClient.get(`/commandes/livreur/${livreurId}`)
       return response
     } catch (error) {
       console.error('Error fetching delivery orders:', error)
@@ -39,16 +49,62 @@ export const deliveryApi = {
     }
   },
 
+  // Get accepted orders for delivery person
+  async getCommandesAcceptees(livreurId: string) {
+    try {
+      // Try backend filtering first
+      return await apiClient.get(`/commandes/livreur/${livreurId}?statut=ACCEPTEE`)
+    } catch (error) {
+      // Fallback: get all and filter client-side
+      console.log('Backend filtering failed, using client-side filtering')
+      const response = await apiClient.get(`/commandes/livreur/${livreurId}`) as any
+      const filtered = response.data?.filter((cmd: any) => cmd.statut === 'ACCEPTEE' || cmd.statut === 'ACCEPTED') || []
+      return { ...response, data: filtered }
+    }
+  },
+
+  // Get in-progress orders for delivery person
+  async getCommandesEnCours(livreurId: string) {
+    try {
+      return await apiClient.get(`/commandes/livreur/${livreurId}?statut=EN_COURS`)
+    } catch (error) {
+      const response = await apiClient.get(`/commandes/livreur/${livreurId}`) as any
+      const filtered = response.data?.filter((cmd: any) => cmd.statut === 'EN_COURS' || cmd.statut === 'IN_PROGRESS') || []
+      return { ...response, data: filtered }
+    }
+  },
+
+  // Get completed orders for delivery person
+  async getCommandesTerminees(livreurId: string) {
+    try {
+      return await apiClient.get(`/commandes/livreur/${livreurId}?statut=TERMINEE`)
+    } catch (error) {
+      const response = await apiClient.get(`/commandes/livreur/${livreurId}`) as any
+      const filtered = response.data?.filter((cmd: any) => cmd.statut === 'TERMINEE' || cmd.statut === 'COMPLETED') || []
+      return { ...response, data: filtered }
+    }
+  },
+
   // Accept a delivery assignment
   async accepterCommande(commandeId: number, livreurId: string) {
     try {
-      const response = await apiClient.put(`/livraisons/${commandeId}/accepter`, {
+      const response = await apiClient.put(`/commandes/livraisons/${commandeId}/accepter`, {
         livreurId,
         dateAcceptation: new Date().toISOString()
       })
       return response
     } catch (error) {
       console.error('Error accepting delivery:', error)
+      throw error
+    }
+  },
+
+  // Get updated order status after acceptance
+  async getStatutCommande(commandeId: number) {
+    try {
+      return await apiClient.get(`/commandes/${commandeId}/statut`)
+    } catch (error) {
+      console.error('Error fetching order status:', error)
       throw error
     }
   },

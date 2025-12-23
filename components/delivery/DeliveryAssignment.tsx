@@ -44,18 +44,41 @@ export default function DeliveryAssignment({
   const loadLivreurs = async () => {
     setLoading(true)
     try {
-      const response = await deliveryApi.getLivreursDisponibles(merchantLat, merchantLon) as any
+      // Use default coordinates if merchant location is not available
+      const safeLat = merchantLat || 0
+      const safeLon = merchantLon || 0
+      
+      console.log(`Loading livreurs with coordinates: lat=${safeLat}, lon=${safeLon}`)
+      
+      const response = await deliveryApi.getLivreursDisponibles(safeLat, safeLon) as any
       const livreurs = Array.isArray(response) ? response : (response.data || [])
       
+      console.log('Livreurs response:', livreurs)
+      
+      // Transform backend response to match frontend interface
+      const transformedLivreurs = livreurs.map((livreur: any) => ({
+        id: livreur.id,
+        nom: livreur.nom,
+        telephone: livreur.telephone,
+        latitude: livreur.latitude || 0,
+        longitude: livreur.longitude || 0,
+        distance: livreur.distance || 999,
+        rating: 4.5, // Default rating
+        totalDeliveries: 50, // Default deliveries
+        status: "DISPONIBLE" as const
+      }))
+      
+      setLivreurs(transformedLivreurs)
+      
       // Si pas de livreurs, ajouter des données de démonstration
-      if (livreurs.length === 0) {
+      if (transformedLivreurs.length === 0) {
         const demoLivreurs: Livreur[] = [
           {
             id: 1,
             nom: 'Ahmed Benali',
             telephone: '+237 6 12 34 56 78',
-            latitude: merchantLat + 0.005,
-            longitude: merchantLon + 0.005,
+            latitude: safeLat + 0.005,
+            longitude: safeLon + 0.005,
             distance: 1.2,
             rating: 4.8,
             totalDeliveries: 156,
@@ -65,8 +88,8 @@ export default function DeliveryAssignment({
             id: 2,
             nom: 'Sophie Dubois',
             telephone: '+237 6 98 76 54 32',
-            latitude: merchantLat - 0.003,
-            longitude: merchantLon + 0.008,
+            latitude: safeLat - 0.003,
+            longitude: safeLon + 0.008,
             distance: 2.1,
             rating: 4.6,
             totalDeliveries: 89,
@@ -76,8 +99,8 @@ export default function DeliveryAssignment({
             id: 3,
             nom: 'Carlos Rodriguez',
             telephone: '+237 7 11 22 33 44',
-            latitude: merchantLat + 0.008,
-            longitude: merchantLon - 0.004,
+            latitude: safeLat + 0.008,
+            longitude: safeLon - 0.004,
             distance: 1.8,
             rating: 4.9,
             totalDeliveries: 203,
@@ -85,19 +108,20 @@ export default function DeliveryAssignment({
           }
         ]
         setLivreurs(demoLivreurs)
-      } else {
-        setLivreurs(livreurs)
       }
     } catch (error) {
       console.error('Erreur chargement livreurs:', error)
       // En cas d'erreur, utiliser les données de démonstration
+      const safeLat = merchantLat || 0
+      const safeLon = merchantLon || 0
+      
       const demoLivreurs: Livreur[] = [
         {
           id: 1,
           nom: 'Ahmed Benali',
           telephone: '+237 6 12 34 56 78',
-          latitude: merchantLat + 0.005,
-          longitude: merchantLon + 0.005,
+          latitude: safeLat + 0.005,
+          longitude: safeLon + 0.005,
           distance: 1.2,
           rating: 4.8,
           totalDeliveries: 156,
@@ -107,8 +131,8 @@ export default function DeliveryAssignment({
           id: 2,
           nom: 'Sophie Dubois',
           telephone: '+237 6 98 76 54 32',
-          latitude: merchantLat - 0.003,
-          longitude: merchantLon + 0.008,
+          latitude: safeLat - 0.003,
+          longitude: safeLon + 0.008,
           distance: 2.1,
           rating: 4.6,
           totalDeliveries: 89,
@@ -236,7 +260,7 @@ export default function DeliveryAssignment({
                         </button>
                         <span className="flex items-center gap-1">
                           <MapPin className="h-4 w-4" />
-                          {livreur.distance.toFixed(1)} km
+                          {livreur.distance > 0 ? `${livreur.distance.toFixed(1)} km` : 'Disponible'}
                         </span>
                       </div>
                     </div>
@@ -254,7 +278,7 @@ export default function DeliveryAssignment({
                     )}
                     <div className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      ~{Math.round(livreur.distance * 3 + 15)} min
+                      {livreur.distance > 0 ? `~${Math.round(livreur.distance * 3 + 15)} min` : 'Disponible maintenant'}
                     </div>
                   </div>
                 </div>

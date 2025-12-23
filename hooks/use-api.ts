@@ -571,14 +571,14 @@ export function useDeleteCommandeFournisseur() {
 export function useVentes() {
   return useQuery({
     queryKey: queryKeys.ventes,
-    queryFn: () => apiClient.get<Ventes[]>("/api/v1.0/ventes"),
+    queryFn: () => apiClient.get<Ventes[]>("/ventes"),
   })
 }
 
 export function useVente(id: number) {
   return useQuery({
     queryKey: ["vente", id],
-    queryFn: () => apiClient.get<Ventes>(`/api/v1.0/ventes/${id}`),
+    queryFn: () => apiClient.get<Ventes>(`/ventes/${id}`),
     enabled: id > 0,
   })
 }
@@ -586,7 +586,7 @@ export function useVente(id: number) {
 export function useVenteByCode(code: string) {
   return useQuery({
     queryKey: ["vente", "code", code],
-    queryFn: () => apiClient.get<Ventes>(`/api/v1.0/ventes/code/${code}`),
+    queryFn: () => apiClient.get<Ventes>(`/ventes/code/${code}`),
     enabled: !!code,
   })
 }
@@ -594,7 +594,7 @@ export function useVenteByCode(code: string) {
 export function useCreateVente() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: Ventes) => apiClient.post<Ventes>("/api/v1.0/ventes", data),
+    mutationFn: (data: Ventes) => apiClient.post<Ventes>("/ventes", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.ventes })
     },
@@ -604,7 +604,7 @@ export function useCreateVente() {
 export function useDeleteVente() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: number) => apiClient.delete<void>(`/api/v1.0/ventes/${id}`),
+    mutationFn: (id: number) => apiClient.delete<void>(`/ventes/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.ventes })
     },
@@ -637,14 +637,14 @@ export function useEnregistrerPaiement() {
 export function useClients() {
   return useQuery({
     queryKey: queryKeys.clients,
-    queryFn: () => apiClient.get<Client[]>("/api/v1.0/clients"),
+    queryFn: () => apiClient.get<Client[]>("/clients"),
   })
 }
 
 export function useClient(id: number) {
   return useQuery({
     queryKey: queryKeys.client(id),
-    queryFn: () => apiClient.get<Client>(`/api/v1.0/clients/${id}`),
+    queryFn: () => apiClient.get<Client>(`/clients/${id}`),
     enabled: id > 0,
   })
 }
@@ -652,7 +652,7 @@ export function useClient(id: number) {
 export function useCreateClient() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: Client) => apiClient.post<Client>("/api/v1.0/clients", data),
+    mutationFn: (data: Client) => apiClient.post<Client>("/clients", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.clients })
     },
@@ -662,7 +662,7 @@ export function useCreateClient() {
 export function useDeleteClient() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: number) => apiClient.delete<void>(`/api/v1.0/clients/${id}`),
+    mutationFn: (id: number) => apiClient.delete<void>(`/clients/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.clients })
     },
@@ -673,14 +673,14 @@ export function useDeleteClient() {
 export function useEntreprises() {
   return useQuery({
     queryKey: queryKeys.entreprises,
-    queryFn: () => apiClient.get<Entreprise[]>("/api/v1.0/entreprises"),
+    queryFn: () => apiClient.get<Entreprise[]>("/entreprises"),
   })
 }
 
 export function useEntreprise(id: number) {
   return useQuery({
     queryKey: queryKeys.entreprise(id),
-    queryFn: () => apiClient.get<Entreprise>(`/api/v1.0/entreprises/${id}`),
+    queryFn: () => apiClient.get<Entreprise>(`/entreprises/${id}`),
     enabled: id > 0,
   })
 }
@@ -688,7 +688,7 @@ export function useEntreprise(id: number) {
 export function useCreateEntreprise() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: Entreprise) => apiClient.post<Entreprise>("/api/v1.0/entreprises", data),
+    mutationFn: (data: Entreprise) => apiClient.post<Entreprise>("/entreprises", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.entreprises })
     },
@@ -698,7 +698,7 @@ export function useCreateEntreprise() {
 export function useDeleteEntreprise() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: number) => apiClient.delete<void>(`/api/v1.0/entreprises/${id}`),
+    mutationFn: (id: number) => apiClient.delete<void>(`/entreprises/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.entreprises })
     },
@@ -709,14 +709,14 @@ export function useDeleteEntreprise() {
 export function useCommandesClient() {
   return useQuery({
     queryKey: queryKeys.commandesClient,
-    queryFn: () => apiClient.get<CommandeClient[]>("/api/v1.0/commandes-client"),
+    queryFn: () => apiClient.get<CommandeClient[]>("/commandes-client"),
   })
 }
 
 export function useCommandeClient(id: number) {
   return useQuery({
     queryKey: queryKeys.commandeClient(id),
-    queryFn: () => apiClient.get<CommandeClient>(`/api/v1.0/commandes-client/${id}`),
+    queryFn: () => apiClient.get<CommandeClient>(`/commandes-client/${id}`),
     enabled: id > 0,
   })
 }
@@ -724,7 +724,7 @@ export function useCommandeClient(id: number) {
 export function useCommandeClientByCode(code: string) {
   return useQuery({
     queryKey: ["commandeClient", "code", code],
-    queryFn: () => apiClient.get<CommandeClient>(`/api/v1.0/commandes-client/code/${code}`),
+    queryFn: () => apiClient.get<CommandeClient>(`/commandes-client/code/${code}`),
     enabled: !!code,
   })
 }
@@ -732,7 +732,7 @@ export function useCommandeClientByCode(code: string) {
 export function useCommandeClientLignes(id: number) {
   return useQuery({
     queryKey: ["commandeClientLignes", id],
-    queryFn: () => apiClient.get<LigneCommandeClient[]>(`/api/v1.0/commandes-client/${id}/lignes`),
+    queryFn: () => apiClient.get<LigneCommandeClient[]>(`/commandes-client/${id}/lignes`),
     enabled: id > 0,
   })
 }
@@ -740,7 +740,7 @@ export function useCommandeClientLignes(id: number) {
 export function useCreateCommandeClient() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: CommandeClient) => apiClient.post<CommandeClient>("/api/v1.0/commandes-client", data),
+    mutationFn: (data: CommandeClient) => apiClient.post<CommandeClient>("/commandes-client", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.commandesClient })
     },
@@ -1068,7 +1068,67 @@ export function useAjouterArticleMerchant() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ userId, data }: { userId: string; data: ArticleDto }) =>
-      apiClient.post<ApiResponse<ArticleDto>>("/merchant/stock/articles", data, { userId }),
+      apiClient.post<ApiResponse<ArticleDto>>("/merchant/stock/articles/json", data, { userId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["merchantArticles"] })
+    },
+  })
+}
+
+export function useAjouterArticleMerchantAvecImage() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      articleData,
+      image,
+      userId,
+    }: {
+      articleData: {
+        designation: string
+        description: string
+        prixUnitaireHt: string
+        prixUnitaireTtc?: string
+        quantiteStock: string
+        categorieId: string
+        seuilAlerte?: string
+      }
+      image?: File
+      userId: string
+    }) => {
+      const token = localStorage.getItem("tj-track-token")
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1.0"
+      const formData = new FormData()
+      
+      // Ajouter les champs de l'article
+      formData.append("designation", articleData.designation)
+      formData.append("description", articleData.description)
+      formData.append("prixUnitaireHt", articleData.prixUnitaireHt)
+      if (articleData.prixUnitaireTtc) {
+        formData.append("prixUnitaireTtc", articleData.prixUnitaireTtc)
+      }
+      formData.append("quantiteStock", articleData.quantiteStock)
+      formData.append("categorieId", articleData.categorieId)
+      formData.append("seuilAlerte", articleData.seuilAlerte || "5")
+      
+      if (image) {
+        formData.append("image", image)
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/merchant/stock/articles`, {
+        method: "POST",
+        headers: {
+          "Authorization": token ? `Bearer ${token}` : "",
+        },
+        body: formData,
+      })
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`)
+      }
+      
+      return response.json()
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["merchantArticles"] })
     },
