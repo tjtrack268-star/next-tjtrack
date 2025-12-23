@@ -51,6 +51,10 @@ export default function InscriptionPage() {
     town: "",
     address: "",
     phoneNumber: "",
+    // Client-specific fields
+    firstName: "",
+    lastName: "",
+    cniNumber: "",
   })
 
   const [otpSent, setOtpSent] = useState(false)
@@ -91,15 +95,74 @@ export default function InscriptionPage() {
   const handleStep1Submit = () => {
     if (validateStep1()) {
       if (formData.role === "CLIENT") {
-        handleRegister()
+        setStep(2) // CLIENT needs extra info now
       } else {
         setStep(2)
       }
     }
   }
 
+  const validateStep2 = () => {
+    if (formData.role === "CLIENT") {
+      if (!formData.firstName || !formData.lastName || !formData.cniNumber || !formData.town || !formData.address || !formData.phoneNumber) {
+        toast({
+          title: "Erreur",
+          description: "Veuillez remplir tous les champs obligatoires",
+          variant: "destructive",
+        })
+        return false
+      }
+    } else if (formData.role === "COMMERCANT" || formData.role === "FOURNISSEUR") {
+      if (!formData.shopName || !formData.town || !formData.address || !formData.phoneNumber) {
+        toast({
+          title: "Erreur",
+          description: "Veuillez remplir tous les champs obligatoires",
+          variant: "destructive",
+        })
+        return false
+      }
+    } else if (formData.role === "LIVREUR") {
+      if (!formData.town || !formData.address || !formData.phoneNumber) {
+        toast({
+          title: "Erreur",
+          description: "Veuillez remplir tous les champs obligatoires",
+          variant: "destructive",
+        })
+        return false
+      }
+    }
+    
+    // Validate phone number format
+    const phoneRegex = /^[+]?[0-9]{8,15}$/
+    const cleanPhone = formData.phoneNumber.replace(/\s+/g, '') // Remove spaces
+    if (!phoneRegex.test(cleanPhone)) {
+      toast({
+        title: "Erreur",
+        description: "Format de téléphone invalide. Utilisez uniquement des chiffres (8-15 caractères)",
+        variant: "destructive",
+      })
+      return false
+    }
+    
+    return true
+  }
+
   const handleRegister = async () => {
+    // Validate step 2 if needed
+    if (step === 2 && !validateStep2()) {
+      return
+    }
+    
     try {
+      console.log("Frontend: Registration data", {
+        name: formData.name,
+        email: formData.email,
+        role: formData.role,
+        phoneNumber: formData.phoneNumber,
+        town: formData.town,
+        address: formData.address
+      })
+      
       const request: ProfileRequest = {
         name: formData.name,
         email: formData.email,
@@ -107,32 +170,38 @@ export default function InscriptionPage() {
         role: formData.role as ProfileRequest["role"],
       }
 
+      // Clean phone number (remove spaces)
+      const cleanPhone = formData.phoneNumber.replace(/\s+/g, '')
+
       // Add role-specific info
       if (formData.role === "COMMERCANT") {
         request.merchantInfo = {
           shopName: formData.shopName,
           town: formData.town,
           address: formData.address,
-          phoneNumber: formData.phoneNumber,
+          phoneNumber: cleanPhone,
         }
       } else if (formData.role === "FOURNISSEUR") {
         request.supplierInfo = {
           shopName: formData.shopName,
           town: formData.town,
           address: formData.address,
-          phoneNumber: formData.phoneNumber,
+          phoneNumber: cleanPhone,
         }
       } else if (formData.role === "LIVREUR") {
         request.deliveryInfo = {
           town: formData.town,
           address: formData.address,
-          phoneNumber: formData.phoneNumber,
+          phoneNumber: cleanPhone,
         }
       } else if (formData.role === "CLIENT") {
         request.clientInfo = {
+          firstName: formData.firstName || "N/A",
+          lastName: formData.lastName || "N/A",
+          cniNumber: formData.cniNumber || "N/A",
           town: formData.town || "N/A",
           address: formData.address || "N/A",
-          phoneNumber: formData.phoneNumber || "+237000000000",
+          phoneNumber: cleanPhone || "+237000000000",
         }
       }
 
@@ -170,7 +239,7 @@ export default function InscriptionPage() {
     }
   }
 
-  const needsExtraInfo = formData.role && formData.role !== "CLIENT"
+  const needsExtraInfo = formData.role && true // All roles need step 2 now
 
   if (otpSent) {
     return (
@@ -342,6 +411,52 @@ export default function InscriptionPage() {
               </>
             ) : (
               <>
+                {formData.role === "CLIENT" && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="firstName">Prénom *</Label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="firstName"
+                            placeholder="Jean"
+                            value={formData.firstName}
+                            onChange={(e) => updateFormData("firstName", e.target.value)}
+                            className="pl-10"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lastName">Nom *</Label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="lastName"
+                            placeholder="Dupont"
+                            value={formData.lastName}
+                            onChange={(e) => updateFormData("lastName", e.target.value)}
+                            className="pl-10"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cniNumber">Numéro CNI *</Label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="cniNumber"
+                          placeholder="123456789"
+                          value={formData.cniNumber}
+                          onChange={(e) => updateFormData("cniNumber", e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+                
                 {(formData.role === "COMMERCANT" || formData.role === "FOURNISSEUR") && (
                   <div className="space-y-2">
                     <Label htmlFor="shopName">Nom de l'entreprise *</Label>
@@ -364,12 +479,13 @@ export default function InscriptionPage() {
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="phoneNumber"
-                      placeholder="+237 6XX XXX XXX"
+                      placeholder="+237612345678"
                       value={formData.phoneNumber}
                       onChange={(e) => updateFormData("phoneNumber", e.target.value)}
                       className="pl-10"
                     />
                   </div>
+                  <p className="text-xs text-muted-foreground">Format: +237612345678 (8-15 chiffres)</p>
                 </div>
 
                 <div className="space-y-2">

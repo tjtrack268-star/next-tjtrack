@@ -348,6 +348,9 @@ export interface DeliveryInfo {
 }
 
 export interface ClientInfo {
+  firstName: string
+  lastName: string
+  cniNumber: string
   town: string
   address: string
   phoneNumber: string

@@ -44,6 +44,11 @@ const getMenuItems = (role?: string) => {
       icon: Home,
     },
     {
+      title: "Catalogue",
+      href: "/catalogue",
+      icon: Package,
+    },
+    {
       title: "Tableau de bord",
       href: "/dashboard",
       icon: LayoutDashboard,
@@ -168,8 +173,8 @@ const getMenuItems = (role?: string) => {
     {
       title: "Mes Achats",
       items: [
-        { name: "Mes Commandes", href: "/dashboard/mes-commandes", icon: ShoppingBag },
-        { name: "Mes Favoris", href: "/dashboard/favoris", icon: Store },
+        { name: "Mes Commandes", href: "/mes-commandes", icon: ShoppingBag },
+        { name: "Mes Favoris", href: "/favoris", icon: Store },
       ],
     },
     {

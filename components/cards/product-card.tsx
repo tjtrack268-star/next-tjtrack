@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { useCart } from "@/contexts/cart-context"
 import { cn } from "@/lib/utils"
+import { buildImageUrl } from "@/lib/image-utils"
 import type { ArticleDto, ProduitEcommerceDto } from "@/types/api"
 
 interface ProductCardProps {
@@ -28,7 +29,7 @@ export function ProductCard({ product, variant = "default" }: ProductCardProps) 
   const id = product.id || 0
   const name = isArticle ? product.designation : product.nom
   const price = isArticle ? product.prixUnitaireTtc || product.prixUnitaireHt : product.prix
-  const image = isArticle ? product.photo : product.images?.[0]
+  const image = buildImageUrl(isArticle ? product.photo : product.images?.[0])
   const category = isArticle ? product.categorieDesignation : product.categorieName
   const inStock = isArticle ? (product.quantiteStock || 0) > 0 : (product.quantite || 0) > 0
   const stockCount = isArticle ? product.quantiteStock : product.quantite
