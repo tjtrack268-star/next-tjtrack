@@ -125,6 +125,7 @@ export interface PanierRequest {
 
 export interface ProduitEcommerceDto {
   id?: number
+  articleId?: number  // Add this field
   nom: string
   description: string
   descriptionLongue?: string

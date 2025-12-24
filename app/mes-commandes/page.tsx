@@ -28,7 +28,10 @@ import type { Commande } from "@/types/api"
 function useUserOrders() {
   return useQuery({
     queryKey: ["userOrders"],
-    queryFn: () => apiClient.get<Commande[]>("/ecommerce/mes-commandes"),
+    queryFn: async () => {
+      const response = await apiClient.get("/commandes/client") as any
+      return Array.isArray(response) ? response : (response.data || [])
+    },
   })
 }
 
@@ -37,6 +40,7 @@ const statusConfig = {
   "CONFIRMEE": { label: "Confirmée", color: "bg-blue-500", icon: CheckCircle },
   "EN_PREPARATION": { label: "En préparation", color: "bg-orange-500", icon: Package },
   "EXPEDIEE": { label: "Expédiée", color: "bg-purple-500", icon: Truck },
+  "EN_ATTENTE_CONFIRMATION": { label: "Livrée - À confirmer", color: "bg-amber-500", icon: Clock },
   "LIVREE": { label: "Livrée", color: "bg-green-500", icon: CheckCircle },
   "ANNULEE": { label: "Annulée", color: "bg-red-500", icon: XCircle },
 }
@@ -57,14 +61,14 @@ export default function MyOrdersPage() {
   const formatPrice = (price: number) => new Intl.NumberFormat("fr-FR").format(price) + " XAF"
   const formatDate = (date: string) => new Date(date).toLocaleDateString("fr-FR")
 
-  const filteredOrders = orders?.filter(order => {
+  const filteredOrders = Array.isArray(orders) ? orders.filter((order: any) => {
     if (selectedTab === "all") return true
     if (selectedTab === "pending") return ["EN_ATTENTE", "CONFIRMEE", "EN_PREPARATION"].includes(order.statut)
     if (selectedTab === "shipped") return ["EXPEDIEE"].includes(order.statut)
     if (selectedTab === "delivered") return ["LIVREE"].includes(order.statut)
     if (selectedTab === "cancelled") return ["ANNULEE"].includes(order.statut)
     return true
-  }) || []
+  }) : []
 
   const handleTrackOrder = (orderNumber: string) => {
     // Redirect to tracking page
@@ -93,11 +97,25 @@ export default function MyOrdersPage() {
   }
 
   const handleLeaveReview = (orderId: number) => {
-    // Open review modal or redirect to review page
-    toast({
-      title: "Évaluation",
-      description: "Fonctionnalité d'évaluation à venir",
-    })
+    // Navigate to review page
+    window.location.href = `/commandes/${orderId}/avis`
+  }
+
+  const handleConfirmDelivery = async (orderId: number) => {
+    try {
+      await apiClient.put(`/commandes/livraisons/${orderId}/confirmer-reception`)
+      toast({
+        title: "Livraison confirmée",
+        description: "Merci d'avoir confirmé la réception de votre commande",
+      })
+      refetch()
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de confirmer la livraison",
+        variant: "destructive",
+      })
+    }
   }
 
   if (isLoading) {
@@ -135,19 +153,19 @@ export default function MyOrdersPage() {
         <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="all">
-              Toutes ({orders?.length || 0})
+              Toutes ({Array.isArray(orders) ? orders.length : 0})
             </TabsTrigger>
             <TabsTrigger value="pending">
-              En cours ({filteredOrders.filter(o => ["EN_ATTENTE", "CONFIRMEE", "EN_PREPARATION"].includes(o.statut)).length})
+              En cours ({Array.isArray(filteredOrders) ? filteredOrders.filter((o: any) => ["EN_ATTENTE", "CONFIRMEE", "EN_PREPARATION"].includes(o.statut)).length : 0})
             </TabsTrigger>
             <TabsTrigger value="shipped">
-              Expédiées ({filteredOrders.filter(o => o.statut === "EXPEDIEE").length})
+              Expédiées ({Array.isArray(filteredOrders) ? filteredOrders.filter((o: any) => o.statut === "EXPEDIEE").length : 0})
             </TabsTrigger>
             <TabsTrigger value="delivered">
-              Livrées ({filteredOrders.filter(o => o.statut === "LIVREE").length})
+              Livrées ({Array.isArray(filteredOrders) ? filteredOrders.filter((o: any) => o.statut === "LIVREE").length : 0})
             </TabsTrigger>
             <TabsTrigger value="cancelled">
-              Annulées ({filteredOrders.filter(o => o.statut === "ANNULEE").length})
+              Annulées ({Array.isArray(filteredOrders) ? filteredOrders.filter((o: any) => o.statut === "ANNULEE").length : 0})
             </TabsTrigger>
           </TabsList>
 
@@ -169,13 +187,13 @@ export default function MyOrdersPage() {
                 </CardContent>
               </Card>
             ) : (
-              filteredOrders.map((order) => {
-                const StatusIcon = statusConfig[order.statut]?.icon || Package
-                const statusColor = statusConfig[order.statut]?.color || "bg-gray-500"
-                const statusLabel = statusConfig[order.statut]?.label || order.statut
+              filteredOrders.map((order: any) => {
+                const StatusIcon = (statusConfig as any)[order.statut]?.icon || Package
+                const statusColor = (statusConfig as any)[order.statut]?.color || "bg-gray-500"
+                const statusLabel = (statusConfig as any)[order.statut]?.label || order.statut
                 
-                const paymentStatusColor = paymentStatusConfig[order.statutPaiement || "EN_ATTENTE"]?.color || "bg-gray-500"
-                const paymentStatusLabel = paymentStatusConfig[order.statutPaiement || "EN_ATTENTE"]?.label || "En attente"
+                const paymentStatusColor = (paymentStatusConfig as any)[order.statutPaiement || "EN_ATTENTE"]?.color || "bg-gray-500"
+                const paymentStatusLabel = (paymentStatusConfig as any)[order.statutPaiement || "EN_ATTENTE"]?.label || "En attente"
 
                 return (
                   <Card key={order.id} className="overflow-hidden">
@@ -204,7 +222,7 @@ export default function MyOrdersPage() {
                     <CardContent className="space-y-4">
                       {/* Order Items */}
                       <div className="space-y-3">
-                        {order.items?.map((item) => (
+                        {order.items?.map((item: any) => (
                           <div key={item.id} className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg">
                             <img
                               src={item.article.photo || "/placeholder.svg"}
@@ -276,6 +294,18 @@ export default function MyOrdersPage() {
                           <Eye className="h-4 w-4 mr-2" />
                           Suivre
                         </Button>
+                        
+                        {order.statut === "EN_ATTENTE_CONFIRMATION" && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleConfirmDelivery(order.id)}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Confirmer réception
+                          </Button>
+                        )}
                         
                         {order.statut === "LIVREE" && (
                           <>

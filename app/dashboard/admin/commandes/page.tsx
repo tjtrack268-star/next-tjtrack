@@ -6,16 +6,22 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { ShoppingCart, Clock, CheckCircle, Truck, Package, MoreVertical, Eye, Edit } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ShoppingCart, Clock, CheckCircle, Truck, Package, MoreVertical, Eye, Edit, AlertTriangle } from "lucide-react"
 import { AdminGuard } from "@/components/admin-guard"
+import { useOrderManagement } from "@/hooks/use-order-management"
 
 export default function AdminOrdersPage() {
-  const orders = [
-    { id: "CMD-001", customer: "Jean Dupont", total: 89.99, status: "pending", date: "2024-01-15", items: 3 },
-    { id: "CMD-002", customer: "Marie Martin", total: 156.50, status: "processing", date: "2024-01-15", items: 2 },
-    { id: "CMD-003", customer: "Pierre Durand", total: 45.00, status: "shipped", date: "2024-01-14", items: 1 },
-    { id: "CMD-004", customer: "Sophie Bernard", total: 234.99, status: "delivered", date: "2024-01-14", items: 4 },
+  const initialOrders = [
+    { id: "CMD-001", customer: "Jean Dupont", total: 89.99, status: "pending", date: "2024-01-15", items: 3, livreurId: null },
+    { id: "CMD-002", customer: "Marie Martin", total: 156.50, status: "processing", date: "2024-01-15", items: 2, livreurId: null },
+    { id: "CMD-003", customer: "Pierre Durand", total: 45.00, status: "shipped", date: "2024-01-14", items: 1, livreurId: 1 },
+    { id: "CMD-004", customer: "Sophie Bernard", total: 234.99, status: "delivered", date: "2024-01-14", items: 4, livreurId: 2 },
   ]
+  
+  const { orders, markAsShipped, canMarkAsShipped, assignDelivery } = useOrderManagement(initialOrders)
+  const [selectedOrder, setSelectedOrder] = useState<any>(null)
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -35,6 +41,14 @@ export default function AdminOrdersPage() {
       case 'delivered': return 'Livrée'
       default: return status
     }
+  }
+
+  const handleMarkAsShipped = (order: any) => {
+    markAsShipped(order.id)
+  }
+
+  const handleAssignDelivery = (order: any) => {
+    setSelectedOrder(order)
   }
 
   return (
@@ -120,9 +134,16 @@ export default function AdminOrdersPage() {
                     <TableCell>€{order.total}</TableCell>
                     <TableCell>{new Date(order.date).toLocaleDateString('fr-FR')}</TableCell>
                     <TableCell>
-                      <Badge variant={getStatusColor(order.status) as any}>
-                        {getStatusLabel(order.status)}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={getStatusColor(order.status) as any}>
+                          {getStatusLabel(order.status)}
+                        </Badge>
+                        {!order.livreurId && order.status !== 'delivered' && (
+                          <Badge variant="outline" className="text-orange-600 border-orange-300">
+                            Sans livreur
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -140,9 +161,21 @@ export default function AdminOrdersPage() {
                             <Edit className="h-4 w-4 mr-2" />
                             Modifier statut
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          {!order.livreurId && (
+                            <DropdownMenuItem onClick={() => handleAssignDelivery(order)}>
+                              <Truck className="h-4 w-4 mr-2" />
+                              Affecter livreur
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem 
+                            onClick={() => handleMarkAsShipped(order)}
+                            disabled={!canMarkAsShipped(order) || order.status === 'shipped' || order.status === 'delivered'}
+                          >
                             <Truck className="h-4 w-4 mr-2" />
                             Marquer expédiée
+                            {!canMarkAsShipped(order) && (
+                              <AlertTriangle className="h-4 w-4 ml-2 text-orange-500" />
+                            )}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -153,6 +186,46 @@ export default function AdminOrdersPage() {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Dialog pour affecter un livreur */}
+        <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Affecter un livreur</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Cette commande doit avoir un livreur assigné avant de pouvoir être marquée comme expédiée.
+                </AlertDescription>
+              </Alert>
+              
+              <div className="text-sm text-muted-foreground">
+                Commande: <strong>{selectedOrder?.id}</strong><br/>
+                Client: <strong>{selectedOrder?.customer}</strong>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => {
+                    // Simuler l'affectation d'un livreur
+                    if (selectedOrder) {
+                      assignDelivery(selectedOrder.id, 1)
+                      setSelectedOrder(null)
+                    }
+                  }}
+                  className="flex-1"
+                >
+                  Affecter automatiquement
+                </Button>
+                <Button variant="outline" onClick={() => setSelectedOrder(null)}>
+                  Annuler
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminGuard>
   )

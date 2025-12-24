@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { StockAnalytics } from "@/components/stock/stock-analytics"
 import { ReorderSuggestions } from "@/components/stock/reorder-suggestions"
 import { MovementAnalytics } from "@/components/stock/movement-analytics"
+import { buildImageUrl } from "@/lib/image-utils"
 
 export default function MerchantStockPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -43,6 +44,7 @@ export default function MerchantStockPage() {
     modele: ""
   })
   const [articleImages, setArticleImages] = useState<File[]>([])
+  const [productImages, setProductImages] = useState<File[]>([])
   const [productDialog, setProductDialog] = useState<{
     open: boolean
     article: Record<string, unknown> | null
@@ -120,7 +122,8 @@ export default function MerchantStockPage() {
     }
 
     try {
-      await addArticleMutation.mutateAsync({
+      // 1. Créer l'article d'abord
+      const articleResponse = await addArticleMutation.mutateAsync({
         userId: user?.email || "",
         data: {
           codeArticle: `ART-${Date.now()}`,
@@ -134,9 +137,53 @@ export default function MerchantStockPage() {
         }
       })
 
+      // 2. Si des images existent, les uploader une par une
+      if (articleImages.length > 0 && articleResponse?.data?.id) {
+        const articleId = articleResponse.data.id as number
+        console.log("🖼️ Uploading", articleImages.length, "images for article", articleId)
+        
+        for (const image of articleImages) {
+          try {
+            const formData = new FormData()
+            formData.append("image", image)
+            
+            const token = localStorage.getItem("tj-track-token")
+            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1.0"
+            
+            const uploadResponse = await fetch(
+              `${API_BASE_URL}/merchant/stock/articles/${articleId}/image`,
+              {
+                method: "POST",
+                headers: {
+                  "Authorization": token ? `Bearer ${token}` : "",
+                },
+                body: formData,
+              }
+            )
+            
+            if (!uploadResponse.ok) {
+              console.error("❌ Image upload failed for", image.name)
+              throw new Error(`Image upload failed: ${uploadResponse.status}`)
+            }
+            
+            const uploadData = await uploadResponse.json()
+            console.log("✅ Image uploaded:", image.name, "→", uploadData)
+          } catch (imgErr) {
+            console.error("❌ Error uploading image:", imgErr)
+            toast({
+              title: "Avertissement",
+              description: `Erreur lors de l'upload de l'image: ${image.name}`,
+              variant: "destructive"
+            })
+          }
+        }
+      }
+
       toast({
         title: "Article ajouté",
-        description: "L'article a été ajouté avec succès"
+        description: articleImages.length > 0 
+          ? `Article créé avec ${articleImages.length} image(s)`
+          : "L'article a été ajouté avec succès"
       })
 
       setAddDialog(false)
@@ -156,6 +203,7 @@ export default function MerchantStockPage() {
       setArticleImages([])
       refetch()
     } catch (err) {
+      console.error("❌ Error adding article:", err)
       toast({
         title: "Erreur",
         description: "Impossible d'ajouter l'article",
@@ -186,7 +234,7 @@ export default function MerchantStockPage() {
           categorieId: 1,
           visibleEnLigne: productData.visibleEnLigne
         },
-        images: [],
+        images: productImages,
         merchantUserId: user?.email || ""
       })
 
@@ -204,6 +252,7 @@ export default function MerchantStockPage() {
         quantite: "",
         visibleEnLigne: true
       })
+      setProductImages([])
     } catch (err) {
       toast({
         title: "Erreur",
@@ -222,12 +271,18 @@ export default function MerchantStockPage() {
       quantite: (article.quantiteStock as number)?.toString() || "",
       visibleEnLigne: true
     })
+    setProductImages([])
     setProductDialog({ open: true, article })
   }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     setArticleImages(prev => [...prev, ...files].slice(0, 5))
+  }
+
+  const handleProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    setProductImages(prev => [...prev, ...files].slice(0, 5))
   }
 
   const removeImage = (index: number) => {
@@ -409,6 +464,7 @@ export default function MerchantStockPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Image</TableHead>
                 <TableHead>Code</TableHead>
                 <TableHead>Désignation</TableHead>
                 <TableHead className="text-center">Stock</TableHead>
@@ -428,6 +484,33 @@ export default function MerchantStockPage() {
                 const price = (article.prixUnitaireHt as number) || 0
                 return (
                   <TableRow key={article.id as number}>
+                    <TableCell>
+                      <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-muted/30 flex-shrink-0 border border-border">
+                        {article.photo ? (
+                          <>
+                            {typeof document !== 'undefined' && console.log('Merchant Stock Image:', {
+                              articleId: article.id,
+                              rawPhoto: article.photo,
+                              builtUrl: buildImageUrl(article.photo as string),
+                              article
+                            })}
+                            <img
+                              src={buildImageUrl(article.photo as string) || "/placeholder.svg"}
+                              alt={article.designation as string}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                console.error('Image load error for article', article.id, ':', buildImageUrl(article.photo as string))
+                                e.currentTarget.src = "/placeholder.svg"
+                              }}
+                            />
+                          </>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-muted/50">
+                            <Package className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="font-mono text-sm">{article.codeArticle as string}</TableCell>
                     <TableCell className="font-medium">{article.designation as string}</TableCell>
                     <TableCell className="text-center">
@@ -472,7 +555,7 @@ export default function MerchantStockPage() {
               })}
               {filteredStock.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     Aucun article trouvé
                   </TableCell>
                 </TableRow>
@@ -812,6 +895,50 @@ export default function MerchantStockPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            
+            {/* Images Section */}
+            <div className="space-y-2">
+              <Label>Images du produit</Label>
+              <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-muted/50 transition">
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleProductImageUpload}
+                  className="hidden"
+                  id="product-images-input"
+                />
+                <label htmlFor="product-images-input" className="cursor-pointer block">
+                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm font-medium">Cliquez pour ajouter des images</p>
+                  <p className="text-xs text-muted-foreground">Accepte JPG, PNG (Max 5 images)</p>
+                </label>
+              </div>
+              
+              {/* Selected Images Preview */}
+              {productImages.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-sm font-medium mb-2">Images sélectionnées: {productImages.length}/5</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {productImages.map((file, idx) => (
+                      <div key={idx} className="relative aspect-square rounded-lg bg-muted overflow-hidden">
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={`Product ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          onClick={() => setProductImages(prev => prev.filter((_, i) => i !== idx))}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>

@@ -152,7 +152,13 @@ export default function CommandesPage() {
   const totalPages = Math.ceil(filteredCommandes.length / itemsPerPage)
   const paginatedCommandes = filteredCommandes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
-  const handleDeleteCommande = async (id: number) => {
+  const handleDeleteCommande = async (id: number, statut: string) => {
+    // Vérifier que la commande peut être supprimée
+    if (statut === "EXPEDIEE" || statut === "LIVREE") {
+      alert("Impossible de supprimer une commande expédiée ou livrée");
+      return;
+    }
+    
     if (confirm("Êtes-vous sûr de vouloir supprimer cette commande ?")) {
       try {
         await deleteCommandeMutation.mutateAsync(id)
@@ -174,10 +180,14 @@ export default function CommandesPage() {
 
   const handleUpdateStatus = async (id: number, statut: string) => {
     try {
-      await updateStatusMutation.mutateAsync({ id, statut })
-      refetch()
+      console.log(`Updating order ${id} to status ${statut}`);
+      await updateStatusMutation.mutateAsync({ id, statut });
+      await refetch();
     } catch (error) {
-      console.error("Erreur lors de la mise à jour:", error)
+      console.error("Erreur lors de la mise à jour:", error);
+      // Show user-friendly error message
+      const errorMessage = error instanceof Error ? error.message : "Erreur inconnue";
+      alert(`Erreur: ${errorMessage}`);
     }
   }
 
@@ -508,13 +518,16 @@ export default function CommandesPage() {
                                 <Phone className="h-4 w-4 mr-2" />
                                 Contacter client
                               </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                className="text-destructive"
-                                onClick={() => handleDeleteCommande(commande.id)}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Supprimer
-                              </DropdownMenuItem>
+                              {/* Afficher l'option supprimer seulement si la commande peut être supprimée */}
+                              {!['EXPEDIEE', 'LIVREE'].includes(commande.statut) && (
+                                <DropdownMenuItem 
+                                  className="text-destructive"
+                                  onClick={() => handleDeleteCommande(commande.id, commande.statut)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Supprimer
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>

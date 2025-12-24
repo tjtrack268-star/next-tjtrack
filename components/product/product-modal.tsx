@@ -28,6 +28,7 @@ import {
 } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
 import { useToast } from "@/hooks/use-toast"
+import { buildImageUrl } from "@/lib/image-utils"
 import type { ProduitEcommerceDto } from "@/types/api"
 
 interface ProductModalProps {
@@ -47,23 +48,30 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
 
   const formatPrice = (price: number) => new Intl.NumberFormat("fr-FR").format(price) + " XAF"
   
-  const images = product.images && product.images.length > 0 ? product.images : ["/placeholder.svg"]
+  const images = product.images && product.images.length > 0 
+    ? product.images.map(img => buildImageUrl(img) || "/placeholder.svg")
+    : ["/placeholder.svg"]
 
   const handleAddToCart = async () => {
     try {
-      await addItem(product.id!, quantity, {
+      // Use the article ID from the product, not the product ID itself
+      const articleId = product.articleId || product.id!
+      console.log('Adding to cart - product:', product)
+      console.log('Using articleId:', articleId)
+      await addItem(articleId, quantity, {
         name: product.nom!,
         price: Number(product.prix || 0),
-        image: images[0],
+        image: images[0] || "/placeholder.svg",
       })
       toast({
         title: "Ajouté au panier",
         description: `${quantity}x ${product.nom} ajouté(s) à votre panier`,
       })
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Erreur ajout panier:', error)
       toast({
         title: "Erreur",
-        description: "Impossible d'ajouter au panier",
+        description: error.message || "Impossible d'ajouter au panier",
         variant: "destructive",
       })
     }

@@ -81,14 +81,189 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [isAuthenticated, user?.email])
 
+  const loadGuestCart = useCallback(() => {
+    try {
+      const cached = localStorage.getItem(LOCAL_CART_KEY)
+      if (cached) {
+        const cachedItems = JSON.parse(cached)
+        setLocalItems(cachedItems)
+      } else {
+        setLocalItems([])
+      }
+    } catch {
+      setLocalItems([])
+    }
+  }, [])
+
+  const addItemLocally = useCallback(
+    (
+      articleIdOrItem: number | PanierItemDto,
+      quantite?: number,
+      productInfo?: { name: string; price: number; image?: string }
+    ) => {
+      // Handle object parameter (PanierItemDto)
+      if (typeof articleIdOrItem === 'object') {
+        const item = articleIdOrItem
+        if (!item.articleId || !item.quantite || !item.prixUnitaire) {
+          throw new Error('Données article incomplètes')
+        }
+        
+        setLocalItems((prev) => {
+          const existingIndex = prev.findIndex((i) => i.articleId === item.articleId)
+          if (existingIndex >= 0) {
+            const updated = [...prev]
+            const newQuantite = updated[existingIndex].quantite + item.quantite
+            updated[existingIndex] = {
+              ...updated[existingIndex],
+              quantite: newQuantite,
+              sousTotal: newQuantite * item.prixUnitaire,
+            }
+            return updated
+          }
+          return [...prev, { ...item, id: Date.now() } as LocalCartItem]
+        })
+        return
+      }
+
+      // Handle separate parameters
+      const articleId = articleIdOrItem
+      if (!quantite || !productInfo || quantite <= 0) {
+        throw new Error("Quantité et informations produit requises")
+      }
+
+      const newItem = {
+        id: Date.now(),
+        articleId,
+        articleCode: `ART-${articleId}`,
+        articleNom: productInfo.name,
+        articlePhoto: productInfo.image,
+        quantite,
+        prixUnitaire: productInfo.price,
+        sousTotal: quantite * productInfo.price,
+        stockDisponible: 100,
+        disponible: true,
+      }
+
+      setLocalItems((prev) => {
+        const existingIndex = prev.findIndex((i) => i.articleId === articleId)
+        if (existingIndex >= 0) {
+          const updated = [...prev]
+          const newQuantite = updated[existingIndex].quantite + quantite
+          updated[existingIndex] = {
+            ...updated[existingIndex],
+            quantite: newQuantite,
+            sousTotal: newQuantite * productInfo.price,
+          }
+          return updated
+        }
+        return [...prev, newItem]
+      })
+    },
+    []
+  )
+
+  const removeItemLocally = useCallback((articleId: number) => {
+    setLocalItems((prev) => prev.filter((i) => i.articleId !== articleId))
+  }, [])
+
+  const updateQuantityLocally = useCallback((articleId: number, quantite: number) => {
+    if (quantite <= 0) {
+      return removeItemLocally(articleId)
+    }
+
+    setLocalItems((prev) =>
+      prev.map((item) =>
+        item.articleId === articleId ? { ...item, quantite, sousTotal: quantite * item.prixUnitaire } : item,
+      ),
+    )
+  }, [removeItemLocally])
+
+  const mergeGuestCartAndRefresh = useCallback(async () => {
+    if (!user?.email) return
+    
+    // Get guest cart from localStorage before refreshCart clears localItems
+    let guestCartItems: LocalCartItem[] = []
+    try {
+      const cached = localStorage.getItem(LOCAL_CART_KEY)
+      if (cached) {
+        guestCartItems = JSON.parse(cached)
+      }
+    } catch {
+      guestCartItems = []
+    }
+    
+    console.log('=== MERGE CART DEBUG ===')
+    console.log('Guest cart items:', guestCartItems.length)
+    
+    // If there are guest items, merge them BEFORE refreshing
+    if (guestCartItems.length > 0) {
+      setIsLoading(true)
+      let mergedCount = 0
+      
+      try {
+        // Batch merge items to reduce API calls
+        const mergePromises = guestCartItems.map(async (guestItem) => {
+          try {
+            console.log(`Merging item: ${guestItem.articleNom} (ID: ${guestItem.articleId})`)
+            await apiClient.post("/panier/ajouter", 
+              { articleId: guestItem.articleId, quantite: guestItem.quantite }, 
+              { userEmail: user.email }
+            )
+            return true
+          } catch (error: any) {
+            console.error(`Failed to merge item ${guestItem.articleNom}:`, error)
+            if (error?.message?.includes('400') || error?.message?.includes('Article non trouvé')) {
+              console.warn(`Article ${guestItem.articleNom} no longer exists, skipping...`)
+              return false
+            }
+            if (error?.message?.includes('404') || error?.message?.includes('Utilisateur non trouvé')) {
+              console.warn('User not found in database, keeping guest cart locally')
+              setLocalItems(guestCartItems)
+              throw new Error('USER_NOT_FOUND')
+            }
+            return false
+          }
+        })
+        
+        const results = await Promise.allSettled(mergePromises)
+        mergedCount = results.filter(r => r.status === 'fulfilled' && r.value === true).length
+        
+        console.log(`Merged ${mergedCount} items successfully`)
+        
+        // Clear guest cart only if at least one item was merged
+        if (mergedCount > 0) {
+          localStorage.removeItem(LOCAL_CART_KEY)
+          console.log('Guest cart cleared from localStorage')
+        }
+      } catch (error: any) {
+        if (error.message === 'USER_NOT_FOUND') {
+          setIsLoading(false)
+          return
+        }
+        console.error('Error merging guest cart:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    // Now refresh to get the merged cart from server
+    await refreshCart()
+    console.log('=== END MERGE CART DEBUG ===')
+  }, [user?.email, refreshCart])
+
   useEffect(() => {
     if (isAuthenticated && user?.email) {
-      refreshCart()
+      // Use requestIdleCallback or setTimeout to defer heavy operations
+      const timeoutId = setTimeout(() => {
+        mergeGuestCartAndRefresh()
+      }, 100) // Small delay to prevent blocking the main thread
+      
+      return () => clearTimeout(timeoutId)
     } else {
-      setLocalItems([])
-      localStorage.removeItem(LOCAL_CART_KEY)
+      // Load guest cart from localStorage
+      loadGuestCart()
     }
-  }, [isAuthenticated, user?.email, refreshCart])
+  }, [isAuthenticated, user?.email, mergeGuestCartAndRefresh, loadGuestCart])
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -108,8 +283,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       quantite?: number,
       productInfo?: { name: string; price: number; image?: string }
     ) => {
+      // For guest users, work with local storage only
       if (!isAuthenticated || !user?.email) {
-        throw new Error('Vous devez être connecté pour ajouter au panier')
+        return addItemLocally(articleIdOrItem, quantite, productInfo)
       }
 
       // Handle object parameter (PanierItemDto)
@@ -140,7 +316,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           await apiClient.post("/panier/ajouter", request, { userEmail: user.email })
         } catch (error: any) {
           if (error?.message?.includes('400')) {
-            console.warn('User not found, working offline')
+            console.warn('Article not found or user not found, working offline')
             return // Keep local changes
           }
           console.error('Erreur ajout panier:', error)
@@ -190,7 +366,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         await apiClient.post("/panier/ajouter", request, { userEmail: user.email })
       } catch (error: any) {
         if (error?.message?.includes('400')) {
-          console.warn('User not found, working offline')
+          console.warn('Article not found or user not found, working offline')
           return // Keep local changes
         }
         console.error('Erreur ajout panier:', error)
@@ -203,8 +379,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const removeItem = useCallback(
     async (articleId: number) => {
+      // For guest users, work with local storage only
       if (!isAuthenticated || !user?.email) {
-        throw new Error('Vous devez être connecté')
+        return removeItemLocally(articleId)
       }
 
       const previousItems = [...localItems]
@@ -227,8 +404,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return removeItem(articleId)
       }
 
+      // For guest users, work with local storage only
       if (!isAuthenticated || !user?.email) {
-        throw new Error('Vous devez être connecté')
+        return updateQuantityLocally(articleId, quantite)
       }
 
       const previousItems = [...localItems]

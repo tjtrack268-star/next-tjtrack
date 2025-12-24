@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://147.93.9.170:8080/api/v1.0"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1.0"
 const API_TIMEOUT = parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000')
 
 interface RequestConfig extends RequestInit {
@@ -43,31 +43,71 @@ class ApiClient {
     }
 
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT)
+    const timeoutId = setTimeout(() => {
+      console.warn(`Request timeout for ${endpoint} after ${API_TIMEOUT}ms`)
+      controller.abort()
+    }, API_TIMEOUT)
 
     try {
+      const startTime = performance.now()
       const response = await fetch(url, {
         ...fetchConfig,
         headers,
         signal: controller.signal,
       })
+      const endTime = performance.now()
+      const duration = endTime - startTime
+      
+      if (duration > 1000) {
+        console.warn(`Slow request detected: ${endpoint} took ${duration.toFixed(2)}ms`)
+      }
 
       clearTimeout(timeoutId)
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ 
-          message: `Erreur HTTP: ${response.status}`,
-          status: response.status 
-        }))
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = { 
+            message: `Erreur HTTP: ${response.status}`,
+            status: response.status 
+          }
+        }
+        
+        // Gestion spéciale pour les erreurs d'authentification
+        if (response.status === 401 || response.status === 403) {
+          // Déconnecter l'utilisateur si le token est invalide
+          localStorage.removeItem("tj-track-token")
+          localStorage.removeItem("tj-track-user")
+          document.cookie = 'tj-track-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
+          document.cookie = 'jwt=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
+          this.setToken(null)
+          
+          // Rediriger vers la page de connexion si on n'y est pas déjà
+          if (typeof window !== 'undefined' && !window.location.pathname.includes('/connexion')) {
+            window.location.href = '/connexion'
+          }
+          
+          throw new Error("Session expirée. Veuillez vous reconnecter.")
+        }
         
         // Retry on server errors (5xx) or network issues
         if (response.status >= 500 && retries > 0) {
           console.warn(`Retrying request to ${endpoint}, attempts left: ${retries - 1}`)
-          await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1s before retry
+          await new Promise(resolve => setTimeout(resolve, Math.min(1000 * (4 - retries), 3000)))
           return this.request<T>(endpoint, config, retries - 1)
         }
         
-        throw new Error(error.message || `Erreur HTTP: ${response.status}`)
+        throw new Error(errorData.message || `Erreur HTTP: ${response.status}`)
+      }
+
+      // Vérifier si la réponse a du contenu
+      const contentLength = response.headers.get('content-length')
+      const contentType = response.headers.get('content-type')
+      
+      if (contentLength === '0' || !contentType?.includes('application/json')) {
+        return {} as T // Retourner un objet vide pour les réponses sans contenu
       }
 
       return response.json()
@@ -78,10 +118,11 @@ class ApiClient {
         throw new Error('Timeout: La requête a pris trop de temps')
       }
       
-      // Retry on network errors
+      // Retry on network errors with exponential backoff
       if (retries > 0 && error instanceof TypeError) {
-        console.warn(`Network error, retrying ${endpoint}, attempts left: ${retries - 1}`)
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        const delay = Math.min(1000 * (4 - retries), 3000)
+        console.warn(`Network error, retrying ${endpoint} in ${delay}ms, attempts left: ${retries - 1}`)
+        await new Promise(resolve => setTimeout(resolve, delay))
         return this.request<T>(endpoint, config, retries - 1)
       }
       
