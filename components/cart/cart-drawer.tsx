@@ -165,26 +165,17 @@ export function CartDrawer({ onCheckout }: CartDrawerProps) {
               </div>
 
               <div className="space-y-2">
-                {isAuthenticated ? (
-                  <Button 
-                    className="w-full gradient-primary text-white" 
-                    size="lg"
-                    onClick={() => {
-                      closeCart()
-                      onCheckout?.()
-                    }}
-                  >
-                    Commander
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                ) : (
-                  <Button asChild className="w-full gradient-primary text-white" size="lg">
-                    <Link href="/connexion" onClick={closeCart}>
-                      Se connecter pour commander
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
-                )}
+                <Button 
+                  className="w-full gradient-primary text-white" 
+                  size="lg"
+                  onClick={() => {
+                    closeCart()
+                    onCheckout?.()
+                  }}
+                >
+                  Commander
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
                 <Button variant="outline" className="w-full bg-transparent" size="lg" onClick={closeCart}>
                   Continuer mes achats
                 </Button>

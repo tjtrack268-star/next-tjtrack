@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, CreditCard, MapPin, User, Phone, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -19,6 +19,27 @@ export default function CheckoutPage() {
   const { toast } = useToast()
   
   const [isLoading, setIsLoading] = useState(false)
+  const [guestId, setGuestId] = useState<string | null>(null)
+  
+  // Initialiser le guestId pour les invités
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (!isAuthenticated) {
+        const stored = localStorage.getItem('guestId')
+        if (stored) {
+          setGuestId(stored)
+        } else {
+          const newGuestId = `guest-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          localStorage.setItem('guestId', newGuestId)
+          setGuestId(newGuestId)
+        }
+      } else {
+        // Utilisateur authentifié
+        setGuestId(null)
+      }
+    }
+  }, [isAuthenticated])
+  
   const [formData, setFormData] = useState({
     nom: user?.name || "",
     email: user?.email || "",
@@ -40,16 +61,6 @@ export default function CheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!isAuthenticated) {
-      toast({
-        title: "Connexion requise",
-        description: "Veuillez vous connecter pour passer commande",
-        variant: "destructive"
-      })
-      router.push("/connexion")
-      return
-    }
 
     if (items.length === 0) {
       toast({
@@ -61,24 +72,80 @@ export default function CheckoutPage() {
       return
     }
 
+    // Valider les champs obligatoires
+    if (!formData.nom || !formData.email || !formData.telephone || !formData.adresse || !formData.ville) {
+      toast({
+        title: "Champs obligatoires manquants",
+        description: "Veuillez remplir tous les champs obligatoires",
+        variant: "destructive"
+      })
+      return
+    }
+
     setIsLoading(true)
     
     try {
-      // Simuler le traitement de la commande
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Vérifier que le guestId est défini pour les invités
+      if (!isAuthenticated && !guestId) {
+        throw new Error("Erreur d'initialisation du panier invité")
+      }
+
+      const adresseLivraisonData = {
+        nom: formData.nom.split(' ').slice(1).join(' ') || formData.nom,
+        prenom: formData.nom.split(' ')[0],
+        telephone: formData.telephone,
+        adresse: formData.adresse,
+        ville: formData.ville,
+        codePostal: formData.codePostal,
+        pays: "Cameroun"
+      }
+
+      const requestBody = isAuthenticated 
+        ? { userId: user?.email }
+        : { 
+            guestId,
+            email: formData.email, 
+            adresseLivraison: adresseLivraisonData 
+          }
+
+      console.log('Authentifié:', isAuthenticated)
+      console.log('GuestId:', guestId)
+      console.log('Body:', requestBody)
+
+      const response = await fetch('/api/commandes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || "Erreur lors de la création de la commande")
+      }
+
+      const result = await response.json()
       
       clearCart()
       
+      // Nettoyer le guestId après commande réussie
+      if (!isAuthenticated) {
+        localStorage.removeItem('guestId')
+      }
+      
       toast({
         title: "Commande confirmée !",
-        description: "Votre commande a été enregistrée avec succès"
+        description: "Votre commande a été enregistrée avec succès",
       })
       
-      router.push("/dashboard/mes-commandes")
+      // Rediriger vers la confirmation ou les commandes
+      router.push(isAuthenticated ? "/dashboard/mes-commandes" : "/")
     } catch (error) {
+      console.error('Erreur:', error)
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue lors du traitement de votre commande",
+        description: error instanceof Error ? error.message : "Une erreur est survenue lors du traitement de votre commande",
         variant: "destructive"
       })
     } finally {
