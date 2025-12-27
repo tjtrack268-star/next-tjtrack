@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,6 +25,24 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
   const { user, isAuthenticated } = useAuth()
   const { toast } = useToast()
   const { mutate: creerCommande, isPending: isCreatingOrder } = useCreerCommande()
+
+  const [guestId, setGuestId] = useState<string | null>(null)
+
+  // Initialiser le guestId pour les invités
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (!isAuthenticated) {
+        const stored = localStorage.getItem('guestId')
+        if (stored) {
+          setGuestId(stored)
+        } else {
+          const newGuestId = `guest-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          localStorage.setItem('guestId', newGuestId)
+          setGuestId(newGuestId)
+        }
+      }
+    }
+  }, [isAuthenticated])
 
   const [formData, setFormData] = useState({
     firstName: user?.name?.split(" ")[0] ?? "",
@@ -87,15 +105,6 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
 
     if (!validateForm()) return
     
-    if (!isAuthenticated || !user?.userId) {
-      toast({
-        title: "Erreur",
-        description: "Vous devez être connecté pour passer commande",
-        variant: "destructive",
-      })
-      return
-    }
-
     if (items.length === 0) {
       toast({
         title: "Erreur", 
@@ -107,34 +116,94 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
 
     setIsSubmitting(true)
 
-    creerCommande({
-      userId: user.userId,
-      adresseLivraison: {
-        nom: formData.lastName,
-        prenom: formData.firstName,
-        telephone: formData.phone,
-        adresse: formData.address,
-        ville: formData.city,
-        codePostal: formData.postalCode
-      },
-      modePaiement: formData.paymentMethod
-    }, {
-      onSuccess: (response) => {
+    try {
+      if (isAuthenticated && user?.userId) {
+        // Utilisateur authentifié
+        creerCommande({
+          userId: user.userId,
+          adresseLivraison: {
+            nom: formData.lastName,
+            prenom: formData.firstName,
+            telephone: formData.phone,
+            adresse: formData.address,
+            ville: formData.city,
+            codePostal: formData.postalCode
+          },
+          modePaiement: formData.paymentMethod
+        }, {
+          onSuccess: (response) => {
+            toast({
+              title: "Commande confirmée !",
+              description: `Commande ${response.data?.numeroCommande} créée avec succès`,
+            })
+            clearCart()
+            onClose()
+          },
+          onError: (error: any) => {
+            console.error('Erreur création commande:', error)
+            setErrors({ submit: error.message || "Impossible de passer la commande" })
+          },
+          onSettled: () => {
+            setIsSubmitting(false)
+          }
+        })
+      } else {
+        // Invité - faire l'appel API via la route API Next.js
+        if (!guestId) {
+          throw new Error("Erreur d'initialisation du panier invité")
+        }
+
+        const response = await fetch('/api/commandes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            guestId,
+            email: formData.email,
+            items: items.map(item => ({
+              articleId: item.articleId,
+              quantite: item.quantite,
+              prixUnitaire: item.prixUnitaire
+            })),
+            adresseLivraison: {
+              nom: formData.lastName,
+              prenom: formData.firstName,
+              telephone: formData.phone,
+              adresse: formData.address,
+              ville: formData.city,
+              codePostal: formData.postalCode,
+              pays: "Cameroun"
+            }
+          })
+        })
+
+        if (!response.ok) {
+          try {
+            const errorData = await response.json()
+            throw new Error(errorData.message || "Erreur lors de la création de la commande")
+          } catch {
+            throw new Error(`Erreur serveur (${response.status}): Le service est temporairement indisponible`)
+          }
+        }
+
+        const result = await response.json()
+
         toast({
           title: "Commande confirmée !",
-          description: `Commande ${response.data?.numeroCommande} créée avec succès`,
+          description: "Votre commande a été enregistrée avec succès",
         })
+
         clearCart()
+        localStorage.removeItem('guestId')
         onClose()
-      },
-      onError: (error: any) => {
-        console.error('Erreur création commande:', error)
-        setErrors({ submit: error.message || "Impossible de passer la commande" })
-      },
-      onSettled: () => {
-        setIsSubmitting(false)
       }
-    })
+    } catch (error) {
+      console.error('Erreur:', error)
+      setErrors({ 
+        submit: error instanceof Error ? error.message : "Une erreur est survenue lors du traitement de votre commande" 
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
