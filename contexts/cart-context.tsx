@@ -283,98 +283,150 @@ export function CartProvider({ children }: { children: ReactNode }) {
       quantite?: number,
       productInfo?: { name: string; price: number; image?: string }
     ) => {
+      // Prevent duplicate requests with debouncing
+      const requestKey = typeof articleIdOrItem === 'object' 
+        ? `add-${articleIdOrItem.articleId}-${Date.now()}` 
+        : `add-${articleIdOrItem}-${Date.now()}`
+      
       // For guest users, work with local storage only
       if (!isAuthenticated || !user?.email) {
         return addItemLocally(articleIdOrItem, quantite, productInfo)
       }
 
-      // Handle object parameter (PanierItemDto)
-      if (typeof articleIdOrItem === 'object') {
-        const item = articleIdOrItem
-        if (!item.articleId || !item.quantite || !item.prixUnitaire) {
-          throw new Error('Données article incomplètes')
-        }
-        
-        const previousItems = [...localItems]
-        setLocalItems((prev) => {
-          const existingIndex = prev.findIndex((i) => i.articleId === item.articleId)
-          if (existingIndex >= 0) {
-            const updated = [...prev]
-            const newQuantite = updated[existingIndex].quantite + item.quantite
-            updated[existingIndex] = {
-              ...updated[existingIndex],
-              quantite: newQuantite,
-              sousTotal: newQuantite * item.prixUnitaire,
-            }
-            return updated
-          }
-          return [...prev, { ...item, id: Date.now() } as LocalCartItem]
-        })
-        
-        try {
-          const request: PanierRequest = { articleId: item.articleId, quantite: item.quantite }
-          await apiClient.post("/panier/ajouter", request, { userEmail: user.email })
-        } catch (error: any) {
-          if (error?.message?.includes('400')) {
-            console.warn('Article not found or user not found, working offline')
-            return // Keep local changes
-          }
-          console.error('Erreur ajout panier:', error)
-          setLocalItems(previousItems)
-          throw error
-        }
+      // Prevent multiple simultaneous requests for the same item
+      if (isLoading) {
+        console.warn('Cart operation already in progress, skipping...')
         return
       }
 
-      // Handle separate parameters
-      const articleId = articleIdOrItem
-      if (!quantite || !productInfo || quantite <= 0) {
-        throw new Error("Quantité et informations produit requises")
-      }
-
-      const previousItems = [...localItems]
-      const newItem = {
-        id: Date.now(),
-        articleId,
-        articleCode: `ART-${articleId}`,
-        articleNom: productInfo.name,
-        articlePhoto: productInfo.image,
-        quantite,
-        prixUnitaire: productInfo.price,
-        sousTotal: quantite * productInfo.price,
-        stockDisponible: 100,
-        disponible: true,
-      }
-
-      setLocalItems((prev) => {
-        const existingIndex = prev.findIndex((i) => i.articleId === articleId)
-        if (existingIndex >= 0) {
-          const updated = [...prev]
-          const newQuantite = updated[existingIndex].quantite + quantite
-          updated[existingIndex] = {
-            ...updated[existingIndex],
-            quantite: newQuantite,
-            sousTotal: newQuantite * productInfo.price,
-          }
-          return updated
-        }
-        return [...prev, newItem]
-      })
-
+      setIsLoading(true)
+      
       try {
-        const request: PanierRequest = { articleId, quantite }
-        await apiClient.post("/panier/ajouter", request, { userEmail: user.email })
-      } catch (error: any) {
-        if (error?.message?.includes('400')) {
-          console.warn('Article not found or user not found, working offline')
-          return // Keep local changes
+        // Handle object parameter (PanierItemDto)
+        if (typeof articleIdOrItem === 'object') {
+          const item = articleIdOrItem
+          if (!item.articleId || !item.quantite || !item.prixUnitaire) {
+            throw new Error('Données article incomplètes')
+          }
+          
+          const previousItems = [...localItems]
+          
+          // Optimistic update
+          setLocalItems((prev) => {
+            const existingIndex = prev.findIndex((i) => i.articleId === item.articleId)
+            if (existingIndex >= 0) {
+              const updated = [...prev]
+              const newQuantite = updated[existingIndex].quantite + item.quantite
+              updated[existingIndex] = {
+                ...updated[existingIndex],
+                quantite: newQuantite,
+                sousTotal: newQuantite * item.prixUnitaire,
+              }
+              return updated
+            }
+            return [...prev, { ...item, id: Date.now() } as LocalCartItem]
+          })
+          
+          try {
+            const request: PanierRequest = { articleId: item.articleId, quantite: item.quantite }
+            await apiClient.post("/panier/ajouter", request, { userEmail: user.email })
+          } catch (error: any) {
+            // Rollback on error
+            setLocalItems(previousItems)
+            if (error?.message?.includes('400')) {
+              console.warn('Article not found or user not found, working offline')
+              // Re-apply local changes for offline mode
+              setLocalItems((prev) => {
+                const existingIndex = prev.findIndex((i) => i.articleId === item.articleId)
+                if (existingIndex >= 0) {
+                  const updated = [...prev]
+                  const newQuantite = updated[existingIndex].quantite + item.quantite
+                  updated[existingIndex] = {
+                    ...updated[existingIndex],
+                    quantite: newQuantite,
+                    sousTotal: newQuantite * item.prixUnitaire,
+                  }
+                  return updated
+                }
+                return [...prev, { ...item, id: Date.now() } as LocalCartItem]
+              })
+              return
+            }
+            console.error('Erreur ajout panier:', error)
+            throw error
+          }
+          return
         }
-        console.error('Erreur ajout panier:', error)
-        setLocalItems(previousItems)
-        throw error
+
+        // Handle separate parameters
+        const articleId = articleIdOrItem
+        if (!quantite || !productInfo || quantite <= 0) {
+          throw new Error("Quantité et informations produit requises")
+        }
+
+        const previousItems = [...localItems]
+        const newItem = {
+          id: Date.now(),
+          articleId,
+          articleCode: `ART-${articleId}`,
+          articleNom: productInfo.name,
+          articlePhoto: productInfo.image,
+          quantite,
+          prixUnitaire: productInfo.price,
+          sousTotal: quantite * productInfo.price,
+          stockDisponible: 100,
+          disponible: true,
+        }
+
+        // Optimistic update
+        setLocalItems((prev) => {
+          const existingIndex = prev.findIndex((i) => i.articleId === articleId)
+          if (existingIndex >= 0) {
+            const updated = [...prev]
+            const newQuantite = updated[existingIndex].quantite + quantite
+            updated[existingIndex] = {
+              ...updated[existingIndex],
+              quantite: newQuantite,
+              sousTotal: newQuantite * productInfo.price,
+            }
+            return updated
+          }
+          return [...prev, newItem]
+        })
+
+        try {
+          const request: PanierRequest = { articleId, quantite }
+          await apiClient.post("/panier/ajouter", request, { userEmail: user.email })
+        } catch (error: any) {
+          // Rollback on error
+          setLocalItems(previousItems)
+          if (error?.message?.includes('400')) {
+            console.warn('Article not found or user not found, working offline')
+            // Re-apply local changes for offline mode
+            setLocalItems((prev) => {
+              const existingIndex = prev.findIndex((i) => i.articleId === articleId)
+              if (existingIndex >= 0) {
+                const updated = [...prev]
+                const newQuantite = updated[existingIndex].quantite + quantite
+                updated[existingIndex] = {
+                  ...updated[existingIndex],
+                  quantite: newQuantite,
+                  sousTotal: newQuantite * productInfo.price,
+                }
+                return updated
+              }
+              return [...prev, newItem]
+            })
+            return
+          }
+          console.error('Erreur ajout panier:', error)
+          throw error
+        }
+      } finally {
+        setIsLoading(false)
       }
     },
-    [isAuthenticated, user?.email, localItems],
+    [isAuthenticated, user?.email, localItems, isLoading, addItemLocally],
   )
 
   const removeItem = useCallback(
