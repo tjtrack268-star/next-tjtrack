@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { ShoppingCart, User, Menu, X, Search, Bell, Package, LayoutDashboard, Heart, ChevronDown, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,34 +39,25 @@ export function Header() {
         <div className="flex h-16 items-center justify-between gap-4">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-primary">
-              <Package className="h-5 w-5 text-white" />
-            </div>
+            <Image
+              src="/logo_tjtrack.jpg"
+              alt="TJ-Track Logo"
+              width={36}
+              height={36}
+              className="rounded-lg object-contain"
+            />
             <span className="text-xl font-bold text-gradient hidden sm:block">TJ-Track</span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-6">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-              >
-                {item.name}
-              </Link>
-            ))}
-          </nav>
-
           {/* Search Bar */}
-          <div className={cn("flex-1 max-w-md transition-all duration-300", isSearchOpen ? "flex" : "hidden md:flex")}>
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className={cn("flex-1 max-w-4xl h-12 transition-all duration-300", isSearchOpen ? "flex" : "hidden md:flex")}>
+            <div className="relative w-full border -bottom-8.5 h-full">
               <Input
                 type="search"
                 placeholder="Rechercher des produits..."
-                className="w-full pl-10 pr-4 bg-secondary/50 border-0 focus-visible:ring-primary"
+                className="w-full h-full pl-10 pr-4 bg-secondary/50 border-0 focus-visible:ring-primary"
               />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
           </div>
 
@@ -159,9 +151,13 @@ export function Header() {
                 <div className="flex flex-col h-full">
                   <div className="p-6 border-b border-sidebar-border">
                     <div className="flex items-center gap-2">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg gradient-primary">
-                        <Package className="h-6 w-6 text-white" />
-                      </div>
+                      <Image
+                        src="/logo_tjtrack.jpg"
+                        alt="TJ-Track Logo"
+                        width={40}
+                        height={40}
+                        className="rounded-lg object-contain"
+                      />
                       <span className="text-xl font-bold text-sidebar-foreground">TJ-Track</span>
                     </div>
                   </div>
