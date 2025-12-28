@@ -68,12 +68,19 @@ export default function DualDeliveryAssignment({
         rating: 4.5,
         totalDeliveries: 50,
         status: "DISPONIBLE" as const,
-        zone: livreur.zone || "Proximité"
+        zone: livreur.ville || livreur.zone || "Proximité" // Utiliser la ville du livreur
       }))
       
-      // Séparer les livreurs par zone
-      setLivreursPickup(transformedLivreurs.filter((l: Livreur) => l.distance < 15))
-      setLivreursDelivery(transformedLivreurs.filter((l: Livreur) => l.distance >= 15 || l.zone === "Autre ville"))
+      // Filtrer les livreurs par ville
+      const livreursVilleMarchand = transformedLivreurs.filter((l: Livreur) => 
+        l.zone?.toLowerCase() === merchantVille.toLowerCase()
+      )
+      const livreursVilleClient = transformedLivreurs.filter((l: Livreur) => 
+        l.zone?.toLowerCase() === clientVille.toLowerCase()
+      )
+      
+      setLivreursPickup(livreursVilleMarchand)
+      setLivreursDelivery(livreursVilleClient)
       
       // Données de démonstration si vide
       if (transformedLivreurs.length === 0) {
