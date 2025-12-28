@@ -1,6 +1,7 @@
 "use client"
 
 import { QueryClientProvider } from "@tanstack/react-query"
+import { ThemeProvider } from "next-themes"
 import dynamic from "next/dynamic"
 
 import { type ReactNode } from "react"
@@ -26,8 +27,8 @@ const ReactQueryDevtools =
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <ApiErrorBoundary>
-        
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ApiErrorBoundary>
           <AuthProvider>
             <CartProvider>
               {children}
@@ -35,9 +36,9 @@ export function Providers({ children }: { children: ReactNode }) {
               <SonnerToaster position="top-right" richColors />
             </CartProvider>
           </AuthProvider>
-        
-      </ApiErrorBoundary>
-    <ReactQueryDevtools />
+        </ApiErrorBoundary>
+        <ReactQueryDevtools />
+      </ThemeProvider>
     </QueryClientProvider>
   )
 }
