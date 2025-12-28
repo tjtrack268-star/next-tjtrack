@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { apiClient } from "@/lib/api"
 import DeliveryAssignment from "./DeliveryAssignment"
+import DualDeliveryAssignment from "./DualDeliveryAssignment"
 
 interface MerchantOrder {
   id: number
@@ -413,21 +414,24 @@ export default function MerchantOrderManagement() {
                               Assigner un livreur
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="max-w-2xl">
+                          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
                               <DialogTitle>Assigner un livreur - Commande #{order.numeroCommande}</DialogTitle>
                             </DialogHeader>
                             {selectedOrder && (
-                              <DeliveryAssignment
+                              <DualDeliveryAssignment
                                 commandeId={selectedOrder.id}
-                                clientId={1} // This should come from the order
-                                merchantId={parseInt(user?.userId || "0")}
-                                merchantLat={0} // This should come from merchant profile
-                                merchantLon={0} // This should come from merchant profile
+                                merchantEmail={user?.userId || ""}
+                                merchantLat={0} // TODO: Get from merchant profile
+                                merchantLon={0} // TODO: Get from merchant profile
+                                clientVille={selectedOrder.adresseLivraison.ville}
+                                merchantVille="Yaoundé" // TODO: Get from merchant profile
                                 onAssigned={(result) => {
                                   toast({
-                                    title: "Livreur assigné",
-                                    description: `${result.livreurNom} a été assigné à cette commande`,
+                                    title: "Livreur(s) assigné(s)",
+                                    description: result.livreurDeliveryNom 
+                                      ? `${result.livreurPickupNom} (pickup) et ${result.livreurDeliveryNom} (delivery) ont été assignés`
+                                      : `${result.livreurNom} a été assigné à cette commande`,
                                   })
                                   queryClient.invalidateQueries({ queryKey: ["merchantOrders"] })
                                   setSelectedOrder(null)

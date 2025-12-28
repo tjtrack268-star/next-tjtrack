@@ -19,22 +19,36 @@ export const deliveryApi = {
   },
 
   // Assign a delivery person to an order
-  async assignerLivreur(commandeId: number, livreurId: number, merchantId: number) {
+  async assignerLivreur(commandeId: number, clientId: number, merchantEmail: string, livreurId: number) {
     try {
-      const response = await apiClient.post('/livraisons/assigner', {
-        commandeId,
-        livreurId,
-        merchantId,
-        dateAssignation: new Date().toISOString()
-      })
+      const response = await apiClient.post(
+        `/commandes/${commandeId}/assigner-livreur?clientId=${clientId}&merchantEmail=${merchantEmail}&livreurId=${livreurId}`
+      )
       return response
     } catch (error) {
       console.error('Error assigning delivery person:', error)
-      return apiClient.post(`/commandes/${commandeId}/assigner-livreur`, {
-        clientId: 1,
-        merchantId,
-        livreurId
-      })
+      throw error
+    }
+  },
+
+  // Assign two delivery persons (pickup and delivery)
+  async assignerDeuxLivreurs(
+    commandeId: number,
+    merchantEmail: string,
+    livreurPickupId: number,
+    livreurDeliveryId: number
+  ) {
+    try {
+      const response = await apiClient.post(
+        `/commandes/${commandeId}/assigner-deux-livreurs?` +
+        `merchantEmail=${merchantEmail}&` +
+        `livreurPickupId=${livreurPickupId}&` +
+        `livreurDeliveryId=${livreurDeliveryId}`
+      )
+      return response
+    } catch (error) {
+      console.error('Error assigning two delivery persons:', error)
+      throw error
     }
   },
 
