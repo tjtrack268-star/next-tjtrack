@@ -30,6 +30,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { useToast } from "@/hooks/use-toast"
 import { useCart } from "@/contexts/cart-context"
 import { ProductSidebar } from "@/components/layout/product-sidebar"
+import { Header } from "@/components/layout/header"
 import { apiClient } from "@/lib/api"
 import { buildImageUrl } from "@/lib/image-utils"
 import type { ProduitDetailDto, ProduitEcommerceDto } from "@/types/api"
@@ -144,6 +145,7 @@ export default function ProductPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Header />
       <div className="container mx-auto px-4 py-6">
         <div className="flex gap-8">
           {/* Main Content */}
