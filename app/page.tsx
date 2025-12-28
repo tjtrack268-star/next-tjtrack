@@ -42,9 +42,9 @@ import { apiClient } from "@/lib/api"
 import { buildImageUrl } from "@/lib/image-utils"
 import type { ProduitEcommerceDto } from "@/types/api"
 import { CheckoutModal } from "@/components/checkout/checkout-modal"
-import { ProductModal } from "@/components/product/product-modal"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Header } from "@/components/layout/header"
+import { useRouter } from "next/navigation"
 
 // Hook pour récupérer les produits e-commerce
 function useEcommerceProducts() {
@@ -61,10 +61,9 @@ export default function HomePage() {
   const { totalItems, addItem, openCart } = useCart()
   const { user, isAuthenticated, logout } = useAuth()
   const { toast } = useToast()
+  const router = useRouter()
   const { data: apiProducts, isLoading, error } = useEcommerceProducts()
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
-  const [selectedProduct, setSelectedProduct] = useState<ProduitEcommerceDto | null>(null)
-  const [isProductModalOpen, setIsProductModalOpen] = useState(false)
 
   console.log('HomePage - Auth state:', { user: user ? 'logged in' : 'not logged in', isAuthenticated })
   
@@ -131,8 +130,7 @@ export default function HomePage() {
   }
 
   const handleProductClick = (product: ProduitEcommerceDto) => {
-    setSelectedProduct(product)
-    setIsProductModalOpen(true)
+    router.push(`/produit/${product.id}`)
   }
 
   const ProductCard = ({ product }: { product: ProduitEcommerceDto }) => (
@@ -509,16 +507,6 @@ export default function HomePage() {
       <CheckoutModal 
         isOpen={isCheckoutOpen} 
         onClose={() => setIsCheckoutOpen(false)} 
-      />
-      
-      {/* Product Modal */}
-      <ProductModal
-        product={selectedProduct}
-        isOpen={isProductModalOpen}
-        onClose={() => {
-          setIsProductModalOpen(false)
-          setSelectedProduct(null)
-        }}
       />
     </div>
   )

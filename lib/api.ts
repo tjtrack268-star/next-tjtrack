@@ -29,6 +29,20 @@ class ApiClient {
     return url.toString()
   }
 
+  private isPublicEndpoint(endpoint: string): boolean {
+    const publicEndpoints = [
+      '/catalogue/',
+      '/ecommerce/produits',
+      '/ecommerce/categories',
+      '/stock/',
+      '/panier/',
+      '/publicite/',
+      '/login',
+      '/register',
+    ]
+    return publicEndpoints.some(path => endpoint.includes(path))
+  }
+
   private async request<T>(endpoint: string, config: RequestConfig = {}, retries = 3): Promise<T> {
     const { params, ...fetchConfig } = config
     const url = this.buildUrl(endpoint, params)
@@ -38,7 +52,8 @@ class ApiClient {
       ...config.headers,
     }
 
-    if (this.token) {
+    // N'envoyer le token que si l'endpoint n'est pas public
+    if (this.token && !this.isPublicEndpoint(endpoint)) {
       ;(headers as Record<string, string>)["Authorization"] = `Bearer ${this.token}`
     }
 
@@ -77,19 +92,24 @@ class ApiClient {
         
         // Gestion spéciale pour les erreurs d'authentification
         if (response.status === 401 || response.status === 403) {
-          // Déconnecter l'utilisateur si le token est invalide
-          localStorage.removeItem("tj-track-token")
-          localStorage.removeItem("tj-track-user")
-          document.cookie = 'tj-track-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
-          document.cookie = 'jwt=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
-          this.setToken(null)
-          
-          // Rediriger vers la page de connexion si on n'y est pas déjà
-          if (typeof window !== 'undefined' && !window.location.pathname.includes('/connexion')) {
-            window.location.href = '/connexion'
+          // Ne pas rediriger si c'est un endpoint public
+          if (!this.isPublicEndpoint(endpoint)) {
+            // Déconnecter l'utilisateur si le token est invalide
+            localStorage.removeItem("tj-track-token")
+            localStorage.removeItem("tj-track-user")
+            document.cookie = 'tj-track-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
+            document.cookie = 'jwt=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
+            this.setToken(null)
+            
+            // Rediriger vers la page de connexion si on n'y est pas déjà
+            if (typeof window !== 'undefined' && !window.location.pathname.includes('/connexion')) {
+              window.location.href = '/connexion'
+            }
+            
+            throw new Error("Session expirée. Veuillez vous reconnecter.")
           }
-          
-          throw new Error("Session expirée. Veuillez vous reconnecter.")
+          // Pour les endpoints publics, laisser passer l'erreur sans redirection
+          throw new Error(errorData.message || `Erreur HTTP: ${response.status}`)
         }
         
         // Retry on server errors (5xx) or network issues

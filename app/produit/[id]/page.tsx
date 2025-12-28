@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useCart } from "@/contexts/cart-context"
 import { ProductSidebar } from "@/components/layout/product-sidebar"
 import { apiClient } from "@/lib/api"
+import { buildImageUrl } from "@/lib/image-utils"
 import type { ProduitDetailDto, ProduitEcommerceDto } from "@/types/api"
 
 function useProductDetail(id: string) {
@@ -138,7 +139,7 @@ export default function ProductPage() {
     )
   }
 
-  const images = product.images || ["/placeholder.svg"]
+  const images = product.images?.map(img => buildImageUrl(img) || "/placeholder.svg") || ["/placeholder.svg"]
   const relatedProductsFiltered = relatedProducts?.filter(p => p.id !== product.id).slice(0, 4) || []
 
   return (
@@ -432,7 +433,7 @@ export default function ProductPage() {
                 >
                   <div className="aspect-square bg-muted overflow-hidden">
                     <img
-                      src={relatedProduct.images?.[0] || "/placeholder.svg"}
+                      src={buildImageUrl(relatedProduct.images?.[0]) || "/placeholder.svg"}
                       alt={relatedProduct.nom}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
