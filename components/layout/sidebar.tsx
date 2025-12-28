@@ -30,6 +30,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
+import { ThemeToggle } from "@/components/theme/theme-toggle"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -278,6 +279,10 @@ function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
 
       {/* User Info */}
       <div className="p-4 border-t border-sidebar-border">
+        <div className="flex items-center justify-between mb-3 px-2">
+          <span className="text-xs text-muted-foreground">Thème</span>
+          <ThemeToggle />
+        </div>
         {isAuthenticated && user ? (
           <div className="space-y-3">
             <div className="flex items-center gap-3 px-2">
