@@ -7,6 +7,7 @@ import { ShoppingCart, User, Menu, X, Search, Bell, Package, LayoutDashboard, He
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { ThemeToggle } from "@/components/theme/theme-toggle"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,6 +68,9 @@ export function Header() {
             <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsSearchOpen(!isSearchOpen)}>
               {isSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
             </Button>
+
+            {/* Theme Toggle */}
+            <ThemeToggle />
 
             {/* Favorites */}
             <Button variant="ghost" size="icon" className="hidden sm:flex">
