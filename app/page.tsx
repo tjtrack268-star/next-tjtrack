@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import {
   Search,
   ShoppingCart,
@@ -43,6 +44,7 @@ import type { ProduitEcommerceDto } from "@/types/api"
 import { CheckoutModal } from "@/components/checkout/checkout-modal"
 import { ProductModal } from "@/components/product/product-modal"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Header } from "@/components/layout/header"
 
 // Hook pour récupérer les produits e-commerce
 function useEcommerceProducts() {
@@ -181,6 +183,23 @@ export default function HomePage() {
   const FilterSidebar = () => (
     <div className="space-y-6">
       <div>
+        <h3 className="font-semibold mb-3">Navigation</h3>
+        <div className="space-y-2">
+          <Link href="/catalogue" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
+            Catalogue
+          </Link>
+          <Link href="/categories" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
+            Catégories
+          </Link>
+          <Link href="/promotions" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
+            Promotions
+          </Link>
+          <Link href="/nouveautes" className="block text-sm text-muted-foreground hover:text-primary transition-colors">
+            Nouveautés
+          </Link>
+        </div>
+      </div>
+      <div>
         <h3 className="font-semibold mb-3">Catégories</h3>
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
           <SelectTrigger>
@@ -249,7 +268,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Announcement Banner */}
-      <div className="bg-primary text-primary-foreground py-2 overflow-hidden">
+      <div className="bg-primary text-primary-foreground accordion-up py-1 overflow-hidden">
         <div className="animate-marquee whitespace-nowrap">
           <span className="mx-4">Livraison gratuite à partir de 50 000 XAF</span>
           <span className="mx-4">•</span>
@@ -261,99 +280,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Header */}
-      <header className="sticky top-0 z-50 glass-card border-b">
-        <div className="max-w-[1600px] mx-auto px-1 sm:px-2 py-3">
-          <div className="flex items-center gap-4">
-            {/* Mobile Menu */}
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="lg:hidden">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left">
-                <SheetHeader>
-                  <SheetTitle>Filtres</SheetTitle>
-                </SheetHeader>
-                <div className="mt-6">
-                  <FilterSidebar />
-                </div>
-              </SheetContent>
-            </Sheet>
-
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-2">
-              <div className="h-9 w-9 rounded-lg gradient-primary flex items-center justify-center">
-                <ShoppingCart className="h-5 w-5 text-white" />
-              </div>
-              <span className="text-xl font-bold hidden sm:inline">TJ-Track</span>
-            </Link>
-
-            {/* Search */}
-            <div className="flex-1 max-w-2xl mx-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Rechercher un produit..."
-                  className="pl-10 pr-4"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              {isAuthenticated && user ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="gap-2">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="h-4 w-4 text-primary" />
-                      </div>
-                      <span className="hidden md:inline">{user.name}</span>
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem asChild>
-                      <Link href="/dashboard" className="flex items-center gap-2">
-                        <LayoutDashboard className="h-4 w-4" />
-                        Tableau de bord
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={logout} className="text-destructive">
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Déconnexion
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <Link href="/connexion">
-                  <Button variant="ghost" className="gap-2">
-                    <User className="h-4 w-4" />
-                    <span className="hidden md:inline">Connexion</span>
-                  </Button>
-                </Link>
-              )}
-              <ThemeToggle />
-              <Button variant="ghost" size="icon" className="relative" onClick={openCart}>
-                <ShoppingCart className="h-5 w-5" />
-                {totalItems > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center gradient-primary text-white text-xs">
-                    {totalItems}
-                  </Badge>
-                )}
-              </Button>
-            </div>
-          </div>
-
-          {/* Categories */}
-          {/* Moved to sidebar */}
-        </div>
-      </header>
+      <Header />
 
       {/* Main Content */}
       <main className="container mx-auto px-2 sm:px-3 py-6">
@@ -550,9 +477,13 @@ export default function HomePage() {
 
           <div className="pt-8 border-t border-white/20 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded bg-white flex items-center justify-center">
-                <span className="text-primary font-bold text-sm italic">TJ</span>
-              </div>
+              <Image
+                src="/logo_tjtrack.jpg"
+                alt="TJ-Track Logo"
+                width={32}
+                height={32}
+                className="rounded bg-white p-1 object-contain"
+              />
               <span className="font-bold text-xl">TRACK</span>
             </div>
             <div className="flex items-center gap-3 flex-wrap">

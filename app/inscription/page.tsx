@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import {
   Eye,
@@ -27,6 +28,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { StaticLocationSelector } from "@/components/ui/static-location-selector"
+import { Header } from "@/components/layout/header"
 import type { ProfileRequest } from "@/types/api"
 
 const roles = [
@@ -260,16 +262,7 @@ export default function InscriptionPage() {
   if (otpSent) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
-        <header className="border-b border-border bg-card/50">
-          <div className="container mx-auto px-4 py-4">
-            <Link href="/" className="flex items-center gap-2 w-fit">
-              <div className="h-10 w-10 rounded-xl gradient-primary flex items-center justify-center">
-                <Store className="h-5 w-5 text-white" />
-              </div>
-              <span className="font-bold text-xl text-gradient">TJ-Track</span>
-            </Link>
-          </div>
-        </header>
+        <Header />
 
         <main className="flex-1 flex items-center justify-center p-4">
           <Card className="w-full max-w-md border-border bg-card/50 backdrop-blur-sm">
@@ -312,16 +305,7 @@ export default function InscriptionPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="border-b border-border bg-card/50">
-        <div className="container mx-auto px-4 py-4">
-          <Link href="/" className="flex items-center gap-2 w-fit">
-            <div className="h-10 w-10 rounded-xl gradient-primary flex items-center justify-center">
-              <Store className="h-5 w-5 text-white" />
-            </div>
-            <span className="font-bold text-xl text-gradient">TJ-Track</span>
-          </Link>
-        </div>
-      </header>
+      <Header />
 
       <main className="flex-1 flex items-center justify-center p-4 py-8">
         <Card className="w-full max-w-md border-border bg-card/50 backdrop-blur-sm">

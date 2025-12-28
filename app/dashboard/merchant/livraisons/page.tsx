@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Package, Truck, Clock, CheckCircle, MapPin } from 'lucide-react'
 import { useCommandesMerchant } from '@/hooks/use-api'
 import { useAuth } from '@/contexts/auth-context'
+import DualDeliveryAssignment from '@/components/delivery/DualDeliveryAssignment'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://147.93.9.170:8080/api/v1.0"
 
@@ -450,7 +451,7 @@ export default function LivraisonsPage() {
 
           {showAssignment && selectedCommande && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+              <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-bold">
@@ -463,9 +464,17 @@ export default function LivraisonsPage() {
                       Fermer
                     </Button>
                   </div>
-                  <DeliveryAssignmentComponent 
+                  <DualDeliveryAssignment
                     commandeId={selectedCommande.id}
-                    onAssigned={handleDeliveryAssigned}
+                    merchantEmail={user?.userId || ""}
+                    merchantLat={0}
+                    merchantLon={0}
+                    clientVille="Douala" // TODO: Get from order
+                    merchantVille="Yaoundé" // TODO: Get from merchant profile
+                    onAssigned={(result) => {
+                      handleDeliveryAssigned(result)
+                      setShowAssignment(false)
+                    }}
                   />
                 </div>
               </div>
