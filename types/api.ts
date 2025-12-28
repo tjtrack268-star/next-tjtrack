@@ -125,13 +125,11 @@ export interface PanierRequest {
 
 export interface ProduitEcommerceDto {
   id?: number
-  articleId?: number
+  articleId?: number  // Add this field
   nom: string
   description: string
   descriptionLongue?: string
-  prix: number  // Prix TTC
-  prixHt?: number  // Prix HT
-  tauxTva?: number  // Taux TVA en %
+  prix: number
   quantite: number
   categorieId: number
   categorieName?: string

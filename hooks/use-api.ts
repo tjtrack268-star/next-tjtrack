@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api"
+import { compressImage } from "@/lib/image-compress"
 import type {
   ApiResponse,
   ArticleDto,
@@ -1011,7 +1012,11 @@ export function useAjouterProduitMerchant() {
       formData.append("visibleEnLigne", produitDto.visibleEnLigne?.toString() || "true")
       formData.append("merchantUserId", merchantUserId)
       
-      images.forEach((img) => formData.append("images", img))
+      // Compresser et ajouter les images
+      for (const img of images) {
+        const compressed = await compressImage(img)
+        formData.append("images", compressed)
+      }
       
       const response = await fetch(`${API_BASE_URL}/merchant/produits`, {
         method: "POST",

@@ -34,7 +34,6 @@ class ApiClient {
       '/catalogue/',
       '/ecommerce/produits',
       '/ecommerce/categories',
-      '/stock/',
       '/panier/',
       '/publicite/',
       '/login',
