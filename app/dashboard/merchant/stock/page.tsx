@@ -19,6 +19,7 @@ import { StockAnalytics } from "@/components/stock/stock-analytics"
 import { ReorderSuggestions } from "@/components/stock/reorder-suggestions"
 import { MovementAnalytics } from "@/components/stock/movement-analytics"
 import { buildImageUrl } from "@/lib/image-utils"
+import { compressImage } from "@/lib/image-compress"
 
 export default function MerchantStockPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -144,8 +145,9 @@ export default function MerchantStockPage() {
         
         for (const image of articleImages) {
           try {
+            const compressedImage = await compressImage(image)
             const formData = new FormData()
-            formData.append("image", image)
+            formData.append("image", compressedImage)
             
             const token = localStorage.getItem("tj-track-token")
             const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://147.93.9.170:8080/api/v1.0"

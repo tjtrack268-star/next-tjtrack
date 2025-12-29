@@ -30,15 +30,6 @@ export function ProductCard({ product, variant = "default" }: ProductCardProps) 
   const name = isArticle ? product.designation : product.nom
   const price = isArticle ? product.prixUnitaireTtc || product.prixUnitaireHt : product.prix
   const image = buildImageUrl(isArticle ? product.photo : product.images?.[0])
-  
-  // Debug temporaire
-  console.log('ProductCard Debug:', {
-    productId: id,
-    isArticle,
-    rawImage: isArticle ? product.photo : product.images?.[0],
-    builtImage: image,
-    product
-  })
   const category = isArticle ? product.categorieDesignation : product.categorieName
   const inStock = isArticle ? (product.quantiteStock || 0) > 0 : (product.quantite || 0) > 0
   const stockCount = isArticle ? product.quantiteStock : product.quantite

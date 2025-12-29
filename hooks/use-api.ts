@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api"
+import { compressImage } from "@/lib/image-compress"
 import type {
   ApiResponse,
   ArticleDto,
@@ -94,8 +95,8 @@ export function useCatalogue(params?: CatalogueParams) {
   return useQuery({
     queryKey: queryKeys.catalogue(params),
     queryFn: () =>
-      apiClient.get<ArticleDto[]>(
-        "/catalogue/articles",
+      apiClient.get<ProduitEcommerceDto[]>(
+        "/catalogue/produits",
         params as Record<string, string | number | boolean | undefined>,
       ),
   })
@@ -227,8 +228,14 @@ export function useCreerCommande() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ userId, adresseLivraison, modePaiement }: { 
+    mutationFn: (data: { 
       userId: string
+      email?: string
+      items?: Array<{
+        articleId: number
+        quantite: number
+        prixUnitaire: number
+      }>
       adresseLivraison?: {
         nom: string
         prenom: string
@@ -236,9 +243,10 @@ export function useCreerCommande() {
         adresse: string
         ville: string
         codePostal?: string
+        pays?: string
       }
       modePaiement?: string
-    }) => apiClient.post<ApiResponse<Commande>>("/commandes/creer", { adresseLivraison, modePaiement }, { userId }),
+    }) => apiClient.post<ApiResponse<Commande>>("/commandes/creer", data, { userId: data.userId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["commandes"] })
       queryClient.invalidateQueries({ queryKey: ["commandesMerchant"] })
@@ -1011,7 +1019,11 @@ export function useAjouterProduitMerchant() {
       formData.append("visibleEnLigne", produitDto.visibleEnLigne?.toString() || "true")
       formData.append("merchantUserId", merchantUserId)
       
-      images.forEach((img) => formData.append("images", img))
+      // Compresser et ajouter les images
+      for (const img of images) {
+        const compressed = await compressImage(img)
+        formData.append("images", compressed)
+      }
       
       const response = await fetch(`${API_BASE_URL}/merchant/produits`, {
         method: "POST",
