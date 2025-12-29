@@ -95,8 +95,8 @@ export function useCatalogue(params?: CatalogueParams) {
   return useQuery({
     queryKey: queryKeys.catalogue(params),
     queryFn: () =>
-      apiClient.get<ArticleDto[]>(
-        "/catalogue/articles",
+      apiClient.get<ProduitEcommerceDto[]>(
+        "/catalogue/produits",
         params as Record<string, string | number | boolean | undefined>,
       ),
   })

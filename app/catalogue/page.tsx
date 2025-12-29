@@ -17,7 +17,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { useCatalogue, useCategories } from "@/hooks/use-api"
 import { ProductSidebar } from "@/components/layout/product-sidebar"
 import { cn } from "@/lib/utils"
-import type { ArticleDto } from "@/types/api"
+import type { ProduitEcommerceDto } from "@/types/api"
 
 export default function CataloguePage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
@@ -38,7 +38,7 @@ export default function CataloguePage() {
 
   const { data: apiCategories, isLoading: isLoadingCategories } = useCategories()
 
-  const products: ArticleDto[] = (apiProducts || []) as ArticleDto[]
+  const products: ProduitEcommerceDto[] = (apiProducts || []) as ProduitEcommerceDto[]
   const categories = (apiCategories || []) as {
     id: number
     code?: string
@@ -51,7 +51,7 @@ export default function CataloguePage() {
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
       // Search filter
-      if (searchQuery && !product.designation.toLowerCase().includes(searchQuery.toLowerCase())) {
+      if (searchQuery && !product.nom.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false
       }
       // Category filter
@@ -59,12 +59,12 @@ export default function CataloguePage() {
         return false
       }
       // Price filter
-      const price = product.prixUnitaireTtc || product.prixUnitaireHt || 0
+      const price = product.prix || 0
       if (price < priceRange[0] || price > priceRange[1]) {
         return false
       }
       // Stock filter
-      if (inStockOnly && (product.quantiteStock || 0) <= 0) {
+      if (inStockOnly && (product.quantite || 0) <= 0) {
         return false
       }
       return true
@@ -75,13 +75,13 @@ export default function CataloguePage() {
     const sorted = [...filteredProducts]
     switch (sortBy) {
       case "designation":
-        return sorted.sort((a, b) => a.designation.localeCompare(b.designation))
+        return sorted.sort((a, b) => (a.nom || "").localeCompare(b.nom || ""))
       case "-designation":
-        return sorted.sort((a, b) => b.designation.localeCompare(a.designation))
+        return sorted.sort((a, b) => (b.nom || "").localeCompare(a.nom || ""))
       case "prixUnitaireTtc":
-        return sorted.sort((a, b) => (a.prixUnitaireTtc || 0) - (b.prixUnitaireTtc || 0))
+        return sorted.sort((a, b) => (a.prix || 0) - (b.prix || 0))
       case "-prixUnitaireTtc":
-        return sorted.sort((a, b) => (b.prixUnitaireTtc || 0) - (a.prixUnitaireTtc || 0))
+        return sorted.sort((a, b) => (b.prix || 0) - (a.prix || 0))
       default:
         return sorted
     }
@@ -195,7 +195,7 @@ export default function CataloguePage() {
                   <div>
                     <h3 className="font-medium mb-3">Prix</h3>
                     <div className="space-y-4">
-                      <Slider value={priceRange} onValueChange={setPriceRange} min={0} max={2000000} step={10000} />
+                      <Slider value={priceRange} onValueChange={setPriceRange} min={0} max={200000} step={500} />
                       <div className="flex items-center justify-between text-sm">
                         <span>{priceRange[0].toLocaleString()} FCFA</span>
                         <span>{priceRange[1].toLocaleString()} FCFA</span>
