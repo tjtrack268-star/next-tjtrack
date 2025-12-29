@@ -39,6 +39,7 @@ class ApiClient {
       '/login',
       '/register',
     ]
+    // /commandes/creer est public mais doit recevoir le token si disponible
     return publicEndpoints.some(path => endpoint.includes(path))
   }
 
@@ -51,9 +52,19 @@ class ApiClient {
       ...config.headers,
     }
 
-    // N'envoyer le token que si l'endpoint n'est pas public
-    if (this.token && !this.isPublicEndpoint(endpoint)) {
+    // Toujours envoyer le token s'il existe (même pour les endpoints publics comme /commandes/creer)
+    if (this.token) {
       ;(headers as Record<string, string>)["Authorization"] = `Bearer ${this.token}`
+      console.log('🔑 Token envoyé:', this.token.substring(0, 20) + '...')
+    } else {
+      console.warn('⚠️ Aucun token disponible pour', endpoint)
+      // Essayer de récupérer le token depuis localStorage
+      const storedToken = typeof window !== 'undefined' ? localStorage.getItem('tj-track-token') : null
+      if (storedToken) {
+        console.log('🔄 Token récupéré depuis localStorage')
+        this.token = storedToken
+        ;(headers as Record<string, string>)["Authorization"] = `Bearer ${storedToken}`
+      }
     }
 
     const controller = new AbortController()

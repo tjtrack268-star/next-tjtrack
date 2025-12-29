@@ -118,19 +118,30 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
 
     try {
       if (isAuthenticated && user?.userId) {
-        // Utilisateur authentifié
-        creerCommande({
+        // Utilisateur authentifié - envoyer les items du panier
+        const commandeData = {
           userId: user.userId,
+          email: user.email,
+          items: items.map(item => ({
+            articleId: item.articleId,
+            quantite: item.quantite,
+            prixUnitaire: item.prixUnitaire
+          })),
           adresseLivraison: {
             nom: formData.lastName,
             prenom: formData.firstName,
             telephone: formData.phone,
             adresse: formData.address,
             ville: formData.city,
-            codePostal: formData.postalCode
+            codePostal: formData.postalCode,
+            pays: "Cameroun"
           },
           modePaiement: formData.paymentMethod
-        }, {
+        }
+        
+        console.log('📦 Données commande envoyées:', JSON.stringify(commandeData, null, 2))
+        
+        creerCommande(commandeData, {
           onSuccess: (response) => {
             toast({
               title: "Commande confirmée !",

@@ -228,8 +228,14 @@ export function useCreerCommande() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ userId, adresseLivraison, modePaiement }: { 
+    mutationFn: (data: { 
       userId: string
+      email?: string
+      items?: Array<{
+        articleId: number
+        quantite: number
+        prixUnitaire: number
+      }>
       adresseLivraison?: {
         nom: string
         prenom: string
@@ -237,9 +243,10 @@ export function useCreerCommande() {
         adresse: string
         ville: string
         codePostal?: string
+        pays?: string
       }
       modePaiement?: string
-    }) => apiClient.post<ApiResponse<Commande>>("/commandes/creer", { adresseLivraison, modePaiement }, { userId }),
+    }) => apiClient.post<ApiResponse<Commande>>("/commandes/creer", data, { userId: data.userId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["commandes"] })
       queryClient.invalidateQueries({ queryKey: ["commandesMerchant"] })
