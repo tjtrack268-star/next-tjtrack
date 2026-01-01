@@ -47,7 +47,7 @@ export function Header() {
               height={36}
               className="rounded-lg object-contain"
             />
-            <span className="text-xl font-bold text-gradient hidden sm:block">TJ-Track</span>
+            <span className="text-xl font-bold text-gradient hidden sm:block">Track</span>
           </Link>
 
           {/* Search Bar */}

@@ -420,7 +420,7 @@ export default function LivraisonsPage() {
                         )}
                       </div>
                       <div className="ml-6">
-                        {commande.statut === 'CONFIRMEE' && !commande.livreurId ? (
+                        {(commande.statut === 'CONFIRMEE' || commande.statut === 'EN_PREPARATION') && !commande.livreurId ? (
                           <Button onClick={() => handleAssignDelivery(commande)}>
                             <Truck className="h-4 w-4 mr-2" />
                             Assigner Livreur

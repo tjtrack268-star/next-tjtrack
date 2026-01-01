@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MapPin, Phone, Clock, Truck, Star, MessageCircle, ArrowRight, Package } from 'lucide-react'
 import { deliveryApi } from '@/lib/delivery-api'
+import { apiClient } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
 
 interface Livreur {
@@ -42,12 +43,26 @@ export default function DualDeliveryAssignment({
   const [selectedPickup, setSelectedPickup] = useState<number | null>(null)
   const [selectedDelivery, setSelectedDelivery] = useState<number | null>(null)
   const [assigning, setAssigning] = useState(false)
+  const [infoLivraison, setInfoLivraison] = useState<any>(null)
 
-  const isDifferentCity = clientVille.toLowerCase() !== merchantVille.toLowerCase()
+  const isDifferentCity = infoLivraison ? !infoLivraison.memeVille : 
+    (clientVille?.toLowerCase() !== merchantVille?.toLowerCase())
 
   useEffect(() => {
+    loadInfoLivraison()
     loadLivreurs()
-  }, [merchantLat, merchantLon])
+  }, [merchantLat, merchantLon, commandeId])
+
+  const loadInfoLivraison = async () => {
+    try {
+      const response = await apiClient.get(`/commandes/${commandeId}/info-livraison`) as any
+      const data = response.data || response
+      setInfoLivraison(data)
+      console.log('Info livraison:', data)
+    } catch (error) {
+      console.error('Erreur chargement info livraison:', error)
+    }
+  }
 
   const loadLivreurs = async () => {
     setLoading(true)
@@ -272,15 +287,17 @@ export default function DualDeliveryAssignment({
 
   if (!isDifferentCity) {
     // Livraison locale - un seul livreur
+    const villeAffichage = infoLivraison?.merchantVille || merchantVille
+    
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Truck className="h-5 w-5" />
-            Livraison Locale - {merchantVille}
+            Livraison Locale - {villeAffichage}
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Le client est dans la même ville. Un seul livreur suffit.
+            Le client est dans la même ville ({infoLivraison?.clientVille || clientVille}). Un seul livreur suffit.
           </p>
         </CardHeader>
         <CardContent>
@@ -315,6 +332,9 @@ export default function DualDeliveryAssignment({
   }
 
   // Livraison inter-villes - deux livreurs
+  const villeClientAffichage = infoLivraison?.clientVille || clientVille
+  const villeMarchandAffichage = infoLivraison?.merchantVille || merchantVille
+  
   return (
     <Card>
       <CardHeader>
@@ -323,7 +343,7 @@ export default function DualDeliveryAssignment({
           Livraison Inter-Villes
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Client à {clientVille}, marchand à {merchantVille}. Deux livreurs nécessaires.
+          Client à {villeClientAffichage}, marchand à {villeMarchandAffichage}. Deux livreurs nécessaires.
         </p>
       </CardHeader>
       <CardContent>
@@ -350,13 +370,13 @@ export default function DualDeliveryAssignment({
             <TabsContent value="pickup" className="space-y-3 mt-4">
               <div className="bg-blue-50 p-3 rounded-lg mb-4">
                 <p className="text-sm text-blue-800">
-                  <strong>Étape 1:</strong> Sélectionnez le livreur qui récupérera la commande chez vous à {merchantVille}
+                  <strong>Étape 1:</strong> Sélectionnez le livreur qui récupérera la commande chez vous à {villeMarchandAffichage}
                 </p>
               </div>
               
               {livreursPickup.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
-                  Aucun livreur disponible à {merchantVille}
+                  Aucun livreur disponible à {villeMarchandAffichage}
                 </p>
               ) : (
                 livreursPickup.map((livreur) => 
@@ -373,13 +393,13 @@ export default function DualDeliveryAssignment({
             <TabsContent value="delivery" className="space-y-3 mt-4">
               <div className="bg-green-50 p-3 rounded-lg mb-4">
                 <p className="text-sm text-green-800">
-                  <strong>Étape 2:</strong> Sélectionnez le livreur qui livrera au client à {clientVille}
+                  <strong>Étape 2:</strong> Sélectionnez le livreur qui livrera au client à {villeClientAffichage}
                 </p>
               </div>
               
               {livreursDelivery.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
-                  Aucun livreur disponible à {clientVille}
+                  Aucun livreur disponible à {villeClientAffichage}
                 </p>
               ) : (
                 livreursDelivery.map((livreur) => 
