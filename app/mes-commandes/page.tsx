@@ -92,8 +92,7 @@ export default function MyOrdersPage() {
   }
 
   const handleDownloadInvoice = (orderId: number) => {
-    // Download invoice PDF
-    window.open(`/api/factures/${orderId}/pdf`, '_blank')
+    window.open(`${process.env.NEXT_PUBLIC_API_URL}/commandes/${orderId}/facture`, '_blank')
   }
 
   const handleLeaveReview = (orderId: number) => {

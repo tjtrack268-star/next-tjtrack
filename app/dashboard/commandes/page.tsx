@@ -727,6 +727,14 @@ export default function CommandesPage() {
                     
                     <div className="pt-4 space-y-2">
                       <Button
+                        onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL}/commandes/${selectedCommande.id}/facture`, '_blank')}
+                        className="w-full gap-2"
+                        variant="outline"
+                      >
+                        <FileText className="h-4 w-4" />
+                        Télécharger la facture PDF
+                      </Button>
+                      <Button
                         onClick={() => handlePrintInvoice(selectedCommande)}
                         className="w-full gap-2"
                         variant="outline"
