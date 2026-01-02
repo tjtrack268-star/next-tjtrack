@@ -131,6 +131,7 @@ export interface ProduitEcommerceDto {
   descriptionLongue?: string
   prix: number
   quantite: number
+  quantiteEnLigne?: number  // Quantity to put online (deducted from article stock)
   categorieId: number
   categorieName?: string
   images?: string[]

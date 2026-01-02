@@ -2,7 +2,7 @@
  * Utilitaire pour construire les URLs d'images depuis l'API Spring Boot et MinIO
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://147.93.9.170:8080/api/v1.0'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1.0'
 
 /**
  * Construit l'URL complète d'une image via l'API Spring Boot
@@ -23,7 +23,7 @@ export function buildImageUrl(imagePath: string | null | undefined): string | nu
     return `${baseHost}${imagePath}`
   }
   
-  // Si c'est un chemin relatif (articles/file.jpg), construire l'URL via l'API d'images
+  // Si c'est un chemin relatif (articles/file.jpg ou products/file.jpg), construire l'URL via l'API d'images
   if (!imagePath.startsWith('/')) {
     const url = `${API_BASE_URL}/images/${imagePath}`
     console.log('Building image URL:', { imagePath, url, API_BASE_URL })
