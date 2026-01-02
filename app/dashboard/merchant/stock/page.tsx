@@ -153,7 +153,7 @@ export default function MerchantStockPage() {
             formData.append("image", compressedImage)
             
             const token = localStorage.getItem("tj-track-token")
-            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1.0"
+            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://147.93.9.170:8080/api/v1.0"
             
             const uploadResponse = await fetch(
               `${API_BASE_URL}/merchant/stock/articles/${articleId}/image`,
