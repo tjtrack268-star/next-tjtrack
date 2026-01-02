@@ -56,6 +56,7 @@ export default function MerchantStockPage() {
     descriptionLongue: "",
     prix: "",
     quantite: "",
+    quantiteEnLigne: "",
     visibleEnLigne: true
   })
   const { toast } = useToast()
@@ -69,14 +70,16 @@ export default function MerchantStockPage() {
   
   const categories = categoriesResponse || []
 
-  // Extract stock from response
+  // Extract stock from response and filter out products that are already online
   const stock = stockResponse?.data || stockResponse || []
 
   const filteredStock = Array.isArray(stock)
     ? stock.filter(
         (s) =>
-          s.designation?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          s.codeArticle?.toLowerCase().includes(searchQuery.toLowerCase()),
+          (s.designation?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          s.codeArticle?.toLowerCase().includes(searchQuery.toLowerCase())) &&
+          // Filter out articles that start with PROD- (these are products, not stock articles)
+          !s.codeArticle?.startsWith('PROD-')
       )
     : []
 
@@ -150,7 +153,7 @@ export default function MerchantStockPage() {
             formData.append("image", compressedImage)
             
             const token = localStorage.getItem("tj-track-token")
-            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://147.93.9.170:8080/api/v1.0"
+            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1.0"
             
             const uploadResponse = await fetch(
               `${API_BASE_URL}/merchant/stock/articles/${articleId}/image`,
@@ -215,10 +218,10 @@ export default function MerchantStockPage() {
   }
 
   const handleCreateProduct = async () => {
-    if (!productDialog.article || !productData.nom || !productData.prix) {
+    if (!productDialog.article) {
       toast({
         title: "Erreur",
-        description: "Veuillez remplir tous les champs obligatoires",
+        description: "Aucun article sélectionné",
         variant: "destructive"
       })
       return
@@ -226,23 +229,37 @@ export default function MerchantStockPage() {
 
     try {
       const article = productDialog.article
+      
+      console.log("Creating product from article:", article)
+      console.log("Article photo:", article.photo)
+      console.log("Product images:", productImages)
+      
+      // Si l'article a une photo et qu'aucune image n'a été ajoutée, utiliser la photo de l'article
+      let imagesToUpload = productImages
+      if (productImages.length === 0 && article.photo) {
+        console.log("⚠️ Article has photo but no product images selected. Photo will be linked automatically.")
+        // Le backend utilisera automatiquement la photo de l'article
+      }
+      
       await addProductMutation.mutateAsync({
         produitDto: {
-          nom: productData.nom,
-          description: productData.description,
-          descriptionLongue: productData.descriptionLongue,
-          prix: parseFloat(productData.prix),
-          quantite: parseInt(productData.quantite) || (article.quantiteStock as number),
-          categorieId: 1,
+          articleId: article.id as number,
+          nom: article.designation as string,
+          description: (article.description as string) || "",
+          descriptionLongue: productData.descriptionLongue || "",
+          prix: article.prixUnitaireTtc as number || 0,
+          quantite: parseInt(productData.quantiteEnLigne) || 0,
+          quantiteEnLigne: parseInt(productData.quantiteEnLigne) || 0,
+          categorieId: (article.categorieId as number) || 1,
           visibleEnLigne: productData.visibleEnLigne
         },
-        images: productImages,
+        images: imagesToUpload,
         merchantUserId: user?.email || ""
       })
 
       toast({
         title: "Produit créé",
-        description: "L'article a été converti en produit avec succès"
+        description: `${parseInt(productData.quantiteEnLigne)} unités mises en ligne. Stock restant: ${Math.max(0, ((article.quantiteStock as number) || 0) - (parseInt(productData.quantiteEnLigne) || 0))} unités.`
       })
 
       setProductDialog({ open: false, article: null })
@@ -252,15 +269,30 @@ export default function MerchantStockPage() {
         descriptionLongue: "",
         prix: "",
         quantite: "",
+        quantiteEnLigne: "",
         visibleEnLigne: true
       })
       setProductImages([])
-    } catch (err) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de créer le produit",
-        variant: "destructive"
-      })
+      // Force refresh of stock data
+      await refetch()
+    } catch (err: any) {
+      console.error("❌ Error creating product:", err)
+      const errorMessage = err?.message || err?.toString() || "Impossible de créer le produit"
+      
+      // Check if article is already online
+      if (errorMessage.includes("déjà en ligne")) {
+        toast({
+          title: "Article déjà en ligne",
+          description: "Cet article est déjà disponible dans votre boutique en ligne.",
+          variant: "destructive"
+        })
+      } else {
+        toast({
+          title: "Erreur",
+          description: errorMessage,
+          variant: "destructive"
+        })
+      }
     }
   }
 
@@ -271,6 +303,7 @@ export default function MerchantStockPage() {
       descriptionLongue: "",
       prix: (article.prixUnitaireHt as number)?.toString() || "",
       quantite: (article.quantiteStock as number)?.toString() || "",
+      quantiteEnLigne: (article.quantiteStock as number)?.toString() || "",
       visibleEnLigne: true
     })
     setProductImages([])
@@ -824,84 +857,55 @@ export default function MerchantStockPage() {
       <Dialog open={productDialog.open} onOpenChange={(open) => setProductDialog({ ...productDialog, open })}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Convertir en Produit E-commerce</DialogTitle>
+            <DialogTitle>Ajouter l'Article en Ligne</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="p-3 rounded-lg bg-muted">
-              <p className="font-medium">{productDialog.article?.designation as string}</p>
-              <p className="text-sm text-muted-foreground">
-                Stock disponible: {(productDialog.article?.quantiteStock as number) || 0} unités
+            <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800">
+              <div className="flex items-start gap-3">
+                <Package className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div>
+                  <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">
+                    {productDialog.article?.designation as string}
+                  </p>
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    Stock disponible: {(productDialog.article?.quantiteStock as number) || 0} unités
+                  </p>
+                  <p className="text-sm text-blue-700 dark:text-blue-300 mt-2">
+                    ✅ Le stock sera automatiquement synchronisé avec votre boutique en ligne.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Quantité à mettre en ligne *</Label>
+              <Input
+                type="number"
+                min="1"
+                max={(productDialog.article?.quantiteStock as number) || 0}
+                value={productData.quantiteEnLigne}
+                onChange={(e) => setProductData({ ...productData, quantiteEnLigne: e.target.value })}
+                placeholder="Quantité"
+              />
+              <p className="text-xs text-muted-foreground">
+                Stock disponible: {(productDialog.article?.quantiteStock as number) || 0} unités. 
+                Après mise en ligne, il restera {Math.max(0, ((productDialog.article?.quantiteStock as number) || 0) - (parseInt(productData.quantiteEnLigne) || 0))} unités en stock.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Nom du produit *</Label>
-                <Input
-                  value={productData.nom}
-                  onChange={(e) => setProductData({ ...productData, nom: e.target.value })}
-                  placeholder="Nom pour l'e-commerce"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Prix de vente (XAF) *</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={productData.prix}
-                  onChange={(e) => setProductData({ ...productData, prix: e.target.value })}
-                  placeholder="Prix public"
-                />
-              </div>
-            </div>
+            
             <div className="space-y-2">
-              <Label>Description courte</Label>
-              <Textarea
-                value={productData.description}
-                onChange={(e) => setProductData({ ...productData, description: e.target.value })}
-                placeholder="Description pour l'e-commerce"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Description détaillée</Label>
+              <Label>Description détaillée (optionnelle)</Label>
               <Textarea
                 value={productData.descriptionLongue}
                 onChange={(e) => setProductData({ ...productData, descriptionLongue: e.target.value })}
-                placeholder="Description complète du produit"
+                placeholder="Ajoutez une description complète pour la boutique en ligne..."
+                rows={4}
               />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Quantité à mettre en ligne</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max={(productDialog.article?.quantiteStock as number) || 0}
-                  value={productData.quantite}
-                  onChange={(e) => setProductData({ ...productData, quantite: e.target.value })}
-                  placeholder="Quantité disponible"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Visibilité</Label>
-                <Select 
-                  value={productData.visibleEnLigne.toString()} 
-                  onValueChange={(value) => setProductData({ ...productData, visibleEnLigne: value === "true" })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="true">Visible en ligne</SelectItem>
-                    <SelectItem value="false">Masqué</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
             
             {/* Images Section */}
             <div className="space-y-2">
-              <Label>Images du produit</Label>
+              <Label>Images supplémentaires (optionnelles)</Label>
               <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-muted/50 transition">
                 <input
                   type="file"
@@ -942,6 +946,19 @@ export default function MerchantStockPage() {
                 </div>
               )}
             </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="visibleEnLigne"
+                checked={productData.visibleEnLigne}
+                onChange={(e) => setProductData({ ...productData, visibleEnLigne: e.target.checked })}
+                className="rounded"
+              />
+              <Label htmlFor="visibleEnLigne" className="font-normal cursor-pointer">
+                Rendre visible en ligne immédiatement
+              </Label>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setProductDialog({ open: false, article: null })}>
@@ -950,7 +967,7 @@ export default function MerchantStockPage() {
             <Button onClick={handleCreateProduct} disabled={addProductMutation.isPending}>
               {addProductMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               <Store className="h-4 w-4 mr-2" />
-              Créer Produit
+              Ajouter en Ligne
             </Button>
           </DialogFooter>
         </DialogContent>

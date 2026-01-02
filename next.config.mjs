@@ -6,6 +6,20 @@ const nextConfig = {
   images: {
     unoptimized: true,
     domains: ['147.93.9.170'], // Add your backend domain here
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: '147.93.9.170',
+        port: '8080',
+        pathname: '/api/v1.0/images/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '8080',
+        pathname: '/api/v1.0/images/**',
+      },
+    ],
   },
   // API routes configuration
   async rewrites() {

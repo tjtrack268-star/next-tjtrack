@@ -44,6 +44,7 @@ import type { ProduitEcommerceDto } from "@/types/api"
 import { CheckoutModal } from "@/components/checkout/checkout-modal"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Header } from "@/components/layout/header"
+import { ProductSidebar } from "@/components/layout/product-sidebar"
 import { useRouter } from "next/navigation"
 
 // Hook pour récupérer les produits e-commerce
@@ -352,78 +353,7 @@ export default function HomePage() {
           </div>
 
           {/* Right Sidebar - Featured/Ads */}
-          <aside className="hidden xl:block w-72 shrink-0">
-            <Card className="glass-card sticky top-32">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  <h2 className="font-semibold">Produits en avant</h2>
-                </div>
-
-                {/* Promo Banner */}
-                <div className="relative rounded-lg overflow-hidden mb-4 bg-gradient-to-r from-primary to-primary/80 p-4 text-white">
-                  <div className="relative z-10">
-                    <Badge className="bg-white/20 mb-2">Promo</Badge>
-                    <p className="font-bold">Soldes d'été</p>
-                    <p className="text-2xl font-bold">-50%</p>
-                    <p className="text-xs opacity-80">Sur une sélection</p>
-                  </div>
-                </div>
-
-                {/* Featured Products */}
-                <div className="space-y-3">
-                  {products.slice(0, 4).map((product, idx) => (
-                    <div
-                      key={product.id}
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                      onClick={() => handleProductClick(product)}
-                    >
-                      <span className="text-lg font-bold text-muted-foreground w-5">{idx + 1}</span>
-                      <img
-                        src={product.images?.[0] || "/placeholder.svg"}
-                        alt={product.nom || "Produit"}
-                        className="h-14 w-14 rounded-lg object-cover"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <Badge className="bg-primary text-white text-xs mb-1">Populaire</Badge>
-                        <p className="text-sm font-medium truncate">{product.nom}</p>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-primary">{formatPrice(Number(product.prix || 0))}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Eye className="h-3 w-3" />
-                          {(product.nombreVues || 0).toLocaleString()} vues
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* CTA */}
-                <Link href={isAuthenticated ? "/dashboard/merchant/publicite" : "/connexion"}>
-                  <Button className="w-full mt-4 gradient-primary text-white">
-                    Mettre mon produit en avant
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </Link>
-
-                <Card className="mt-4 bg-muted/30 border-0">
-                  <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground mb-2">Publicité</p>
-                    <p className="text-sm text-muted-foreground">
-                      Boostez la visibilité de vos produits avec nos options de mise en avant.
-                    </p>
-                    <Link
-                      href="/dashboard/merchant/publicite"
-                      className="text-xs text-primary hover:underline mt-2 inline-block"
-                    >
-                      En savoir plus →
-                    </Link>
-                  </CardContent>
-                </Card>
-              </CardContent>
-            </Card>
-          </aside>
+          <ProductSidebar />
         </div>
       </main>
 

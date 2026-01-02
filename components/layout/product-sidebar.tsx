@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useQuery } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api"
+import { buildImageUrl } from "@/lib/image-utils"
 import type { ProduitEcommerceDto } from "@/types/api"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
@@ -56,7 +57,7 @@ export function ProductSidebar() {
               {carouselItems.map((item, index) => (
                 <div key={index} className="w-full flex-shrink-0 relative bg-gradient-to-r from-primary to-primary/80 p-4 text-white">
                   <img
-                    src={item.images?.[0] || "/placeholder.svg"}
+                    src={buildImageUrl(item.images?.[0]) || "/placeholder.svg"}
                     alt={item.nom || "Produit"}
                     className="absolute inset-0 w-full h-full object-cover opacity-20"
                   />
@@ -113,7 +114,7 @@ export function ProductSidebar() {
               >
                 <span className="text-lg font-bold text-muted-foreground w-5">{idx + 1}</span>
                 <img
-                  src={product.images?.[0] || "/placeholder.svg"}
+                  src={buildImageUrl(product.images?.[0]) || "/placeholder.svg"}
                   alt={product.nom || "Produit"}
                   className="h-14 w-14 rounded-lg object-cover"
                 />

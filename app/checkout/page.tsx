@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator"
 import { useCart } from "@/contexts/cart-context"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
+import { GuestRegistrationPrompt } from "@/components/checkout/guest-registration-prompt"
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -20,6 +21,7 @@ export default function CheckoutPage() {
   
   const [isLoading, setIsLoading] = useState(false)
   const [guestId, setGuestId] = useState<string | null>(null)
+  const [showRegistrationPrompt, setShowRegistrationPrompt] = useState(false)
   
   // Initialiser le guestId pour les invités
   useEffect(() => {
@@ -132,15 +134,16 @@ export default function CheckoutPage() {
       // Nettoyer le guestId après commande réussie
       if (!isAuthenticated) {
         localStorage.removeItem('guestId')
+        // Proposer l'inscription aux invités
+        setShowRegistrationPrompt(true)
+      } else {
+        toast({
+          title: "Commande confirmée !",
+          description: "Votre commande a été enregistrée avec succès",
+        })
+        // Rediriger vers les commandes
+        router.push("/dashboard/mes-commandes")
       }
-      
-      toast({
-        title: "Commande confirmée !",
-        description: "Votre commande a été enregistrée avec succès",
-      })
-      
-      // Rediriger vers la confirmation ou les commandes
-      router.push(isAuthenticated ? "/dashboard/mes-commandes" : "/")
     } catch (error) {
       console.error('Erreur:', error)
       toast({
@@ -374,6 +377,17 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal de proposition d'inscription pour les invités */}
+      <GuestRegistrationPrompt
+        isOpen={showRegistrationPrompt}
+        onClose={() => {
+          setShowRegistrationPrompt(false)
+          router.push("/")
+        }}
+        guestEmail={formData.email}
+        guestName={formData.nom}
+      />
     </div>
   )
 }

@@ -1006,7 +1006,7 @@ export function useAjouterProduitMerchant() {
       merchantUserId: string
     }) => {
       const token = localStorage.getItem("tj-track-token")
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://147.93.9.170:8080/api/v1.0"
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1.0"
       const formData = new FormData()
       
       // Ajouter chaque champ du DTO séparément
@@ -1018,6 +1018,11 @@ export function useAjouterProduitMerchant() {
       formData.append("categorieId", produitDto.categorieId?.toString() || "1")
       formData.append("visibleEnLigne", produitDto.visibleEnLigne?.toString() || "true")
       formData.append("merchantUserId", merchantUserId)
+      
+      // Ajouter l'articleId pour que le backend puisse récupérer la photo de l'article
+      if (produitDto.articleId) {
+        formData.append("articleId", produitDto.articleId.toString())
+      }
       
       // Compresser et ajouter les images
       for (const img of images) {
@@ -1035,13 +1040,22 @@ export function useAjouterProduitMerchant() {
       
       if (!response.ok) {
         const errorText = await response.text()
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`)
+        // Try to parse as JSON to get the error message
+        try {
+          const errorJson = JSON.parse(errorText)
+          const errorMessage = errorJson.message || errorJson.error || errorText
+          throw new Error(errorMessage)
+        } catch (parseError) {
+          // If not JSON, use the text directly
+          throw new Error(errorText || `HTTP error! status: ${response.status}`)
+        }
       }
       
       return response.json()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["merchantProduits"] })
+      queryClient.invalidateQueries({ queryKey: ["merchantArticles"] })
       queryClient.invalidateQueries({ queryKey: queryKeys.stockStats })
     },
   })
@@ -1108,7 +1122,7 @@ export function useAjouterArticleMerchantAvecImage() {
       userId: string
     }) => {
       const token = localStorage.getItem("tj-track-token")
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://147.93.9.170:8080/api/v1.0"
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1.0"
       const formData = new FormData()
       
       // Ajouter les champs de l'article
