@@ -469,8 +469,8 @@ export default function LivraisonsPage() {
                     merchantEmail={user?.userId || ""}
                     merchantLat={0}
                     merchantLon={0}
-                    clientVille="Douala" // TODO: Get from order
-                    merchantVille="Yaoundé" // TODO: Get from merchant profile
+                    clientVille="" // Sera récupéré depuis l'API
+                    merchantVille="" // Sera récupéré depuis l'API
                     onAssigned={(result) => {
                       handleDeliveryAssigned(result)
                       setShowAssignment(false)

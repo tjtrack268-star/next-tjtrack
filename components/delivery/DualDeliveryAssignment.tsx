@@ -86,16 +86,36 @@ export default function DualDeliveryAssignment({
         zone: livreur.ville || livreur.zone || "Proximité" // Utiliser la ville du livreur
       }))
       
-      // Filtrer les livreurs par ville
-      const livreursVilleMarchand = transformedLivreurs.filter((l: Livreur) => 
-        l.zone?.toLowerCase() === merchantVille.toLowerCase()
-      )
-      const livreursVilleClient = transformedLivreurs.filter((l: Livreur) => 
-        l.zone?.toLowerCase() === clientVille.toLowerCase()
-      )
-      
-      setLivreursPickup(livreursVilleMarchand)
-      setLivreursDelivery(livreursVilleClient)
+      // Filtrer les livreurs par ville pour livraison locale
+      if (infoLivraison && infoLivraison.memeVille) {
+        const villeMarchand = infoLivraison.merchantVille
+        const livreursVilleMarchand = transformedLivreurs.filter((l: Livreur) => 
+          l.zone?.toLowerCase().trim() === villeMarchand?.toLowerCase().trim()
+        )
+        
+        // Si aucun livreur dans la ville exacte, afficher tous les livreurs disponibles
+        if (livreursVilleMarchand.length === 0) {
+          console.log(`Aucun livreur trouvé pour ${villeMarchand}, affichage de tous les livreurs disponibles`)
+          setLivreursPickup(transformedLivreurs)
+        } else {
+          console.log(`Livraison locale à ${villeMarchand}: ${livreursVilleMarchand.length} livreurs filtrés`)
+          setLivreursPickup(livreursVilleMarchand)
+        }
+        setLivreursDelivery([])
+      } else {
+        // Filtrer les livreurs par ville pour livraison inter-villes
+        const livreursVilleMarchand = transformedLivreurs.filter((l: Livreur) => 
+          l.zone?.toLowerCase().trim() === merchantVille.toLowerCase().trim()
+        )
+        const livreursVilleClient = transformedLivreurs.filter((l: Livreur) => 
+          l.zone?.toLowerCase().trim() === clientVille.toLowerCase().trim()
+        )
+        
+        // Si aucun livreur dans les villes exactes, afficher tous
+        setLivreursPickup(livreursVilleMarchand.length > 0 ? livreursVilleMarchand : transformedLivreurs)
+        setLivreursDelivery(livreursVilleClient.length > 0 ? livreursVilleClient : transformedLivreurs)
+        console.log(`Livraison inter-villes: ${livreursVilleMarchand.length} livreurs à ${merchantVille}, ${livreursVilleClient.length} à ${clientVille}`)
+      }
       
       // Données de démonstration si vide
       if (transformedLivreurs.length === 0) {
@@ -305,6 +325,13 @@ export default function DualDeliveryAssignment({
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               <span className="ml-2">Recherche des livreurs...</span>
+            </div>
+          ) : livreursPickup.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">Aucun livreur disponible pour le moment</p>
+              <Button variant="outline" onClick={loadLivreurs}>
+                Actualiser
+              </Button>
             </div>
           ) : (
             <div className="space-y-3">
