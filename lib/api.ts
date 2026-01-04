@@ -1,5 +1,5 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://147.93.9.170:8080/api/v1.0"
-const API_TIMEOUT = parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000')
+const API_TIMEOUT = parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '10000')
 
 interface RequestConfig extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>
@@ -99,6 +99,14 @@ class ApiClient {
             status: response.status 
           }
         }
+        
+        // Log détaillé pour debug
+        console.error('❌ API Error:', {
+          endpoint,
+          status: response.status,
+          errorData,
+          method: fetchConfig.method || 'GET'
+        })
         
         // Gestion spéciale pour les erreurs d'authentification
         if (response.status === 401 || response.status === 403) {

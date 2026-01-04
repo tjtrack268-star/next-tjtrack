@@ -29,6 +29,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { StaticLocationSelector } from "@/components/ui/static-location-selector"
 import { Header } from "@/components/layout/header"
+import DocumentUpload from "@/components/profile/DocumentUpload"
 import type { ProfileRequest } from "@/types/api"
 
 const roles = [
@@ -41,41 +42,41 @@ const roles = [
 export default function InscriptionPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const { register, verifyOtp, isLoading } = useAuth()
+  const { register, verifyOtp, resendOtp, isLoading } = useAuth()
 
   const [step, setStep] = useState(1)
   const [showPassword, setShowPassword] = useState(false)
+  const [registeredUserId, setRegisteredUserId] = useState<number | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: "",
     role: "" as ProfileRequest["role"] | "",
-    // Role-specific info
     shopName: "",
     town: "",
     customTown: "",
     address: "",
     customAddress: "",
     phoneNumber: "",
-    // Client-specific fields
     firstName: "",
     lastName: "",
     cniNumber: "",
-    // Geolocation preference
     enableGeolocation: false,
   })
+  
+  const [cniRecto, setCniRecto] = useState<File | null>(null)
+  const [cniVerso, setCniVerso] = useState<File | null>(null)
+  const [photoProfil, setPhotoProfil] = useState<File | null>(null)
 
   const [otpSent, setOtpSent] = useState(false)
   const [otp, setOtp] = useState("")
+  const [resendingOtp, setResendingOtp] = useState(false)
+  const [pendingDocuments, setPendingDocuments] = useState(false)
 
   const updateFormData = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
-
-
-
-
 
   const validateStep1 = () => {
     if (!formData.name || !formData.email || !formData.password || !formData.role) {
@@ -107,54 +108,67 @@ export default function InscriptionPage() {
 
   const handleStep1Submit = () => {
     if (validateStep1()) {
-      if (formData.role === "CLIENT") {
-        setStep(2) // CLIENT needs extra info now
-      } else {
-        setStep(2)
-      }
+      setStep(2)
     }
   }
 
-  const validateStep2 = () => {
-    const finalTown = formData.town
-    const finalAddress = formData.address
-    
-    if (formData.role === "CLIENT") {
-      if (!formData.firstName || !formData.lastName || !formData.cniNumber || !finalTown || !finalAddress || !formData.phoneNumber) {
-        toast({
-          title: "Erreur",
-          description: "Veuillez remplir tous les champs obligatoires",
-          variant: "destructive",
-        })
-        return false
-      }
-    } else if (formData.role === "COMMERCANT" || formData.role === "FOURNISSEUR") {
-      if (!formData.shopName || !finalTown || !finalAddress || !formData.phoneNumber) {
-        toast({
-          title: "Erreur",
-          description: "Veuillez remplir tous les champs obligatoires",
-          variant: "destructive",
-        })
-        return false
-      }
-    } else if (formData.role === "LIVREUR") {
-      if (!finalTown || !finalAddress || !formData.phoneNumber) {
-        toast({
-          title: "Erreur",
-          description: "Veuillez remplir tous les champs obligatoires",
-          variant: "destructive",
-        })
-        return false
-      }
+  const handleStep2Submit = () => {
+    if (!formData.phoneNumber || !formData.town || !formData.address) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez remplir tous les champs obligatoires",
+        variant: "destructive",
+      })
+      return
     }
     
-    // Validate phone number format
     const phoneRegex = /^[+]?[0-9]{8,15}$/
-    const cleanPhone = formData.phoneNumber.replace(/\s+/g, '') // Remove spaces
+    const cleanPhone = formData.phoneNumber.replace(/\s+/g, '')
     if (!phoneRegex.test(cleanPhone)) {
       toast({
         title: "Erreur",
         description: "Format de téléphone invalide. Utilisez uniquement des chiffres (8-15 caractères)",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    if (formData.role === "CLIENT") {
+      if (!formData.firstName || !formData.lastName || !formData.cniNumber) {
+        toast({
+          title: "Erreur",
+          description: "Veuillez remplir tous les champs obligatoires",
+          variant: "destructive",
+        })
+        return
+      }
+    } else if (formData.role === "COMMERCANT" || formData.role === "FOURNISSEUR") {
+      if (!formData.shopName) {
+        toast({
+          title: "Erreur",
+          description: "Veuillez remplir le nom de l'entreprise",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+    setStep(3)
+  }
+
+  const validateStep3 = () => {
+    if (formData.role === "COMMERCANT" && (!formData.cniNumber || !cniRecto || !cniVerso || !photoProfil)) {
+      toast({
+        title: "Documents manquants",
+        description: "Veuillez fournir votre CNI et photo de profil",
+        variant: "destructive",
+      })
+      return false
+    }
+    
+    if (formData.role === "LIVREUR" && (!formData.cniNumber || !cniRecto || !cniVerso || !photoProfil)) {
+      toast({
+        title: "Documents manquants",
+        description: "Veuillez fournir tous les documents requis",
         variant: "destructive",
       })
       return false
@@ -164,21 +178,9 @@ export default function InscriptionPage() {
   }
 
   const handleRegister = async () => {
-    // Validate step 2 if needed
-    if (step === 2 && !validateStep2()) {
-      return
-    }
+    if (!validateStep3()) return
     
     try {
-      console.log("Frontend: Registration data", {
-        name: formData.name,
-        email: formData.email,
-        role: formData.role,
-        phoneNumber: formData.phoneNumber,
-        town: formData.town,
-        address: formData.address
-      })
-      
       const request: ProfileRequest = {
         name: formData.name,
         email: formData.email,
@@ -186,78 +188,174 @@ export default function InscriptionPage() {
         role: formData.role as ProfileRequest["role"],
       }
 
-      // Clean phone number (remove spaces)
       const cleanPhone = formData.phoneNumber.replace(/\s+/g, '')
-      const finalTown = formData.town
-      const finalAddress = formData.address
 
-      // Add role-specific info
       if (formData.role === "COMMERCANT") {
         request.merchantInfo = {
           shopName: formData.shopName,
-          town: finalTown,
-          address: finalAddress,
+          town: formData.town,
+          address: formData.address,
           phoneNumber: cleanPhone,
         }
       } else if (formData.role === "FOURNISSEUR") {
         request.supplierInfo = {
           shopName: formData.shopName,
-          town: finalTown,
-          address: finalAddress,
+          town: formData.town,
+          address: formData.address,
           phoneNumber: cleanPhone,
         }
       } else if (formData.role === "LIVREUR") {
         request.deliveryInfo = {
-          town: finalTown,
-          address: finalAddress,
+          town: formData.town,
+          address: formData.address,
           phoneNumber: cleanPhone,
         }
       } else if (formData.role === "CLIENT") {
         request.clientInfo = {
-          firstName: formData.firstName || "N/A",
-          lastName: formData.lastName || "N/A",
-          cniNumber: formData.cniNumber || "N/A",
-          town: finalTown || "N/A",
-          address: finalAddress || "N/A",
-          phoneNumber: cleanPhone || "+237000000000",
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          cniNumber: formData.cniNumber,
+          town: formData.town,
+          address: formData.address,
+          phoneNumber: cleanPhone,
         }
       }
 
       await register(request)
+      
+      // Marquer qu'il y a des documents à uploader après OTP
+      if ((formData.role === "LIVREUR" || formData.role === "COMMERCANT") && (cniRecto || cniVerso || photoProfil)) {
+        setPendingDocuments(true)
+      }
+      
       setOtpSent(true)
+      
       toast({
         title: "Inscription réussie",
         description: "Un code de vérification a été envoyé à votre email",
       })
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Une erreur est survenue"
       toast({
         title: "Erreur d'inscription",
-        description: error instanceof Error ? error.message : "Une erreur est survenue",
+        description: errorMessage.includes("already has") 
+          ? "Cet email est déjà utilisé. Veuillez utiliser un autre email ou vous connecter."
+          : errorMessage,
         variant: "destructive",
       })
     }
   }
 
-  const handleVerifyOtp = async () => {
+  const uploadDocuments = async () => {
     try {
-      console.log("Frontend: Verifying OTP", { email: formData.email, otp: otp.trim() })
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1.0"
+      const token = localStorage.getItem("tj-track-token")
+      
+      if (!token) {
+        throw new Error("Token non disponible")
+      }
+      
+      const uploadFile = async (file: File, endpoint: string) => {
+        const uploadFormData = new FormData()
+        uploadFormData.append("file", file)
+        uploadFormData.append("profileType", formData.role)
+        
+        const response = await fetch(`${API_BASE_URL}/profile-documents/${endpoint}`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: uploadFormData
+        })
+        
+        if (!response.ok) {
+          throw new Error(`Upload ${endpoint} échoué`)
+        }
+      }
+      
+      // Sauvegarder le numéro CNI
+      if (formData.cniNumber) {
+        const response = await fetch(
+          `${API_BASE_URL}/profile-documents/save-cni-number?profileType=${formData.role}&cniNumber=${formData.cniNumber}`,
+          { 
+            method: "POST", 
+            headers: { Authorization: `Bearer ${token}` } 
+          }
+        )
+        if (!response.ok) {
+          throw new Error("Sauvegarde CNI échouée")
+        }
+      }
+      
+      // Upload des fichiers
+      if (cniRecto) await uploadFile(cniRecto, "upload-cni-recto")
+      if (cniVerso) await uploadFile(cniVerso, "upload-cni-verso")
+      if (photoProfil) await uploadFile(photoProfil, "upload-photo-profil")
+      
+      return true
+    } catch (error) {
+      console.error("Erreur upload documents:", error)
+      toast({
+        title: "Avertissement",
+        description: "Documents non uploadés. Vous pourrez les ajouter depuis votre profil.",
+        variant: "destructive",
+      })
+      return false
+    }
+  }
+
+  const handleVerifyOtp = async () => {
+    if (!otp.trim() || otp.trim().length !== 6) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez entrer un code à 6 chiffres",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    try {
       await verifyOtp(formData.email, otp.trim())
+      
+      // Upload des documents après vérification OTP réussie
+      if (pendingDocuments) {
+        await uploadDocuments()
+      }
+      
       toast({
         title: "Compte vérifié",
         description: "Votre compte a été créé avec succès !",
       })
       router.push("/")
     } catch (error) {
-      console.error("Frontend: OTP verification error:", error)
       toast({
-        title: "Erreur",
-        description: error instanceof Error ? error.message : "Code de vérification incorrect",
+        title: "Code incorrect",
+        description: error instanceof Error ? error.message : "Vérifiez le code et réessayez",
         variant: "destructive",
       })
     }
   }
 
-  const needsExtraInfo = formData.role && true // All roles need step 2 now
+  const handleResendOtp = async () => {
+    setResendingOtp(true)
+    try {
+      await resendOtp(formData.email)
+      toast({
+        title: "Code renvoyé",
+        description: "Un nouveau code a été envoyé à votre email",
+      })
+      setOtp("")
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de renvoyer le code",
+        variant: "destructive",
+      })
+    } finally {
+      setResendingOtp(false)
+    }
+  }
+
+
+  const needsExtraInfo = formData.role && true
 
   if (otpSent) {
     return (
@@ -272,29 +370,50 @@ export default function InscriptionPage() {
               </div>
               <CardTitle className="text-2xl">Vérification</CardTitle>
               <CardDescription>Entrez le code envoyé à {formData.email}</CardDescription>
+              <div className="flex justify-center gap-2 mt-4">
+                <div className="h-2 w-8 rounded-full gradient-primary" />
+                <div className="h-2 w-8 rounded-full gradient-primary" />
+                <div className="h-2 w-8 rounded-full gradient-primary" />
+                <div className="h-2 w-8 rounded-full gradient-primary" />
+              </div>
             </CardHeader>
 
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="otp">Code de vérification</Label>
+                <Label htmlFor="otp">Code de vérification (6 chiffres)</Label>
                 <Input
                   id="otp"
                   placeholder="123456"
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   className="text-center text-2xl tracking-widest"
                   maxLength={6}
+                  autoComplete="off"
                 />
+                {otp && otp.length !== 6 && (
+                  <p className="text-xs text-destructive">Le code doit contenir 6 chiffres</p>
+                )}
               </div>
             </CardContent>
 
             <CardFooter className="flex flex-col gap-4">
-              <Button onClick={handleVerifyOtp} className="w-full gradient-primary text-white" disabled={isLoading}>
+              <Button 
+                onClick={handleVerifyOtp} 
+                className="w-full gradient-primary text-white" 
+                disabled={isLoading || otp.length !== 6}
+              >
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
                 Vérifier
               </Button>
               <p className="text-sm text-muted-foreground text-center">
-                Pas reçu le code ? <button className="text-primary hover:underline font-medium">Renvoyer</button>
+                Pas reçu le code ?{" "}
+                <button 
+                  onClick={handleResendOtp}
+                  disabled={resendingOtp}
+                  className="text-primary hover:underline font-medium disabled:opacity-50"
+                >
+                  {resendingOtp ? "Envoi..." : "Renvoyer"}
+                </button>
               </p>
             </CardFooter>
           </Card>
@@ -311,17 +430,23 @@ export default function InscriptionPage() {
         <Card className="w-full max-w-md border-border bg-card/50 backdrop-blur-sm">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Créer un compte</CardTitle>
-            <CardDescription>{step === 1 ? "Informations de base" : "Informations professionnelles"}</CardDescription>
+            <CardDescription>
+              {step === 1 && "Informations de base"}
+              {step === 2 && "Informations de contact"}
+              {step === 3 && "Documents requis"}
+            </CardDescription>
             {needsExtraInfo && (
               <div className="flex justify-center gap-2 mt-4">
                 <div className={`h-2 w-8 rounded-full ${step >= 1 ? "gradient-primary" : "bg-muted"}`} />
                 <div className={`h-2 w-8 rounded-full ${step >= 2 ? "gradient-primary" : "bg-muted"}`} />
+                <div className={`h-2 w-8 rounded-full ${step >= 3 ? "gradient-primary" : "bg-muted"}`} />
+                <div className={`h-2 w-8 rounded-full ${otpSent ? "gradient-primary" : "bg-muted"}`} />
               </div>
             )}
           </CardHeader>
 
           <CardContent className="space-y-4">
-            {step === 1 ? (
+            {step === 1 && (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="name">Nom complet *</Label>
@@ -409,7 +534,9 @@ export default function InscriptionPage() {
                   </div>
                 </div>
               </>
-            ) : (
+            )}
+
+            {step === 2 && (
               <>
                 {formData.role === "CLIENT" && (
                   <>
@@ -519,15 +646,89 @@ export default function InscriptionPage() {
                 </div>
               </>
             )}
+
+            {step === 3 && (
+              <>
+                {(formData.role === "LIVREUR" || formData.role === "COMMERCANT") && (
+                  <>
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="cniNumber">Numéro CNI *</Label>
+                        <Input
+                          id="cniNumber"
+                          placeholder="123456789"
+                          value={formData.cniNumber}
+                          onChange={(e) => updateFormData("cniNumber", e.target.value)}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="cniRecto">Photo CNI Recto *</Label>
+                        <Input
+                          id="cniRecto"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setCniRecto(e.target.files?.[0] || null)}
+                        />
+                        {cniRecto && <p className="text-xs text-muted-foreground">{cniRecto.name}</p>}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="cniVerso">Photo CNI Verso *</Label>
+                        <Input
+                          id="cniVerso"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setCniVerso(e.target.files?.[0] || null)}
+                        />
+                        {cniVerso && <p className="text-xs text-muted-foreground">{cniVerso.name}</p>}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="photoProfil">Photo 4x4 *</Label>
+                        <Input
+                          id="photoProfil"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setPhotoProfil(e.target.files?.[0] || null)}
+                        />
+                        {photoProfil && <p className="text-xs text-muted-foreground">{photoProfil.name}</p>}
+                      </div>
+                    </div>
+                  </>
+                )}
+                
+                {(formData.role === "CLIENT" || formData.role === "FOURNISSEUR") && (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">Aucun document requis pour votre type de compte.</p>
+                    <p className="text-sm text-muted-foreground mt-2">Cliquez sur "Créer mon compte" pour continuer.</p>
+                  </div>
+                )}
+              </>
+            )}
           </CardContent>
 
           <CardFooter className="flex flex-col gap-4">
-            {step === 1 ? (
+            {step === 1 && (
               <Button onClick={handleStep1Submit} className="w-full gradient-primary text-white" disabled={isLoading}>
-                {needsExtraInfo ? "Continuer" : "Créer mon compte"}
+                Continuer
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-            ) : (
+            )}
+            
+            {step === 2 && (
+              <div className="w-full space-y-2">
+                <Button onClick={handleStep2Submit} className="w-full gradient-primary text-white" disabled={isLoading}>
+                  Continuer
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+                <Button variant="outline" onClick={() => setStep(1)} className="w-full bg-transparent">
+                  Retour
+                </Button>
+              </div>
+            )}
+            
+            {step === 3 && (
               <div className="w-full space-y-2">
                 <Button onClick={handleRegister} className="w-full gradient-primary text-white" disabled={isLoading}>
                   {isLoading ? (
@@ -542,7 +743,7 @@ export default function InscriptionPage() {
                     </>
                   )}
                 </Button>
-                <Button variant="outline" onClick={() => setStep(1)} className="w-full bg-transparent">
+                <Button variant="outline" onClick={() => setStep(2)} className="w-full bg-transparent">
                   Retour
                 </Button>
               </div>
