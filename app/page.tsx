@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import {
@@ -17,6 +17,7 @@ import {
   LogOut,
   LayoutDashboard,
   ChevronRight,
+  ChevronLeft,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme/theme-toggle"
@@ -76,9 +77,23 @@ export default function HomePage() {
   const [priceMax, setPriceMax] = useState("")
   const [selectedCity, setSelectedCity] = useState("Toutes")
   const [sortBy, setSortBy] = useState("pertinence")
-  const [visibleProducts, setVisibleProducts] = useState(8)
+  const [visibleProducts, setVisibleProducts] = useState(12)
+  const [carouselSlide, setCarouselSlide] = useState(0)
 
   const formatPrice = (price: number) => new Intl.NumberFormat("fr-FR").format(price) + " XAF"
+
+  // Carousel auto-play pour mobile (désactivé par défaut pour performance)
+  const carouselProducts = products.slice(0, 5)
+  useEffect(() => {
+    // Auto-play désactivé pour améliorer les performances
+    // Décommenter pour réactiver:
+    // if (carouselProducts.length > 0) {
+    //   const timer = setInterval(() => {
+    //     setCarouselSlide((prev) => (prev + 1) % carouselProducts.length)
+    //   }, 4000)
+    //   return () => clearInterval(timer)
+    // }
+  }, [carouselProducts.length])
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch =
@@ -106,6 +121,18 @@ export default function HomePage() {
   const displayedProducts = sortedProducts.slice(0, visibleProducts)
 
   const handleAddToCart = async (product: ProduitEcommerceDto) => {
+    // Vérifier le stock disponible en ligne
+    const stockDisponible = product.quantiteEnLigne ?? product.quantite ?? 0
+    
+    if (stockDisponible === 0) {
+      toast({
+        title: "Produit indisponible",
+        description: "Ce produit est en rupture de stock",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
       const articleId = product.articleId || product.id!
       await addItem(articleId, 1, {
@@ -127,41 +154,95 @@ export default function HomePage() {
   }
 
   const handleLoadMore = () => {
-    setVisibleProducts((prev) => Math.min(prev + 4, sortedProducts.length))
+    setVisibleProducts((prev) => Math.min(prev + 12, sortedProducts.length))
   }
+
+  // Infinite scroll
+  const observerTarget = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && visibleProducts < sortedProducts.length) {
+          handleLoadMore()
+        }
+      },
+      { threshold: 0.5, rootMargin: '100px' }
+    )
+
+    const currentTarget = observerTarget.current
+    if (currentTarget) {
+      observer.observe(currentTarget)
+    }
+
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget)
+      }
+    }
+  }, [visibleProducts, sortedProducts.length])
 
   const handleProductClick = (product: ProduitEcommerceDto) => {
     router.push(`/produit/${product.id}`)
   }
 
-  const ProductCard = ({ product }: { product: ProduitEcommerceDto }) => (
+  const ProductCard = ({ product }: { product: ProduitEcommerceDto }) => {
+    // Utiliser quantiteEnLigne ou quantite pour vérifier la disponibilité
+    const stockDisponible = product.quantiteEnLigne ?? product.quantite ?? 0
+    const estEnRupture = stockDisponible === 0
+    const stockFaible = stockDisponible > 0 && stockDisponible <= 5
+    
+    return (
     <Card 
       className="group glass-card overflow-hidden hover:border-primary/50 transition-all duration-300 cursor-pointer"
       onClick={() => handleProductClick(product)}
     >
       <div className="relative aspect-square bg-muted/30 overflow-hidden">
-        <img
+        {estEnRupture && (
+          <div className="absolute inset-0 bg-black/60 z-10 flex items-center justify-center">
+            {/* <Badge variant="destructive" className="text-lg px-4 py-2">
+              RUPTURE DE STOCK
+            </Badge> */}
+          </div>
+        )}
+        {/* Badges de statut en haut à gauche */}
+        <div className="absolute top-3 left-3 flex flex-col gap-2 z-20">
+          {estEnRupture && (
+            <Badge variant="destructive">Rupture</Badge>
+          )}
+          {stockFaible && (
+            <Badge variant="secondary" className="bg-yellow-500 text-white">
+              Stock faible
+            </Badge>
+          )}
+        </div>
+        <Image
           src={buildImageUrl(product.images?.[0]) || "/placeholder.svg"}
           alt={product.nom || "Produit"}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          fill
+          sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          className="object-cover group-hover:scale-105 transition-transform duration-300"
+          loading="lazy"
         />
-        <Button variant="ghost" size="icon" className="absolute top-2 right-2 bg-white/80 hover:bg-white">
+        <Button variant="ghost" size="icon" className="absolute top-2 right-2 bg-white/80 hover:bg-white z-20">
           <Heart className="h-4 w-4" />
         </Button>
-        <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button
-            size="sm"
-            className="w-full gradient-primary text-white"
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              handleAddToCart(product)
-            }}
-          >
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            Ajouter au panier
-          </Button>
-        </div>
+        {!estEnRupture && (
+          <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              size="sm"
+              className="w-full gradient-primary text-white"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                handleAddToCart(product)
+              }}
+            >
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Ajouter au panier
+            </Button>
+          </div>
+        )}
       </div>
       <CardContent className="p-4">
         <p className="text-xs text-muted-foreground mb-1">{product.categorieName}</p>
@@ -171,13 +252,16 @@ export default function HomePage() {
           <span className="text-xs font-medium">{product.noteMoyenne || 0}</span>
           <span className="text-xs text-muted-foreground">({product.nombreEvaluations || 0})</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2">
           <span className="font-bold text-primary">{formatPrice(Number(product.prix || 0))}</span>
+          {stockDisponible > 0 && stockDisponible <= 10 && (
+            <span className="text-xs text-muted-foreground">Plus que {stockDisponible}</span>
+          )}
         </div>
         <p className="text-xs text-muted-foreground mt-2">Vendu par {product.nomEntreprise || product.nomCommercant}</p>
       </CardContent>
     </Card>
-  )
+  )}
 
   const FilterSidebar = () => (
     <div className="space-y-6">
@@ -281,8 +365,76 @@ export default function HomePage() {
 
       <Header />
 
+      {/* Mobile/Tablet Carousel - Visible only on small screens */}
+      <div className="xl:hidden container mx-auto px-4 sm:px-6 pt-4">
+        <Card className="glass-card overflow-hidden">
+          <div className="relative h-48 sm:h-56">
+            <div 
+              className="flex transition-transform duration-500 ease-in-out h-full"
+              style={{ transform: `translateX(-${carouselSlide * 100}%)` }}
+            >
+              {carouselProducts.map((product, index) => (
+                <div 
+                  key={index} 
+                  className="w-full flex-shrink-0 relative bg-gradient-to-r from-primary to-primary/80 cursor-pointer"
+                  onClick={() => handleProductClick(product)}
+                >
+                  <Image
+                    src={buildImageUrl(product.images?.[0]) || "/placeholder.svg"}
+                    alt={product.nom || "Produit"}
+                    fill
+                    className="object-cover opacity-30"
+                    loading="eager"
+                    priority={index === 0}
+                  />
+                  <div className="relative z-10 p-6 h-full flex flex-col justify-center">
+                    <Badge className="bg-white/20 text-white mb-2 w-fit">Produit en avant</Badge>
+                    <h3 className="font-bold text-white text-lg sm:text-xl mb-2 line-clamp-2">{product.nom}</h3>
+                    <p className="text-white/90 text-2xl sm:text-3xl font-bold mb-1">{formatPrice(Number(product.prix || 0))}</p>
+                    <p className="text-white/70 text-sm">{product.nomEntreprise || product.nomCommercant}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {carouselProducts.length > 1 && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-white/20 hover:bg-white/30 text-white"
+                  onClick={() => setCarouselSlide((prev) => (prev - 1 + carouselProducts.length) % carouselProducts.length)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-white/20 hover:bg-white/30 text-white"
+                  onClick={() => setCarouselSlide((prev) => (prev + 1) % carouselProducts.length)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                  {carouselProducts.map((_, index) => (
+                    <button
+                      key={index}
+                      className={`w-2 h-2 rounded-full transition-colors ${
+                        index === carouselSlide ? "bg-white" : "bg-white/50"
+                      }`}
+                      onClick={() => setCarouselSlide(index)}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </Card>
+      </div>
+
       {/* Main Content */}
-      <main className="container mx-auto px-2 sm:px-3 py-6">
+      <main className="container mx-auto px-4 sm:px-6 py-6">
         <div className="flex gap-6">
           {/* Left Sidebar - Filters */}
           <aside className="hidden lg:block w-64 shrink-0">
@@ -342,24 +494,27 @@ export default function HomePage() {
               </div>
             )}
 
+            {/* Infinite scroll trigger */}
             {visibleProducts < sortedProducts.length && (
-              <div className="mt-8 text-center">
-                <Button variant="outline" size="lg" className="px-8 bg-transparent" onClick={handleLoadMore}>
-                  Voir plus de produits ({sortedProducts.length - visibleProducts} restants)
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
+              <div ref={observerTarget} className="mt-8 text-center py-8">
+                <Spinner size="md" />
+                <p className="text-sm text-muted-foreground mt-2">
+                  Chargement de plus de produits...
+                </p>
               </div>
             )}
           </div>
 
           {/* Right Sidebar - Featured/Ads */}
-          <ProductSidebar />
+          <div className="hidden xl:block">
+            <ProductSidebar />
+          </div>
         </div>
       </main>
 
       {/* Footer */}
       <footer className="mt-20 bg-gradient-to-b from-primary to-primary/80 text-white dark:from-primary dark:to-primary/80">
-        <div className="container mx-auto px-2 sm:px-3 py-12">
+        <div className="container mx-auto px-4 sm:px-6 py-12">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
             <div>
               <h3 className="font-semibold mb-4">Objet de l'aide</h3>

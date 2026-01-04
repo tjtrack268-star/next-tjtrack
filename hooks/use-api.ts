@@ -911,24 +911,54 @@ export function useAllUsers(params?: { page?: number; limit?: number; role?: str
 export function useApproveUser() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ userId, approvedBy }: { userId: string; approvedBy: string }) =>
-      apiClient.post<Record<string, unknown>>(`/admin/approve-user/${userId}`, undefined, { approvedBy }),
-    onSuccess: () => {
-      // Invalider toutes les queries liées aux utilisateurs
-      queryClient.invalidateQueries({ queryKey: queryKeys.pendingUsers })
-      queryClient.invalidateQueries({ queryKey: queryKeys.allUsers })
-      queryClient.invalidateQueries({ queryKey: ["userAnalytics"] })
-      // Forcer un refetch immédiat
-      queryClient.refetchQueries({ queryKey: queryKeys.allUsers })
+    mutationFn: async ({ userId }: { userId: string; approvedBy?: string }) => {
+      console.log('=== APPROVE USER DEBUG ===');
+      console.log('userId:', userId);
+      console.log('userId type:', typeof userId);
+      console.log('userId is undefined?', userId === undefined);
+      console.log('userId is null?', userId === null);
+      
+      if (!userId || userId === 'undefined' || userId === 'null') {
+        console.error('❌ Invalid userId:', userId);
+        throw new Error('ID utilisateur invalide');
+      }
+      
+      const token = localStorage.getItem('tj-track-token');
+      console.log('Token available?', !!token);
+      if (token) {
+        console.log('Token preview:', token.substring(0, 20) + '...');
+      }
+      
+      console.log('Calling API endpoint:', `/admin/approve-user/${userId}`);
+      
+      try {
+        const response = await apiClient.post<Record<string, unknown>>(`/admin/approve-user/${userId}`);
+        console.log('✅ API response:', response);
+        return response;
+      } catch (error: any) {
+        console.error('❌ API error:', error);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        throw error;
+      }
     },
-  })
+    onSuccess: async () => {
+      console.log('✅ Approval successful, refetching queries');
+      await queryClient.invalidateQueries({ queryKey: queryKeys.allUsers });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.pendingUsers });
+      await queryClient.invalidateQueries({ queryKey: ["userAnalytics"] });
+    },
+    onError: (error: any) => {
+      console.error('❌ Mutation error:', error);
+    },
+  });
 }
 
 export function useRejectUser() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ userId, rejectedBy }: { userId: string; rejectedBy: string }) =>
-      apiClient.post<Record<string, unknown>>(`/admin/reject-user/${userId}`, undefined, { rejectedBy }),
+    mutationFn: ({ userId }: { userId: string; rejectedBy?: string }) =>
+      apiClient.post<Record<string, unknown>>(`/admin/reject-user/${userId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.pendingUsers })
       queryClient.invalidateQueries({ queryKey: queryKeys.allUsers })

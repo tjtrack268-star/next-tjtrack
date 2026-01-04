@@ -40,7 +40,7 @@ export function ProductSidebar() {
   const formatPrice = (price: number) => new Intl.NumberFormat("fr-FR").format(price) + " XAF"
 
   return (
-    <div className="w-72 flex-shrink-0">
+    <div className="hidden xl:block w-72 flex-shrink-0">
       <Card className="glass-card sticky top-32">
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-4">

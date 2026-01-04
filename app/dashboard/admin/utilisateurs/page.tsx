@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Users, Search, MoreVertical, UserCheck, UserX, Mail, Store, Truck, ShieldCheck, Loader2, ChevronLeft, ChevronRight, Clock } from "lucide-react"
-import { useAllUsers, useApproveUser, useUserAnalytics } from "@/hooks/use-api"
+import { useAllUsers, useApproveUser, useUserAnalytics, useRejectUser } from "@/hooks/use-api"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { AdminGuard } from "@/components/admin-guard"
@@ -31,7 +31,7 @@ export default function AdminUsersPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const { toast } = useToast()
   const { user } = useAuth()
-  const { confirm, isOpen, options, handleConfirm, handleCancel } = useConfirm()
+  const { confirm } = useConfirm()
   const queryClient = useQueryClient()
   
   const debouncedSearch = useDebounce(searchQuery, 300)
@@ -49,11 +49,36 @@ export default function AdminUsersPage() {
   const users = data?.users || []
   const totalPages = Math.ceil((data?.total || 0) / 20)
   const approveUserMutation = useApproveUser()
+  const rejectUserMutation = useRejectUser()
 
-  const handleApprove = async (userId: string, userName: string) => {
+  useEffect(() => {
+    if (users.length > 0) {
+      console.log('=== USERS DATA DEBUG ===')
+      console.log('Total users:', users.length)
+      console.log('First user sample:', users[0])
+      console.log('First user userId:', users[0]?.userId)
+      console.log('First user email:', users[0]?.email)
+    }
+  }, [users])
+
+  const handleApprove = async (userItem: any) => {
+    const identifier = userItem.userId && userItem.userId !== 'undefined' && userItem.userId !== 'null'
+      ? String(userItem.userId)
+      : userItem.email
+    const userName = userItem.name || userItem.email
+    
+    if (!identifier) {
+      toast({
+        title: "Erreur",
+        description: "Identifiant utilisateur invalide",
+        variant: "destructive",
+      })
+      return
+    }
+    
     const confirmed = await confirm({
       title: "Approuver l'utilisateur",
-      description: `Êtes-vous sûr de vouloir approuver ${userName} ? Cette action ne peut pas être annulée.`,
+      description: `Êtes-vous sûr de vouloir approuver ${userName} ?`,
       confirmText: "Approuver",
       cancelText: "Annuler"
     })
@@ -61,19 +86,60 @@ export default function AdminUsersPage() {
     if (!confirmed) return
     
     try {
-      await approveUserMutation.mutateAsync({ userId, approvedBy: user?.email || "admin" })
+      await approveUserMutation.mutateAsync({ userId: identifier, approvedBy: user?.email || "admin" })
       toast({
         title: "Utilisateur approuvé",
         description: `${userName} a été approuvé avec succès`,
       })
-      // Force refresh of data
+      await queryClient.invalidateQueries({ queryKey: ["allUsers"] })
+      await queryClient.invalidateQueries({ queryKey: ["userAnalytics"] })
       await refetch()
-      // Also refresh user analytics
-      queryClient.invalidateQueries({ queryKey: ["userAnalytics"] })
-    } catch (err) {
+    } catch (err: any) {
       toast({
         title: "Erreur",
-        description: "Impossible d'approuver l'utilisateur",
+        description: err?.message || "Impossible d'approuver l'utilisateur",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleReject = async (userItem: any) => {
+    const identifier = userItem.userId && userItem.userId !== 'undefined' && userItem.userId !== 'null'
+      ? String(userItem.userId)
+      : userItem.email
+    const userName = userItem.name || userItem.email
+    
+    if (!identifier) {
+      toast({
+        title: "Erreur",
+        description: "Identifiant utilisateur invalide",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    const confirmed = await confirm({
+      title: "Rejeter l'utilisateur",
+      description: `Êtes-vous sûr de vouloir rejeter ${userName} ?`,
+      confirmText: "Rejeter",
+      cancelText: "Annuler"
+    })
+    
+    if (!confirmed) return
+    
+    try {
+      await rejectUserMutation.mutateAsync({ userId: identifier, rejectedBy: user?.email || "admin" })
+      toast({
+        title: "Utilisateur rejeté",
+        description: `${userName} a été rejeté avec succès`,
+      })
+      await queryClient.invalidateQueries({ queryKey: ["allUsers"] })
+      await queryClient.invalidateQueries({ queryKey: ["userAnalytics"] })
+      await refetch()
+    } catch (err: any) {
+      toast({
+        title: "Erreur",
+        description: err?.message || "Impossible de rejeter l'utilisateur",
         variant: "destructive",
       })
     }
@@ -286,13 +352,35 @@ export default function AdminUsersPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {!userItem.isApproved && userItem.isApproved !== false && (
+                            {userItem.isApproved === null && (
+                              <>
+                                <DropdownMenuItem
+                                  onSelect={() => handleApprove(userItem)}
+                                  disabled={approveUserMutation.isPending}
+                                >
+                                  <UserCheck className="h-4 w-4 mr-2" />
+                                  Approuver
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onSelect={() => handleReject(userItem)}
+                                  disabled={rejectUserMutation?.isPending}
+                                >
+                                  <UserX className="h-4 w-4 mr-2" />
+                                  Rejeter
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            {userItem.isApproved === false && (
                               <DropdownMenuItem
-                                onClick={() => handleApprove(userItem.userId || userItem.email, userItem.name || userItem.email)}
-                                disabled={approveUserMutation.isPending}
+                                onSelect={() => {
+                                  toast({
+                                    title: "Fonctionnalité à venir",
+                                    description: "La réinitialisation sera bientôt disponible",
+                                  });
+                                }}
                               >
                                 <UserCheck className="h-4 w-4 mr-2" />
-                                Approuver
+                                Réinitialiser
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuItem>

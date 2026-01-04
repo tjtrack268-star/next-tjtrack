@@ -211,15 +211,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
             )
             return true
           } catch (error: any) {
-            console.error(`Failed to merge item ${guestItem.articleNom}:`, error)
-            if (error?.message?.includes('400') || error?.message?.includes('Article non trouvé')) {
+            console.error(`Failed to merge item ${guestItem.articleNom}:`, error?.message || error)
+            // Si l'utilisateur n'existe pas (400), garder le panier local
+            if (error?.message?.includes('400') || error?.message?.includes('Utilisateur non trouvé')) {
+              console.warn('User not found in database, keeping guest cart locally')
+              throw new Error('USER_NOT_FOUND')
+            }
+            // Si l'article n'existe plus, ignorer
+            if (error?.message?.includes('Article non trouvé')) {
               console.warn(`Article ${guestItem.articleNom} no longer exists, skipping...`)
               return false
-            }
-            if (error?.message?.includes('404') || error?.message?.includes('Utilisateur non trouvé')) {
-              console.warn('User not found in database, keeping guest cart locally')
-              setLocalItems(guestCartItems)
-              throw new Error('USER_NOT_FOUND')
             }
             return false
           }

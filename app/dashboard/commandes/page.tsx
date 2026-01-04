@@ -49,6 +49,10 @@ interface Commande {
   montantTotal: number
   fraisLivraison: number
   articles: number
+  livreurNom?: string
+  livreurTelephone?: string
+  merchantNom?: string
+  merchantVille?: string
   items?: Array<{
     id: number
     article: {
@@ -206,91 +210,175 @@ export default function CommandesPage() {
   }
 
   const handlePrintInvoice = (commande: Commande) => {
-    const printWindow = window.open('', '_blank')
-    if (!printWindow) return
-    
-    const invoiceHTML = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Facture ${commande.numeroCommande}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .invoice-details { display: flex; justify-content: space-between; margin-bottom: 30px; }
-            .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-            .items-table th, .items-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            .items-table th { background-color: #f2f2f2; }
-            .total-section { text-align: right; margin-top: 20px; }
-            .total-line { margin: 5px 0; }
-            .final-total { font-weight: bold; font-size: 18px; }
-            @media print { body { margin: 0; } }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>TJ-Track</h1>
-            <h2>FACTURE</h2>
-            <p>N° ${commande.numeroCommande}</p>
-          </div>
+  //  window.open(`${process.env.NEXT_PUBLIC_API_URL}/commandes/${commande.id}/facture`, '_blank')
+  
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
+
+  const invoiceHTML = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8"/>
+        <title>Facture de Livraison - ${commande.numeroCommande}</title>
+        <style>
+          @page { size: A4; margin: 10mm; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; color: #2c3e50; }
           
-          <div class="invoice-details">
-            <div>
-              <h3>Facturé à:</h3>
-              <p><strong>${commande.client}</strong></p>
-              <p>${commande.email}</p>
-              <p>${commande.telephone}</p>
-              <p>${commande.adresse}</p>
-              <p>${commande.ville} ${commande.codePostal}</p>
-            </div>
-            <div>
-              <p><strong>Date:</strong> ${new Date(commande.dateCommande).toLocaleDateString('fr-FR')}</p>
-              <p><strong>Statut:</strong> ${statutStyles[commande.statut]?.label}</p>
-              <p><strong>Paiement:</strong> ${paiementStyles[commande.statutPaiement]?.label}</p>
-            </div>
-          </div>
+          /* Filigrane */
+          .watermark {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 100px; color: #e5e7eb; opacity: 0.2; font-weight: bold; z-index: -1; pointer-events: none; white-space: nowrap;
+          }
+
+          /* Header */
+          .header-table { width: 100%; border-bottom: 3px solid #2c3e50; padding-bottom: 20px; margin-bottom: 20px; }
+          .logo-text { font-size: 32px; font-weight: bold; color: #2c3e50; margin: 0; }
+          .company-info { text-align: right; color: #7f8c8d; font-size: 13px; }
+
+          .invoice-title { text-align: center; font-size: 28px; font-weight: bold; margin: 20px 0; text-transform: uppercase; }
+
+          /* Blocs d'informations (Grid style) */
+          .details-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+          .detail-box { background-color: rgba(248, 249, 250, 0.1); padding: 15px; border-radius: 8px; border-left: 4px solid #3498db; }
+          .detail-box h3 { margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase; color: #2c3e50; border-bottom: 1px solid #dee2e6; padding-bottom: 5px; }
+          .detail-box p { margin: 5px 0; font-size: 13px; line-height: 1.4; }
+
+          /* Tableau des articles */
+          .items-table { width: 100%; border-collapse: collapse; margin: 25px 0; }
+          .items-table thead { background-color: #2c3e50; color: white; }
+          .items-table th, .items-table td { padding: 12px; border-bottom: 1px solid #bdc3c7; text-align: left; font-size: 13px; }
+          .text-right { text-align: right; }
+
+          /* Section Totaux */
+          .total-section { margin-left: auto; width: 300px; margin-top: 20px; }
+          .total-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; }
+          .grand-total { border-top: 2px solid #2c3e50; margin-top: 10px; padding-top: 10px; font-weight: bold; font-size: 18px; color: #e67e22; }
+
+          /* Signatures */
+          .signature-section { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; margin-top: 60px; text-align: center; }
+          .signature-box p { font-weight: bold; margin-bottom: 60px; text-decoration: underline; }
+          .signature-line { border-top: 1px dashed #2c3e50; width: 80%; margin: 0 auto; }
+
+          .footer { margin-top: 50px; text-align: center; font-size: 11px; color: #95a5a6; border-top: 1px solid #ecf0f1; padding-top: 20px; }
           
-          <table class="items-table">
-            <thead>
+          @media print {
+            body { padding: 0; }
+            .detail-box { background-color: #f8f9fa !important; -webkit-print-color-adjust: exact; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="watermark">TJ-TRACK</div>
+
+        <table class="header-table">
+          <tr>
+            <td>
+              <div class="logo-text">TJ-TRACK</div>
+              <div style="color: #3498db; font-weight: bold; font-size: 14px;">Logistics & Delivery</div>
+            </td>
+            <td class="company-info">
+              <p><strong>TJ-TRACK Sarl</strong></p>
+              <p>Plateforme de Livraison Digitale</p>
+              <p>Douala / Yaoundé, Cameroun</p>
+              <p>Email: tj-track268@gmail.com</p>
+            </td>
+          </tr>
+        </table>
+
+        <div class="invoice-title">Bon de Livraison / Facture</div>
+
+        <div class="details-container">
+          <div class="detail-box">
+            <h3>Commande</h3>
+            <p><strong>N° :</strong> ${commande.numeroCommande}</p>
+            <p><strong>Date Commande :</strong> ${new Date(commande.dateCommande).toLocaleString('fr-FR')}</p>
+            <p><strong>Paiement :</strong> ${commande.statutPaiement || 'En attente'}</p>
+          </div>
+          <div class="detail-box">
+            <h3>Destinataire (Client)</h3>
+            <p><strong>Nom :</strong> ${commande.client}</p>
+            <p><strong>Tél :</strong> ${commande.telephone}</p>
+            <p><strong>Adresse :</strong> ${commande.adresse}, ${commande.ville}</p>
+          </div>
+          <div class="detail-box">
+            <h3>Livreur</h3>
+            <p><strong>Nom :</strong> ${commande.livreurNom || 'Non assigné'}</p>
+            <p><strong>Contact :</strong> ${commande.livreurTelephone || '-'}</p>
+          </div>
+          <div class="detail-box">
+            <h3>Expéditeur (Marchand)</h3>
+            <p><strong>Boutique :</strong> ${commande.merchantNom || 'TJ-Track Central'}</p>
+            <p><strong>Ville :</strong> ${commande.merchantVille || 'Cameroun'}</p>
+          </div>
+        </div>
+
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>Désignation de l'article</th>
+              <th class="text-right">Qté</th>
+              <th class="text-right">Prix Unitaire</th>
+              <th class="text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${commande.items?.map(item => `
               <tr>
-                <th>Article</th>
-                <th>Quantité</th>
-                <th>Prix unitaire</th>
-                <th>Total</th>
+                <td>${item.article.designation}</td>
+                <td class="text-right">${item.quantite}</td>
+                <td class="text-right">${item.prixUnitaire.toLocaleString('fr-FR')} FCFA</td>
+                <td class="text-right">${item.sousTotal.toLocaleString('fr-FR')} FCFA</td>
               </tr>
-            </thead>
-            <tbody>
-              ${commande.items?.map(item => `
-                <tr>
-                  <td>${item.article.designation}</td>
-                  <td>${item.quantite}</td>
-                  <td>${item.prixUnitaire.toLocaleString('fr-FR')} FCFA</td>
-                  <td>${item.sousTotal.toLocaleString('fr-FR')} FCFA</td>
-                </tr>
-              `).join('') || ''}
-            </tbody>
-          </table>
-          
-          <div class="total-section">
-            <div class="total-line">Sous-total: ${(commande.montantTotal - commande.fraisLivraison).toLocaleString('fr-FR')} FCFA</div>
-            <div class="total-line">Frais de livraison: ${commande.fraisLivraison.toLocaleString('fr-FR')} FCFA</div>
-            <div class="total-line final-total">Total: ${commande.montantTotal.toLocaleString('fr-FR')} FCFA</div>
+            `).join('') || '<tr><td colspan="4">Aucun article</td></tr>'}
+          </tbody>
+        </table>
+
+        <div class="total-section">
+          <div class="total-row">
+            <span>Sous-total:</span>
+            <span>${(commande.montantTotal - (commande.fraisLivraison || 0)).toLocaleString('fr-FR')} FCFA</span>
           </div>
-          
-          <script>
-            window.onload = function() {
-              window.print();
-              window.onafterprint = function() {
-                window.close();
-              }
-            }
-          </script>
-        </body>
-      </html>
-    `
-    
-    printWindow.document.write(invoiceHTML)
-    printWindow.document.close()
+          <div class="total-row">
+            <span>Frais de livraison:</span>
+            <span>${(commande.fraisLivraison || 0).toLocaleString('fr-FR')} FCFA</span>
+          </div>
+          <div class="total-row grand-total">
+            <span>TOTAL À PAYER:</span>
+            <span>${commande.montantTotal.toLocaleString('fr-FR')} FCFA</span>
+          </div>
+        </div>
+
+        <div class="signature-section">
+          <div class="signature-box">
+            <p>Signature & Cachet Livreur</p>
+            <div class="signature-line"></div>
+          </div>
+          <div class="signature-box">
+            <p>Signature Client (Réception)</p>
+            <div class="signature-line"></div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <p>Merci d'avoir choisi <strong>TJ-Track</strong> pour vos achats et livraisons.</p>
+          <p>Ce document certifie la passation de propriété des biens listés ci-dessus.</p>
+          <p><em>Généré numériquement le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</em></p>
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+            window.onafterprint = function() { window.close(); }
+          }
+        </script>
+      </body>
+    </html>
+  `;
+
+  printWindow.document.write(invoiceHTML);
+  printWindow.document.close();
+
   }
 
   // Stats
@@ -577,12 +665,12 @@ export default function CommandesPage() {
                 <DialogDescription className="text-lg font-medium">{selectedCommande?.numeroCommande}</DialogDescription>
               </div>
               <Button
-                onClick={() => selectedCommande && handlePrintInvoice(selectedCommande)}
+                onClick={() => selectedCommande && window.open(`${process.env.NEXT_PUBLIC_API_URL}/commandes/${selectedCommande.id}/facture`, '_blank')}
                 className="gap-2"
                 variant="outline"
               >
-                <Printer className="h-4 w-4" />
-                Imprimer la facture
+                <FileText className="h-4 w-4" />
+                Télécharger la facture PDF
               </Button>
             </div>
           </DialogHeader>
@@ -733,14 +821,6 @@ export default function CommandesPage() {
                       >
                         <FileText className="h-4 w-4" />
                         Télécharger la facture PDF
-                      </Button>
-                      <Button
-                        onClick={() => handlePrintInvoice(selectedCommande)}
-                        className="w-full gap-2"
-                        variant="outline"
-                      >
-                        <Printer className="h-4 w-4" />
-                        Imprimer la facture
                       </Button>
                     </div>
                   </CardContent>

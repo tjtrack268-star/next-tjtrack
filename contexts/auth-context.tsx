@@ -12,6 +12,7 @@ interface AuthContextType {
   register: (data: ProfileRequest) => Promise<void>
   logout: () => void
   verifyOtp: (email: string, otp: string) => Promise<void>
+  resendOtp: (email: string) => Promise<void>
   sendResetOtp: (email: string) => Promise<void>
   resetPassword: (email: string, otp: string, newPassword: string) => Promise<void>
 }
@@ -131,6 +132,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const resendOtp = useCallback(async (email: string) => {
+    console.log("Resend OTP to:", email)
+    await apiClient.post("/resend-otp", { email })
+  }, [])
+
   const sendResetOtp = useCallback(async (email: string) => {
     console.log("Send reset OTP to:", email)
     await apiClient.post("/send-reset-otp", undefined, { email })
@@ -165,6 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register,
         logout,
         verifyOtp,
+        resendOtp,
         sendResetOtp,
         resetPassword,
       }}
