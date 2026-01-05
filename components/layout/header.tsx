@@ -43,8 +43,8 @@ export function Header() {
             <Image
               src="/logo_tjtrack.png"
               alt="TJ-Track Logo"
-              width={36}
-              height={36}
+              width={48}
+              height={48}
               className="rounded-lg object-contain"
             />
             <span className="text-xl font-bold text-gradient hidden sm:block">Track</span>
@@ -158,8 +158,8 @@ export function Header() {
                       <Image
                         src="/logo_tjtrack.jpg"
                         alt="TJ-Track Logo"
-                        width={40}
-                        height={40}
+                        width={48}
+                        height={48}
                         className="rounded-lg object-contain"
                       />
                       <span className="text-xl font-bold text-sidebar-foreground">TJ-Track</span>
