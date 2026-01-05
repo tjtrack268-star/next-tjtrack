@@ -35,6 +35,7 @@ import {
 
 import { useCart } from "@/contexts/cart-context"
 import { useAuth } from "@/contexts/auth-context"
+import { useSearch } from "@/contexts/search-context"
 import { CartDrawer } from "@/components/cart/cart-drawer"
 import { useToast } from "@/hooks/use-toast"
 import { Spinner } from "@/components/ui/spinner"
@@ -62,6 +63,7 @@ const cities = ["Toutes", "Douala", "Yaoundé", "Bafoussam", "Garoua", "Bamenda"
 export default function HomePage() {
   const { totalItems, addItem, openCart } = useCart()
   const { user, isAuthenticated, logout } = useAuth()
+  const { searchQuery } = useSearch()
   const { toast } = useToast()
   const router = useRouter()
   const { data: apiProducts, isLoading, error } = useEcommerceProducts()
@@ -71,7 +73,6 @@ export default function HomePage() {
   
   const products = apiProducts || []
 
-  const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("Tous")
   const [priceMin, setPriceMin] = useState("")
   const [priceMax, setPriceMax] = useState("")

@@ -19,6 +19,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useCart } from "@/contexts/cart-context"
 import { useAuth } from "@/contexts/auth-context"
+import { useSearch } from "@/contexts/search-context"
 import { cn } from "@/lib/utils"
 import { safeUserName } from "@/lib/safe-render"
 
@@ -30,9 +31,9 @@ const navigation = [
 ]
 
 export function Header() {
-  const [isSearchOpen, setIsSearchOpen] = useState(false)
   const { totalItems, openCart } = useCart()
   const { user, isAuthenticated, logout } = useAuth()
+  const { searchQuery, setSearchQuery } = useSearch()
 
   return (
     <header className="sticky top-0 z-50 w-full glass-card border-b border-border/50">
@@ -58,6 +59,8 @@ export function Header() {
                 type="search"
                 placeholder="Rechercher des produits..."
                 className="w-full h-10 pl-10 pr-4 bg-secondary/50 border-0 focus-visible:ring-primary"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
@@ -309,6 +312,8 @@ export function Header() {
                 type="search"
                 placeholder="Rechercher des produits..."
                 className="w-full h-10 pl-10 pr-4 bg-secondary/50 border-0 focus-visible:ring-primary"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
