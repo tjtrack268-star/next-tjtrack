@@ -5,10 +5,10 @@
 
 /* TJ-Track Custom Theme - Mode clair (Vert) & Mode sombre (Bleu) */
 :root {
-  /* Mode clair - Thème vert */
-  --primary: #1fad9f; /* Vert turquoise original */
+  /* Mode clair - Thème bleu */
+  --primary: #3b82f6; /* Bleu */
   --primary-foreground: #ffffff;
-  --primary-hover: #166f69;
+  --primary-hover: #2563eb;
 
   /* Dark Theme Base */
   --background: #f0f3fb;
@@ -27,8 +27,8 @@
   --muted-foreground: #6c757d;
 
   /* Accent */
-  --accent: #e6f7f5;
-  --accent-foreground: #166f69;
+  --accent: #dbeafe;
+  --accent-foreground: #2563eb;
 
   /* Destructive */
   --destructive: #dc3545;
@@ -37,11 +37,11 @@
   /* Borders & Inputs */
   --border: #dee2e6;
   --input: #e9ecef;
-  --ring: #1fad9f;
+  --ring: #3b82f6;
 
   /* Chart Colors */
-  --chart-1: #1fad9f;
-  --chart-2: #166f69;
+  --chart-1: #3b82f6;
+  --chart-2: #2563eb;
   --chart-3: #6c757d;
   --chart-4: #ffc107;
   --chart-5: #dc3545;
@@ -57,12 +57,12 @@
   /* Sidebar */
   --sidebar: #212529;
   --sidebar-foreground: #f0f3fb;
-  --sidebar-primary: #1fad9f;
+  --sidebar-primary: #3b82f6;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #2d3339;
   --sidebar-accent-foreground: #f0f3fb;
   --sidebar-border: #343a40;
-  --sidebar-ring: #1fad9f;
+  --sidebar-ring: #3b82f6;
 }
 
 .dark {
