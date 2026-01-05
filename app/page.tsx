@@ -39,7 +39,7 @@ import { useSearch } from "@/contexts/search-context"
 import { CartDrawer } from "@/components/cart/cart-drawer"
 import { useToast } from "@/hooks/use-toast"
 import { Spinner } from "@/components/ui/spinner"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api"
 import { buildImageUrl } from "@/lib/image-utils"
 import type { ProduitEcommerceDto } from "@/types/api"
@@ -183,6 +183,28 @@ export default function HomePage() {
     }
   }, [visibleProducts, sortedProducts.length])
 
+  const queryClient = useQueryClient()
+
+  const handleLike = async (e: React.MouseEvent, product: ProduitEcommerceDto) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    try {
+      await apiClient.post(`/ecommerce/produits/${product.id}/like`)
+      queryClient.invalidateQueries({ queryKey: ["ecommerceProducts"] })
+      toast({
+        title: "Like ajouté",
+        description: `Vous aimez ${product.nom}`,
+      })
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'ajouter le like",
+        variant: "destructive",
+      })
+    }
+  }
+
   const handleProductClick = (product: ProduitEcommerceDto) => {
     router.push(`/produit/${product.id}`)
   }
@@ -225,7 +247,12 @@ export default function HomePage() {
           className="object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
         />
-        <Button variant="ghost" size="icon" className="absolute top-2 right-2 bg-white/80 hover:bg-white z-20">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="absolute top-2 right-2 bg-white/80 hover:bg-white z-20"
+          onClick={(e) => handleLike(e, product)}
+        >
           <Heart className="h-4 w-4" />
         </Button>
         {!estEnRupture && (
@@ -252,6 +279,13 @@ export default function HomePage() {
           <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
           <span className="text-xs font-medium">{product.noteMoyenne || 0}</span>
           <span className="text-xs text-muted-foreground">({product.nombreEvaluations || 0})</span>
+          {product.nombreLikes && product.nombreLikes > 0 && (
+            <>
+              <span className="text-xs text-muted-foreground mx-1">•</span>
+              <Heart className="h-3 w-3 fill-red-500 text-red-500" />
+              <span className="text-xs font-medium">{product.nombreLikes}</span>
+            </>
+          )}
         </div>
         <div className="flex items-center justify-between gap-2">
           <span className="font-bold text-primary">{formatPrice(Number(product.prix || 0))}</span>

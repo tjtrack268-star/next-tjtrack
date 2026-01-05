@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { 
   Star, 
   Heart, 
@@ -29,6 +29,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Spinner } from "@/components/ui/spinner"
 import { useToast } from "@/hooks/use-toast"
 import { useCart } from "@/contexts/cart-context"
+import { useAuth } from "@/contexts/auth-context"
 import { ProductSidebar } from "@/components/layout/product-sidebar"
 import { Header } from "@/components/layout/header"
 import { apiClient } from "@/lib/api"
@@ -38,7 +39,7 @@ import type { ProduitDetailDto, ProduitEcommerceDto } from "@/types/api"
 function useProductDetail(id: string) {
   return useQuery({
     queryKey: ["productDetail", id],
-    queryFn: () => apiClient.get<ProduitDetailDto>(`/catalogue/produits/${id}`),
+    queryFn: () => apiClient.get<ProduitDetailDto>(`/ecommerce/produits/${id}`),
     enabled: !!id,
   })
 }
@@ -56,6 +57,8 @@ export default function ProductPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { addItem } = useCart()
+  const { isAuthenticated } = useAuth()
+  const queryClient = useQueryClient()
   
   const productId = params.id as string
   const { data: product, isLoading, error } = useProductDetail(productId)
@@ -64,6 +67,8 @@ export default function ProductPage() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const [isFavorite, setIsFavorite] = useState(false)
+  const [showReviewForm, setShowReviewForm] = useState(false)
+  const [reviewData, setReviewData] = useState({ note: 5, commentaire: "", recommande: false })
 
   const formatPrice = (price: number) => new Intl.NumberFormat("fr-FR").format(price) + " XAF"
 
@@ -89,12 +94,62 @@ export default function ProductPage() {
     }
   }
 
-  const handleToggleFavorite = () => {
-    setIsFavorite(!isFavorite)
-    toast({
-      title: isFavorite ? "Retiré des favoris" : "Ajouté aux favoris",
-      description: product?.nom,
-    })
+  const handleToggleFavorite = async () => {
+    if (!product) return
+    
+    try {
+      await apiClient.post(`/ecommerce/produits/${product.id}/favoris`)
+      setIsFavorite(!isFavorite)
+      queryClient.invalidateQueries({ queryKey: ["productDetail", productId] })
+      toast({
+        title: isFavorite ? "Retiré des favoris" : "Ajouté aux favoris",
+        description: product.nom,
+      })
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de modifier les favoris",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleSubmitReview = async () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Connexion requise",
+        description: "Vous devez être connecté pour laisser un avis",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    if (!product || !reviewData.commentaire.trim()) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez remplir tous les champs",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    try {
+      await apiClient.post(`/ecommerce/produits/${product.id}/evaluation`, reviewData)
+      queryClient.invalidateQueries({ queryKey: ["productDetail", productId] })
+      queryClient.invalidateQueries({ queryKey: ["ecommerceProducts"] })
+      setShowReviewForm(false)
+      setReviewData({ note: 5, commentaire: "", recommande: false })
+      toast({
+        title: "Avis ajouté",
+        description: "Merci pour votre avis !",
+      })
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'ajouter l'avis",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleShare = async () => {
@@ -154,10 +209,6 @@ export default function ProductPage() {
         <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
           <Button variant="ghost" size="sm" onClick={() => router.push("/")}>
             Accueil
-          </Button>
-          <ChevronRight className="h-4 w-4" />
-          <Button variant="ghost" size="sm" onClick={() => router.push("/catalogue")}>
-            Catalogue
           </Button>
           <ChevronRight className="h-4 w-4" />
           <span>{product.categorieNom}</span>
@@ -358,6 +409,63 @@ export default function ProductPage() {
           <TabsContent value="reviews" className="mt-6">
             <Card>
               <CardContent className="p-6">
+                <div className="mb-6">
+                  <Button onClick={() => setShowReviewForm(!showReviewForm)}>
+                    {showReviewForm ? "Annuler" : "Laisser un avis"}
+                  </Button>
+                </div>
+                
+                {showReviewForm && (
+                  <Card className="mb-6">
+                    <CardContent className="p-4 space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Note</label>
+                        <div className="flex gap-2">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setReviewData({ ...reviewData, note: star })}
+                              className="focus:outline-none hover:scale-110 transition-transform cursor-pointer"
+                            >
+                              <Star
+                                className={`h-8 w-8 ${
+                                  star <= reviewData.note ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                                }`}
+                              />
+                            </button>
+                          ))}
+                          <span className="ml-2 text-sm text-muted-foreground self-center">
+                            {reviewData.note} / 5
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Commentaire</label>
+                        <textarea
+                          className="w-full border rounded-lg p-3 min-h-[100px]"
+                          placeholder="Partagez votre expérience avec ce produit..."
+                          value={reviewData.commentaire}
+                          onChange={(e) => setReviewData({ ...reviewData, commentaire: e.target.value })}
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="recommande"
+                          checked={reviewData.recommande}
+                          onChange={(e) => setReviewData({ ...reviewData, recommande: e.target.checked })}
+                          className="rounded"
+                        />
+                        <label htmlFor="recommande" className="text-sm">Je recommande ce produit</label>
+                      </div>
+                      <Button onClick={handleSubmitReview} className="w-full">
+                        Publier l'avis
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+                
                 {product.evaluations && product.evaluations.length > 0 ? (
                   <div className="space-y-6">
                     {product.evaluations.map((review) => (
