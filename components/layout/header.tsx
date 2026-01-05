@@ -36,7 +36,7 @@ export function Header() {
   const { searchQuery, setSearchQuery } = useSearch()
 
   return (
-    <header className="sticky top-0 z-50 w-full glass-card border-b border-border/50">
+    <header className="sticky top-0 z-[100] w-full glass-card border-b border-border/50">
       <div className="container mx-auto px-4">
         {/* Desktop Layout */}
         <div className="hidden md:flex h-16 items-center justify-between gap-4">

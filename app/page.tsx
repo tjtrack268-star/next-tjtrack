@@ -80,8 +80,24 @@ export default function HomePage() {
   const [sortBy, setSortBy] = useState("pertinence")
   const [visibleProducts, setVisibleProducts] = useState(12)
   const [carouselSlide, setCarouselSlide] = useState(0)
+  const [showBanner, setShowBanner] = useState(true)
 
   const formatPrice = (price: number) => new Intl.NumberFormat("fr-FR").format(price) + " XAF"
+
+  // Auto-hide banner after 5 seconds, then reappear after 1 minute
+  useEffect(() => {
+    if (showBanner) {
+      const hideTimer = setTimeout(() => {
+        setShowBanner(false)
+      }, 5000)
+      return () => clearTimeout(hideTimer)
+    } else {
+      const showTimer = setTimeout(() => {
+        setShowBanner(true)
+      }, 60000)
+      return () => clearTimeout(showTimer)
+    }
+  }, [showBanner])
 
   // Carousel auto-play pour mobile (désactivé par défaut pour performance)
   const carouselProducts = products.slice(0, 5)
@@ -385,18 +401,24 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Announcement Banner */}
-      <div className="bg-primary text-primary-foreground accordion-up py-1 overflow-hidden">
-        <div className="animate-marquee whitespace-nowrap">
-          <span className="mx-4">Livraison gratuite à partir de 50 000 XAF</span>
-          <span className="mx-4">•</span>
-          <span className="mx-4">Nouveaux produits chaque semaine</span>
-          <span className="mx-4">•</span>
-          <span className="mx-4">Paiement sécurisé</span>
-          <span className="mx-4">•</span>
-          <span className="mx-4">Service client 24/7</span>
+      {/* Announcement Banner - Auto-hide after 5s */}
+      {showBanner && (
+        <div className="bg-primary text-primary-foreground py-1 overflow-hidden animate-fade-in relative z-[110]">
+          <div className="animate-marquee whitespace-nowrap">
+            <span className="mx-4">Livraison gratuite à partir de 50 000 XAF</span>
+            <span className="mx-4">•</span>
+            <span className="mx-4">Nouveaux produits chaque semaine</span>
+            <span className="mx-4">•</span>
+            <span className="mx-4">Paiement sécurisé</span>
+            <span className="mx-4">•</span>
+            <span className="mx-4">Service client 24/7</span>
+            <span className="mx-4">•</span>
+            <span className="mx-4">Livraison gratuite à partir de 50 000 XAF</span>
+            <span className="mx-4">•</span>
+            <span className="mx-4">Nouveaux produits chaque semaine</span>
+          </div>
         </div>
-      </div>
+      )}
 
       <Header />
 
