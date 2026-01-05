@@ -41,7 +41,7 @@ export function Header() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <Image
-              src="/logo_tjtrack.jpg"
+              src="/logo_tjtrack.png"
               alt="TJ-Track Logo"
               width={36}
               height={36}
