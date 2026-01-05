@@ -563,8 +563,8 @@ export default function HomePage() {
               <Image
                 src="/logo_tjtrack.png"
                 alt="TJ-Track Logo"
-                width={32}
-                height={32}
+                width={48}
+                height={48}
                 className="rounded bg-white p-1 object-contain"
               />
               <span className="font-bold text-xl">TRACK</span>

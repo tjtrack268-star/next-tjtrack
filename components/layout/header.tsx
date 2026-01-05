@@ -37,9 +37,10 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full glass-card border-b border-border/50">
       <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between gap-4">
+        {/* Desktop Layout */}
+        <div className="hidden md:flex h-16 items-center justify-between gap-4">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2 shrink-0">
             <Image
               src="/logo_tjtrack.png"
               alt="TJ-Track Logo"
@@ -47,28 +48,23 @@ export function Header() {
               height={48}
               className="rounded-lg object-contain"
             />
-            <span className="text-xl font-bold text-gradient hidden sm:block">Track</span>
+            <span className="text-xl font-bold text-gradient">Track</span>
           </Link>
 
           {/* Search Bar */}
-          <div className={cn("flex-1 max-w-4xl h-12 transition-all duration-300", isSearchOpen ? "flex" : "hidden md:flex")}>
-            <div className="relative w-full border -bottom-8.5 h-full">
+          <div className="flex-1 max-w-2xl mx-4">
+            <div className="relative w-full">
               <Input
                 type="search"
                 placeholder="Rechercher des produits..."
-                className="w-full h-full pl-10 pr-4 bg-secondary/50 border-0 focus-visible:ring-primary"
+                className="w-full h-10 pl-10 pr-4 bg-secondary/50 border-0 focus-visible:ring-primary"
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2">
-            {/* Mobile Search Toggle */}
-            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsSearchOpen(!isSearchOpen)}>
-              {isSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
-            </Button>
-
+          <div className="flex items-center gap-2 shrink-0">
             {/* Theme Toggle */}
             <ThemeToggle />
 
@@ -156,7 +152,7 @@ export function Header() {
                   <div className="p-6 border-b border-sidebar-border">
                     <div className="flex items-center gap-2">
                       <Image
-                        src="/logo_tjtrack.jpg"
+                        src="/logo_tjtrack.png"
                         alt="TJ-Track Logo"
                         width={48}
                         height={48}
@@ -209,6 +205,113 @@ export function Header() {
                 </div>
               </SheetContent>
             </Sheet>
+          </div>
+        </div>
+
+        {/* Mobile Layout */}
+        <div className="md:hidden">
+          {/* Top Row */}
+          <div className="flex h-16 items-center justify-between gap-2">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-2 shrink-0">
+              <Image
+                src="/logo_tjtrack.png"
+                alt="TJ-Track Logo"
+                width={40}
+                height={40}
+                className="rounded-lg object-contain"
+              />
+              <span className="text-lg font-bold text-gradient">Track</span>
+            </Link>
+
+            {/* Mobile Actions */}
+            <div className="flex items-center gap-1 shrink-0">
+              <ThemeToggle />
+              <Button variant="ghost" size="icon" className="relative" onClick={openCart}>
+                <ShoppingCart className="h-5 w-5" />
+                {totalItems > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-primary text-primary-foreground">
+                    {totalItems}
+                  </Badge>
+                )}
+              </Button>
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-80 glass-sidebar p-0">
+                  <div className="flex flex-col h-full">
+                    <div className="p-6 border-b border-sidebar-border">
+                      <div className="flex items-center gap-2">
+                        <Image
+                          src="/logo_tjtrack.png"
+                          alt="TJ-Track Logo"
+                          width={48}
+                          height={48}
+                          className="rounded-lg object-contain"
+                        />
+                        <span className="text-xl font-bold text-sidebar-foreground">TJ-Track</span>
+                      </div>
+                    </div>
+                    <nav className="flex-1 p-4">
+                      <div className="space-y-1">
+                        {navigation.map((item) => (
+                          <Link
+                            key={item.name}
+                            href={item.href}
+                            className="flex items-center gap-3 rounded-lg px-4 py-3 text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+                          >
+                            {item.name}
+                          </Link>
+                        ))}
+                      </div>
+                      <div className="mt-6 pt-6 border-t border-sidebar-border">
+                        {isAuthenticated ? (
+                          <>
+                            <Link
+                              href="/dashboard"
+                              className="flex items-center gap-3 rounded-lg px-4 py-3 text-sidebar-primary hover:bg-sidebar-accent transition-colors"
+                            >
+                              <LayoutDashboard className="h-5 w-5" />
+                              Espace Gestion
+                            </Link>
+                            <button
+                              onClick={logout}
+                              className="flex items-center gap-3 rounded-lg px-4 py-3 text-destructive hover:bg-sidebar-accent transition-colors w-full text-left"
+                            >
+                              <LogOut className="h-5 w-5" />
+                              Déconnexion
+                            </button>
+                          </>
+                        ) : (
+                          <Link
+                            href="/connexion"
+                            className="flex items-center gap-3 rounded-lg px-4 py-3 text-sidebar-primary hover:bg-sidebar-accent transition-colors"
+                          >
+                            <User className="h-5 w-5" />
+                            Connexion
+                          </Link>
+                        )}
+                      </div>
+                    </nav>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
+          </div>
+
+          {/* Search Bar Row */}
+          <div className="pb-3">
+            <div className="relative w-full">
+              <Input
+                type="search"
+                placeholder="Rechercher des produits..."
+                className="w-full h-10 pl-10 pr-4 bg-secondary/50 border-0 focus-visible:ring-primary"
+              />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            </div>
           </div>
         </div>
       </div>
