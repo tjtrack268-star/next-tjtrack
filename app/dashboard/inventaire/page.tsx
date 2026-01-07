@@ -137,6 +137,8 @@ export default function InventairePage() {
   const [adjustmentQuantity, setAdjustmentQuantity] = useState("")
   const [adjustmentReason, setAdjustmentReason] = useState("")
   const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [editingArticle, setEditingArticle] = useState<ArticleDto | null>(null)
   const [filterCategory, setFilterCategory] = useState("all")
   const [filterStock, setFilterStock] = useState("all")
 
@@ -187,6 +189,35 @@ export default function InventairePage() {
   const openAdjustDialog = (article: ArticleDto) => {
     setSelectedArticle(article)
     setIsAdjustDialogOpen(true)
+  }
+
+  const openEditDialog = (article: ArticleDto) => {
+    setEditingArticle(article)
+    setIsEditDialogOpen(true)
+  }
+
+  const handleDeleteArticle = async (article: ArticleDto) => {
+    if (!confirm(`Voulez-vous vraiment supprimer "${article.designation}" ?`)) return
+    
+    try {
+      // TODO: Implémenter l'appel API de suppression
+      console.log("Suppression article:", article.id)
+    } catch (error) {
+      console.error("Erreur suppression:", error)
+    }
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editingArticle) return
+    
+    try {
+      // TODO: Implémenter l'appel API de modification
+      console.log("Modification article:", editingArticle)
+      setIsEditDialogOpen(false)
+      setEditingArticle(null)
+    } catch (error) {
+      console.error("Erreur modification:", error)
+    }
   }
 
   const getStockStatus = (article: ArticleDto) => {
@@ -404,16 +435,16 @@ export default function InventairePage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openAdjustDialog(article)}>
+                            <DropdownMenuItem onClick={() => openEditDialog(article)}>
                               <Edit className="h-4 w-4 mr-2" />
+                              Modifier
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openAdjustDialog(article)}>
+                              <Package className="h-4 w-4 mr-2" />
                               Ajuster stock
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Package className="h-4 w-4 mr-2" />
-                              Voir détails
-                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive">
+                            <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteArticle(article)}>
                               <Trash2 className="h-4 w-4 mr-2" />
                               Supprimer
                             </DropdownMenuItem>
@@ -428,6 +459,95 @@ export default function InventairePage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Article Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="glass-card max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Modifier l'article</DialogTitle>
+            <DialogDescription>Modifiez les informations de l'article</DialogDescription>
+          </DialogHeader>
+          {editingArticle && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-designation">Désignation</Label>
+                  <Input
+                    id="edit-designation"
+                    value={editingArticle.designation}
+                    onChange={(e) => setEditingArticle({ ...editingArticle, designation: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-code">Code article</Label>
+                  <Input
+                    id="edit-code"
+                    value={editingArticle.codeArticle}
+                    onChange={(e) => setEditingArticle({ ...editingArticle, codeArticle: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-prix-ht">Prix HT (FCFA)</Label>
+                  <Input
+                    id="edit-prix-ht"
+                    type="number"
+                    value={editingArticle.prixUnitaireHt}
+                    onChange={(e) => setEditingArticle({ ...editingArticle, prixUnitaireHt: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-prix-ttc">Prix TTC (FCFA)</Label>
+                  <Input
+                    id="edit-prix-ttc"
+                    type="number"
+                    value={editingArticle.prixUnitaireTtc}
+                    onChange={(e) => setEditingArticle({ ...editingArticle, prixUnitaireTtc: Number(e.target.value) })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-stock">Stock actuel</Label>
+                  <Input
+                    id="edit-stock"
+                    type="number"
+                    value={editingArticle.quantiteStock}
+                    onChange={(e) => setEditingArticle({ ...editingArticle, quantiteStock: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-seuil">Seuil alerte</Label>
+                  <Input
+                    id="edit-seuil"
+                    type="number"
+                    value={editingArticle.seuilAlerte}
+                    onChange={(e) => setEditingArticle({ ...editingArticle, seuilAlerte: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-max">Stock max</Label>
+                  <Input
+                    id="edit-max"
+                    type="number"
+                    value={editingArticle.stockMax}
+                    onChange={(e) => setEditingArticle({ ...editingArticle, stockMax: Number(e.target.value) })}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button className="gradient-primary text-white" onClick={handleSaveEdit}>
+              Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Adjust Stock Dialog */}
       <Dialog open={isAdjustDialogOpen} onOpenChange={setIsAdjustDialogOpen}>

@@ -18,9 +18,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { buildImageUrl } from "@/lib/image-utils"
 import { apiClient } from "@/lib/api"
 
+import { ProductVariants } from "@/components/product-variants"
+
 export default function MerchantProductsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<any | null>(null)
+  const [editImages, setEditImages] = useState<File[]>([])
+  const [variants, setVariants] = useState<any[]>([])
+  const [editVariants, setEditVariants] = useState<any[]>([])
   const [mode, setMode] = useState<"existing" | "new">("existing")
   const [stockArticles, setStockArticles] = useState<any[]>([])
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null)
@@ -150,6 +157,7 @@ export default function MerchantProductsPage() {
       setArticleSearchQuery("")
       setNewProduct({ nom: "", description: "", descriptionLongue: "", prix: "", quantite: "", quantiteEnLigne: "", categorieId: "1" })
       setSelectedImages([])
+      setVariants([])
       refetch()
     } catch (err) {
       toast({ title: "Erreur", description: "Impossible d'ajouter le produit", variant: "destructive" })
@@ -351,6 +359,15 @@ export default function MerchantProductsPage() {
                       <p className="text-sm text-muted-foreground">{selectedImages.length} image(s) sélectionnée(s)</p>
                     )}
                   </div>
+
+                  {/* Variantes */}
+                  <div className="space-y-2">
+                    <Label>Variantes du produit (couleurs, tailles...)</Label>
+                    <ProductVariants
+                      variants={variants}
+                      onChange={setVariants}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -437,6 +454,15 @@ export default function MerchantProductsPage() {
                       <p className="text-sm text-muted-foreground">{selectedImages.length} image(s) sélectionnée(s)</p>
                     )}
                   </div>
+
+                  {/* Variantes */}
+                  <div className="space-y-2">
+                    <Label>Variantes du produit (couleurs, tailles...)</Label>
+                    <ProductVariants
+                      variants={variants}
+                      onChange={setVariants}
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -456,6 +482,114 @@ export default function MerchantProductsPage() {
                 Créer le produit
               </Button>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Product Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Modifier le produit</DialogTitle>
+            </DialogHeader>
+            {editingProduct && (
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label>Nom du produit</Label>
+                  <Input
+                    value={editingProduct.nom}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, nom: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Textarea
+                    value={editingProduct.description || ""}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Prix (XAF)</Label>
+                    <Input
+                      type="number"
+                      value={editingProduct.prix}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, prix: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Quantité en ligne</Label>
+                    <Input
+                      type="number"
+                      value={editingProduct.quantite}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, quantite: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Ajouter des images</Label>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => setEditImages(Array.from(e.target.files || []))}
+                  />
+                  {editImages.length > 0 && (
+                    <p className="text-sm text-muted-foreground">{editImages.length} image(s) sélectionnée(s)</p>
+                  )}
+                </div>
+
+                {/* Variantes */}
+                <div className="space-y-2">
+                  <Label>Variantes du produit</Label>
+                  <ProductVariants
+                    variants={editVariants}
+                    onChange={setEditVariants}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                    Annuler
+                  </Button>
+                  <Button
+                    className="gradient-primary text-white"
+                    onClick={async () => {
+                      try {
+                        await apiClient.put(`/merchant/produits/${editingProduct.id}`, {
+                          nom: editingProduct.nom,
+                          description: editingProduct.description,
+                          prix: editingProduct.prix,
+                          quantiteEnLigne: editingProduct.quantite,
+                        })
+                        
+                        if (editImages.length > 0) {
+                          const formData = new FormData()
+                          editImages.forEach((img) => formData.append('images', img))
+                          await apiClient.post(`/merchant/produits/${editingProduct.id}/images`, formData)
+                        }
+                        
+                        toast({
+                          title: "Produit modifié",
+                          description: "Les modifications ont été enregistrées",
+                        })
+                        setIsEditDialogOpen(false)
+                        setEditImages([])
+                        refetch()
+                      } catch (error) {
+                        toast({
+                          title: "Erreur",
+                          description: "Impossible de modifier le produit",
+                          variant: "destructive",
+                        })
+                      }
+                    }}
+                  >
+                    Enregistrer
+                  </Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
@@ -599,10 +733,9 @@ export default function MerchantProductsPage() {
                         variant="ghost" 
                         size="icon"
                         onClick={() => {
-                          toast({
-                            title: "Fonctionnalité à venir",
-                            description: "L'édition de produits sera bientôt disponible",
-                          })
+                          setEditingProduct(product)
+                          setEditVariants(product.variants || [])
+                          setIsEditDialogOpen(true)
                         }}
                       >
                         <Edit className="h-4 w-4" />

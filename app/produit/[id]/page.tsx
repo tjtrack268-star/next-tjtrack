@@ -69,6 +69,7 @@ export default function ProductPage() {
   const [isFavorite, setIsFavorite] = useState(false)
   const [showReviewForm, setShowReviewForm] = useState(false)
   const [reviewData, setReviewData] = useState({ note: 5, commentaire: "", recommande: false })
+  const [selectedVariant, setSelectedVariant] = useState<number | null>(null)
 
   const formatPrice = (price: number) => new Intl.NumberFormat("fr-FR").format(price) + " XAF"
 
@@ -273,6 +274,83 @@ export default function ProductPage() {
               <p className="text-muted-foreground">{product.description}</p>
             </div>
 
+            {/* Variants */}
+            {product.variants && product.variants.length > 0 && (
+              <div className="space-y-4">
+                {/* Colors */}
+                {Array.from(new Set(product.variants.map(v => v.couleur).filter(Boolean))).length > 0 && (
+                  <div>
+                    <span className="font-medium block mb-2">Couleur:</span>
+                    <div className="flex flex-wrap gap-2">
+                      {Array.from(new Set(product.variants.map(v => v.couleur).filter(Boolean))).map((couleur) => {
+                        const variantsWithColor = product.variants!.filter(v => v.couleur === couleur)
+                        const isSelected = selectedVariant !== null && variantsWithColor.some(v => v.id === selectedVariant)
+                        return (
+                          <Button
+                            key={couleur}
+                            variant={isSelected ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setSelectedVariant(variantsWithColor[0].id!)}
+                          >
+                            {couleur}
+                          </Button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Sizes */}
+                {Array.from(new Set(product.variants.map(v => v.taille).filter(Boolean))).length > 0 && (
+                  <div>
+                    <span className="font-medium block mb-2">Taille:</span>
+                    <div className="flex flex-wrap gap-2">
+                      {Array.from(new Set(product.variants.map(v => v.taille).filter(Boolean))).map((taille) => {
+                        const variantsWithSize = product.variants!.filter(v => v.taille === taille)
+                        const isSelected = selectedVariant !== null && variantsWithSize.some(v => v.id === selectedVariant)
+                        return (
+                          <Button
+                            key={taille}
+                            variant={isSelected ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setSelectedVariant(variantsWithSize[0].id!)}
+                          >
+                            {taille}
+                          </Button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Selected Variant Info */}
+                {selectedVariant && (() => {
+                  const variant = product.variants!.find(v => v.id === selectedVariant)
+                  if (!variant) return null
+                  return (
+                    <div className="p-3 bg-muted rounded-lg space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">
+                          {[variant.couleur, variant.taille].filter(Boolean).join(" - ")}
+                        </span>
+                        {variant.prixSupplement && variant.prixSupplement > 0 && (
+                          <span className="text-sm text-primary font-medium">
+                            +{formatPrice(variant.prixSupplement)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className={`h-2 w-2 rounded-full ${variant.quantite > 0 ? "bg-green-500" : "bg-red-500"}`} />
+                        <span className={`text-sm ${variant.quantite > 0 ? "text-green-600" : "text-red-600"}`}>
+                          {variant.quantite > 0 ? `${variant.quantite} disponibles` : "Rupture de stock"}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+            )}
+
             {/* Stock Status */}
             <div className="flex items-center gap-2">
               <div className={`h-2 w-2 rounded-full ${product.enStock ? "bg-green-500" : "bg-red-500"}`} />
@@ -282,7 +360,15 @@ export default function ProductPage() {
             </div>
 
             {/* Quantity & Actions */}
-            {product.enStock && (
+            {product.enStock && (() => {
+              const maxQty = selectedVariant 
+                ? product.variants?.find(v => v.id === selectedVariant)?.quantite || 0
+                : product.quantiteDisponible
+              const canAddToCart = selectedVariant 
+                ? (product.variants?.find(v => v.id === selectedVariant)?.quantite || 0) > 0
+                : product.enStock
+              
+              return (
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
                   <span className="font-medium">Quantité:</span>
@@ -299,8 +385,8 @@ export default function ProductPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setQuantity(Math.min(product.quantiteDisponible, quantity + 1))}
-                      disabled={quantity >= product.quantiteDisponible}
+                      onClick={() => setQuantity(Math.min(maxQty, quantity + 1))}
+                      disabled={quantity >= maxQty}
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
@@ -308,9 +394,16 @@ export default function ProductPage() {
                 </div>
 
                 <div className="flex gap-3">
-                  <Button onClick={handleAddToCart} className="flex-1" size="lg">
+                  <Button 
+                    onClick={handleAddToCart} 
+                    className="flex-1" 
+                    size="lg"
+                    disabled={!canAddToCart || (product.variants && product.variants.length > 0 && !selectedVariant)}
+                  >
                     <ShoppingCart className="h-4 w-4 mr-2" />
-                    Ajouter au panier
+                    {product.variants && product.variants.length > 0 && !selectedVariant 
+                      ? "Sélectionnez une variante" 
+                      : "Ajouter au panier"}
                   </Button>
                   <Button variant="outline" size="lg" onClick={handleToggleFavorite}>
                     <Heart className={`h-4 w-4 ${isFavorite ? "fill-red-500 text-red-500" : ""}`} />
@@ -320,7 +413,8 @@ export default function ProductPage() {
                   </Button>
                 </div>
               </div>
-            )}
+              )
+            })()}
 
             {/* Merchant Info */}
             <Card>

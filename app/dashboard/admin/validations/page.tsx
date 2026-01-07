@@ -7,11 +7,18 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Clock, CheckCircle, XCircle, Store, Truck, MapPin, Phone, Mail, Loader2 } from "lucide-react"
+import { Clock, CheckCircle, XCircle, Store, Truck, MapPin, Phone, Mail, Loader2, Users } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { usePendingUsers, useApproveUser, useRejectUser } from "@/hooks/use-api"
 import type { ProfileResponse } from "@/types/api"
 import { useAuth } from "@/contexts/auth-context"
+
+const roleConfig = {
+  LIVREUR: { label: "Livreur", icon: Truck, color: "bg-yellow-500", priority: 2 },
+  COMMERCANT: { label: "Commerçant", icon: Store, color: "bg-green-500", priority: 3 },
+  FOURNISSEUR: { label: "Fournisseur", icon: Truck, color: "bg-orange-500", priority: 4 },
+  CLIENT: { label: "Client", icon: Users, color: "bg-blue-500", priority: 5 },
+}
 
 export default function AdminValidationsPage() {
   const [selectedUser, setSelectedUser] = useState<ProfileResponse | null>(null)
@@ -124,12 +131,12 @@ export default function AdminValidationsPage() {
         <Card className="glass-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <Truck className="h-5 w-5 text-blue-500" />
+              <div className="p-2 rounded-lg bg-yellow-500/10">
+                <Truck className="h-5 w-5 text-yellow-500" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Fournisseurs</p>
-                <p className="text-2xl font-bold">{pendingUsers.filter((u) => u.roles?.includes("FOURNISSEUR")).length}</p>
+                <p className="text-sm text-muted-foreground">Livreurs</p>
+                <p className="text-2xl font-bold">{pendingUsers.filter((u) => u.roles?.includes("LIVREUR")).length}</p>
               </div>
             </div>
           </CardContent>
@@ -147,7 +154,19 @@ export default function AdminValidationsPage() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {pendingUsers.map((pendingUser) => (
+          {pendingUsers.map((pendingUser) => {
+            // Get the highest priority role
+            const primaryRole = pendingUser.roles?.reduce((highest, current) => {
+              const currentConfig = roleConfig[current as keyof typeof roleConfig]
+              const highestConfig = roleConfig[highest as keyof typeof roleConfig]
+              if (!currentConfig) return highest
+              if (!highestConfig) return current
+              return currentConfig.priority < highestConfig.priority ? current : highest
+            }, pendingUser.roles[0]) || 'CLIENT'
+            
+            const roleInfo = roleConfig[primaryRole as keyof typeof roleConfig] || roleConfig.CLIENT
+            
+            return (
             <Card
               key={String(pendingUser.userId || pendingUser.email)}
               className="glass-card hover:border-primary/50 transition-colors"
@@ -155,8 +174,8 @@ export default function AdminValidationsPage() {
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <Badge variant="outline" className="gap-1">
-                    {pendingUser.roles?.includes("COMMERCANT") ? <Store className="h-3 w-3" /> : <Truck className="h-3 w-3" />}
-                    {pendingUser.roles?.includes("COMMERCANT") ? "Commerçant" : "Fournisseur"}
+                    <roleInfo.icon className="h-3 w-3" />
+                    {roleInfo.label}
                   </Badge>
                   <span className="text-xs text-muted-foreground">
                     {pendingUser.createdAt ? new Date(String(pendingUser.createdAt)).toLocaleDateString("fr-FR") : "N/A"}
@@ -210,7 +229,8 @@ export default function AdminValidationsPage() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+          )
+          })}
         </div>
       )}
 

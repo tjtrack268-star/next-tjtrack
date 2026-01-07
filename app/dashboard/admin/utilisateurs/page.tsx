@@ -18,10 +18,11 @@ import { useDebounce } from "@/hooks/use-debounce"
 import { useQueryClient } from "@tanstack/react-query"
 
 const roleConfig = {
-  CLIENT: { label: "Client", icon: Users, color: "bg-blue-500" },
-  COMMERCANT: { label: "Commerçant", icon: Store, color: "bg-green-500" },
-  FOURNISSEUR: { label: "Fournisseur", icon: Truck, color: "bg-orange-500" },
-  ADMIN: { label: "Admin", icon: ShieldCheck, color: "bg-purple-500" },
+  LIVREUR: { label: "Livreur", icon: Truck, color: "bg-yellow-500", priority: 2 },
+  CLIENT: { label: "Client", icon: Users, color: "bg-blue-500", priority: 5 },
+  COMMERCANT: { label: "Commerçant", icon: Store, color: "bg-green-500", priority: 3 },
+  FOURNISSEUR: { label: "Fournisseur", icon: Truck, color: "bg-orange-500", priority: 4 },
+  ADMIN: { label: "Admin", icon: ShieldCheck, color: "bg-purple-500", priority: 1 },
 }
 
 export default function AdminUsersPage() {
@@ -61,85 +62,36 @@ export default function AdminUsersPage() {
     }
   }, [users])
 
-  const handleApprove = async (userItem: any) => {
-    const identifier = userItem.userId && userItem.userId !== 'undefined' && userItem.userId !== 'null'
-      ? String(userItem.userId)
-      : userItem.email
-    const userName = userItem.name || userItem.email
-    
-    if (!identifier) {
-      toast({
-        title: "Erreur",
-        description: "Identifiant utilisateur invalide",
-        variant: "destructive",
-      })
-      return
-    }
-    
-    const confirmed = await confirm({
-      title: "Approuver l'utilisateur",
-      description: `Êtes-vous sûr de vouloir approuver ${userName} ?`,
-      confirmText: "Approuver",
-      cancelText: "Annuler"
-    })
-    
-    if (!confirmed) return
-    
+  const handleApprove = async (userId: string) => {
     try {
-      await approveUserMutation.mutateAsync({ userId: identifier, approvedBy: user?.email || "admin" })
+      await approveUserMutation.mutateAsync({ userId, approvedBy: user?.email || "admin" })
       toast({
         title: "Utilisateur approuvé",
-        description: `${userName} a été approuvé avec succès`,
+        description: "Le compte a été activé avec succès",
       })
-      await queryClient.invalidateQueries({ queryKey: ["allUsers"] })
-      await queryClient.invalidateQueries({ queryKey: ["userAnalytics"] })
-      await refetch()
-    } catch (err: any) {
+      refetch()
+    } catch (err) {
       toast({
         title: "Erreur",
-        description: err?.message || "Impossible d'approuver l'utilisateur",
+        description: "Impossible d'approuver l'utilisateur",
         variant: "destructive",
       })
     }
   }
 
-  const handleReject = async (userItem: any) => {
-    const identifier = userItem.userId && userItem.userId !== 'undefined' && userItem.userId !== 'null'
-      ? String(userItem.userId)
-      : userItem.email
-    const userName = userItem.name || userItem.email
-    
-    if (!identifier) {
-      toast({
-        title: "Erreur",
-        description: "Identifiant utilisateur invalide",
-        variant: "destructive",
-      })
-      return
-    }
-    
-    const confirmed = await confirm({
-      title: "Rejeter l'utilisateur",
-      description: `Êtes-vous sûr de vouloir rejeter ${userName} ?`,
-      confirmText: "Rejeter",
-      cancelText: "Annuler"
-    })
-    
-    if (!confirmed) return
-    
+  const handleReject = async (userId: string) => {
     try {
-      await rejectUserMutation.mutateAsync({ userId: identifier, rejectedBy: user?.email || "admin" })
+      await rejectUserMutation.mutateAsync({ userId, rejectedBy: user?.email || "admin" })
       toast({
         title: "Utilisateur rejeté",
-        description: `${userName} a été rejeté avec succès`,
+        description: "L'utilisateur a été rejeté avec succès",
+        variant: "destructive",
       })
-      await queryClient.invalidateQueries({ queryKey: ["allUsers"] })
-      await queryClient.invalidateQueries({ queryKey: ["userAnalytics"] })
-      await refetch()
-    } catch (err: any) {
+      refetch()
+    } catch (err) {
       toast({
         title: "Erreur",
-        description: err?.message || "Impossible de rejeter l'utilisateur",
+        description: "Impossible de rejeter l'utilisateur",
         variant: "destructive",
       })
     }
@@ -283,7 +235,15 @@ export default function AdminUsersPage() {
               </TableHeader>
               <TableBody>
                 {users.map((userItem) => {
-                  const primaryRole = userItem.roles?.[0] || 'CLIENT'
+                  // Get the highest priority role
+                  const primaryRole = userItem.roles?.reduce((highest, current) => {
+                    const currentConfig = roleConfig[current as keyof typeof roleConfig]
+                    const highestConfig = roleConfig[highest as keyof typeof roleConfig]
+                    if (!currentConfig) return highest
+                    if (!highestConfig) return current
+                    return currentConfig.priority < highestConfig.priority ? current : highest
+                  }, userItem.roles[0]) || 'CLIENT'
+                  
                   const roleInfo = roleConfig[primaryRole as keyof typeof roleConfig] || roleConfig.CLIENT
                   return (
                     <TableRow key={String(userItem.userId || userItem.email)}>
@@ -355,14 +315,14 @@ export default function AdminUsersPage() {
                             {userItem.isApproved === null && (
                               <>
                                 <DropdownMenuItem
-                                  onSelect={() => handleApprove(userItem)}
+                                  onSelect={() => handleApprove(String(userItem.userId || userItem.email))}
                                   disabled={approveUserMutation.isPending}
                                 >
                                   <UserCheck className="h-4 w-4 mr-2" />
                                   Approuver
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onSelect={() => handleReject(userItem)}
+                                  onSelect={() => handleReject(String(userItem.userId || userItem.email))}
                                   disabled={rejectUserMutation?.isPending}
                                 >
                                   <UserX className="h-4 w-4 mr-2" />
