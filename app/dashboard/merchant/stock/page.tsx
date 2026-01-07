@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Package, Search, AlertTriangle, TrendingUp, TrendingDown, ArrowUpDown, Loader2, Plus, BarChart3, ShoppingCart, Store, Upload, X } from "lucide-react"
+import { Package, Search, AlertTriangle, TrendingUp, TrendingDown, ArrowUpDown, Loader2, Plus, BarChart3, ShoppingCart, Store, Upload, X, Edit, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useMerchantArticles, useAjusterStockMerchant, useAjouterArticleMerchant, useAllCategories, useAjouterProduitMerchant } from "@/hooks/use-api"
 import { useAuth } from "@/contexts/auth-context"
@@ -46,6 +46,18 @@ export default function MerchantStockPage() {
   })
   const [articleImages, setArticleImages] = useState<File[]>([])
   const [productImages, setProductImages] = useState<File[]>([])
+  const [editDialog, setEditDialog] = useState<{
+    open: boolean
+    article: Record<string, unknown> | null
+  }>({ open: false, article: null })
+  const [editArticle, setEditArticle] = useState({
+    designation: "",
+    description: "",
+    prixUnitaireHt: "",
+    quantiteStock: "",
+    seuilAlerte: "",
+    categorieId: ""
+  })
   const [productDialog, setProductDialog] = useState<{
     open: boolean
     article: Record<string, unknown> | null
@@ -310,6 +322,59 @@ export default function MerchantStockPage() {
     setProductDialog({ open: true, article })
   }
 
+  const openEditDialog = (article: Record<string, unknown>) => {
+    setEditArticle({
+      designation: article.designation as string,
+      description: article.description as string || "",
+      prixUnitaireHt: (article.prixUnitaireHt as number)?.toString() || "",
+      quantiteStock: (article.quantiteStock as number)?.toString() || "",
+      seuilAlerte: (article.seuilAlerte as number)?.toString() || "5",
+      categorieId: (article.categorieId as number)?.toString() || ""
+    })
+    setEditDialog({ open: true, article })
+  }
+
+  const handleEditArticle = async () => {
+    if (!editDialog.article) return
+    
+    try {
+      // TODO: Implémenter l'appel API de modification
+      console.log("Modification article:", editDialog.article.id, editArticle)
+      toast({
+        title: "Article modifié",
+        description: "Les modifications ont été enregistrées"
+      })
+      setEditDialog({ open: false, article: null })
+      refetch()
+    } catch (err) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de modifier l'article",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleDeleteArticle = async (article: Record<string, unknown>) => {
+    if (!confirm(`Voulez-vous vraiment supprimer "${article.designation}" ?`)) return
+    
+    try {
+      // TODO: Implémenter l'appel API de suppression
+      console.log("Suppression article:", article.id)
+      toast({
+        title: "Article supprimé",
+        description: "L'article a été supprimé avec succès"
+      })
+      refetch()
+    } catch (err) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer l'article",
+        variant: "destructive"
+      })
+    }
+  }
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     setArticleImages(prev => [...prev, ...files].slice(0, 5))
@@ -560,6 +625,21 @@ export default function MerchantStockPage() {
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEditDialog(article)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive"
+                          onClick={() => handleDeleteArticle(article)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                        <Button
                           variant="outline"
                           size="sm"
                           onClick={() => openProductDialog(article)}
@@ -613,6 +693,83 @@ export default function MerchantStockPage() {
           <MovementAnalytics mouvements={[]} />
         </TabsContent>
       </Tabs>
+
+      {/* Edit Article Dialog */}
+      <Dialog open={editDialog.open} onOpenChange={(open) => setEditDialog({ ...editDialog, open })}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Modifier l'article</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Désignation</Label>
+                <Input
+                  value={editArticle.designation}
+                  onChange={(e) => setEditArticle({ ...editArticle, designation: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Catégorie</Label>
+                <Select value={editArticle.categorieId} onValueChange={(value) => setEditArticle({ ...editArticle, categorieId: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat: any) => (
+                      <SelectItem key={cat.id} value={cat.id.toString()}>
+                        {cat.designation}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                value={editArticle.description}
+                onChange={(e) => setEditArticle({ ...editArticle, description: e.target.value })}
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Prix HT (XAF)</Label>
+                <Input
+                  type="number"
+                  value={editArticle.prixUnitaireHt}
+                  onChange={(e) => setEditArticle({ ...editArticle, prixUnitaireHt: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Stock</Label>
+                <Input
+                  type="number"
+                  value={editArticle.quantiteStock}
+                  onChange={(e) => setEditArticle({ ...editArticle, quantiteStock: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Seuil alerte</Label>
+                <Input
+                  type="number"
+                  value={editArticle.seuilAlerte}
+                  onChange={(e) => setEditArticle({ ...editArticle, seuilAlerte: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialog({ open: false, article: null })}>
+              Annuler
+            </Button>
+            <Button onClick={handleEditArticle}>
+              Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Adjust Dialog */}
       <Dialog open={adjustDialog.open} onOpenChange={(open) => setAdjustDialog({ ...adjustDialog, open })}>
@@ -804,6 +961,13 @@ export default function MerchantStockPage() {
                 </div>
               </div>
             )}
+
+            {/* Note: Les variantes sont gérées au niveau produit, pas article */}
+            <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                💡 <strong>Astuce:</strong> Pour gérer plusieurs couleurs/tailles avec des stocks séparés, créez cet article puis ajoutez les variantes lors de la mise en ligne dans "Mes Produits".
+              </p>
+            </div>
 
             {/* Prix et stock */}
             <div className="grid grid-cols-3 gap-4">

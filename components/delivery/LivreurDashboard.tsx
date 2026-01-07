@@ -33,7 +33,7 @@ import { apiClient } from "@/lib/api"
 interface DeliveryOrder {
   id: number
   numeroCommande: string
-  statut: "ASSIGNEE" | "ASSIGNEE_PICKUP" | "ASSIGNEE_FINAL" | "ACCEPTEE" | "ACCEPTEE_FINAL" | "EN_COURS" | "LIVREE" | "REFUSEE"
+  statut: "ASSIGNEE" | "ASSIGNEE_PICKUP" | "ASSIGNEE_FINAL" | "ACCEPTEE" | "ACCEPTEE_FINAL" | "EN_COURS" | "EN_COURS_PICKUP" | "EN_TRANSIT_VERS_FINAL" | "LIVREE" | "REFUSEE"
   montantTotal: number
   dateCommande: string
   dateLivraisonPrevue?: string
@@ -49,6 +49,7 @@ interface DeliveryOrder {
     nom: string
     telephone: string
     email: string
+    ville: string
   }
   merchant: {
     nom: string
@@ -73,6 +74,8 @@ interface DeliveryOrder {
     nom: string
     telephone: string
   }
+  isPickupDelivery?: boolean
+  expedieVersLivreurFinal?: boolean
 }
 
 const statusConfig = {
@@ -82,6 +85,8 @@ const statusConfig = {
   "ACCEPTEE": { label: "Acceptée", color: "bg-green-500", icon: CheckCircle },
   "ACCEPTEE_FINAL": { label: "Acceptée (livraison finale)", color: "bg-green-600", icon: CheckCircle },
   "EN_COURS": { label: "En cours de livraison", color: "bg-orange-500", icon: Truck },
+  "EN_COURS_PICKUP": { label: "En cours de récupération", color: "bg-orange-600", icon: Truck },
+  "EN_TRANSIT_VERS_FINAL": { label: "En transit vers vous", color: "bg-purple-600", icon: Truck },
   "LIVREE": { label: "Livrée", color: "bg-emerald-500", icon: CheckCircle },
   "REFUSEE": { label: "Refusée", color: "bg-red-500", icon: XCircle },
 }
@@ -110,9 +115,21 @@ export default function LivreurDashboard() {
     queryFn: async () => {
       try {
         const response = await apiClient.get(`/commandes/livreur`) as any
-        console.log('Raw API response:', response)
+        console.log('🔍 Raw API response:', response)
         const ordersData = Array.isArray(response) ? response : (response.data || [])
-        console.log('Processed orders:', ordersData)
+        console.log('📦 Processed orders:', ordersData)
+        // Log détaillé de chaque commande
+        ordersData.forEach((order: any) => {
+          console.log(`📋 Order #${order.numeroCommande}:`, {
+            id: order.id,
+            statut: order.statut,
+            livreurPickup: order.livreurPickup,
+            livreurFinal: order.livreurFinal,
+            expedieVersLivreurFinal: order.expedieVersLivreurFinal,
+            hasPickup: !!order.livreurPickup,
+            hasFinal: !!order.livreurFinal
+          })
+        })
         return ordersData
       } catch (error) {
         console.error('Error fetching delivery orders:', error)
@@ -188,6 +205,8 @@ export default function LivreurDashboard() {
         description: "Le client a été notifié du départ",
       })
       queryClient.invalidateQueries({ queryKey: ["deliveryOrders"] })
+      // Switch to en-cours tab to show the order in progress
+      setSelectedTab("en-cours")
     }
   })
 
@@ -201,6 +220,8 @@ export default function LivreurDashboard() {
         description: "La commande a été marquée comme livrée",
       })
       queryClient.invalidateQueries({ queryKey: ["deliveryOrders"] })
+      // Switch to terminees tab to show the completed order
+      setSelectedTab("terminees")
     }
   })
 
@@ -238,9 +259,9 @@ export default function LivreurDashboard() {
 
   const filteredOrders = orders?.filter((order: DeliveryOrder) => {
     console.log(`Filtering order ${order.id} with status ${order.statut} for tab ${selectedTab}`) // Debug log
-    if (selectedTab === "nouvelles") return ["ASSIGNEE", "ASSIGNEE_PICKUP", "ASSIGNEE_FINAL"].includes(order.statut)
+    if (selectedTab === "nouvelles") return ["ASSIGNEE", "ASSIGNEE_PICKUP", "ASSIGNEE_FINAL", "EN_TRANSIT_VERS_FINAL"].includes(order.statut)
     if (selectedTab === "acceptees") return ["ACCEPTEE", "ACCEPTEE_FINAL"].includes(order.statut)
-    if (selectedTab === "en-cours") return order.statut === "EN_COURS"
+    if (selectedTab === "en-cours") return ["EN_COURS", "EN_COURS_PICKUP"].includes(order.statut)
     if (selectedTab === "terminees") return ["LIVREE", "REFUSEE"].includes(order.statut)
     return true
   }) || []
@@ -334,9 +355,9 @@ export default function LivreurDashboard() {
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="nouvelles" className="relative">
               Nouvelles
-              {orders?.filter((o: DeliveryOrder) => ["ASSIGNEE", "ASSIGNEE_PICKUP", "ASSIGNEE_FINAL"].includes(o.statut)).length > 0 && (
+              {orders?.filter((o: DeliveryOrder) => ["ASSIGNEE", "ASSIGNEE_PICKUP", "ASSIGNEE_FINAL", "EN_TRANSIT_VERS_FINAL"].includes(o.statut)).length > 0 && (
                 <Badge className="ml-2 bg-red-500 text-white text-xs">
-                  {orders?.filter((o: DeliveryOrder) => ["ASSIGNEE", "ASSIGNEE_PICKUP", "ASSIGNEE_FINAL"].includes(o.statut)).length}
+                  {orders?.filter((o: DeliveryOrder) => ["ASSIGNEE", "ASSIGNEE_PICKUP", "ASSIGNEE_FINAL", "EN_TRANSIT_VERS_FINAL"].includes(o.statut)).length}
                 </Badge>
               )}
             </TabsTrigger>
@@ -344,7 +365,7 @@ export default function LivreurDashboard() {
               Acceptées ({orders?.filter((o: DeliveryOrder) => ["ACCEPTEE", "ACCEPTEE_FINAL"].includes(o.statut)).length || 0})
             </TabsTrigger>
             <TabsTrigger value="en-cours">
-              En cours ({orders?.filter((o: DeliveryOrder) => o.statut === "EN_COURS").length || 0})
+              En cours ({orders?.filter((o: DeliveryOrder) => ["EN_COURS", "EN_COURS_PICKUP"].includes(o.statut)).length || 0})
             </TabsTrigger>
             <TabsTrigger value="terminees">
               Terminées ({filteredOrders.filter((o: DeliveryOrder) => ["LIVREE", "REFUSEE"].includes(o.statut)).length})
@@ -366,13 +387,24 @@ export default function LivreurDashboard() {
                 </CardContent>
               </Card>
             ) : (
-              filteredOrders.map((order: DeliveryOrder) => {
+              filteredOrders.map((order: DeliveryOrder, index: number) => {
                 const StatusIcon = statusConfig[order.statut]?.icon || Package
                 const statusColor = statusConfig[order.statut]?.color || "bg-gray-500"
-                const statusLabel = statusConfig[order.statut]?.label || order.statut
+                
+                // Adapter le label selon le type de livreur
+                let statusLabel = statusConfig[order.statut]?.label || order.statut
+                
+                // Debug: afficher les champs pour comprendre
+                console.log(`🔍 Order ${order.id} - livreurPickup:`, order.livreurPickup, 'livreurFinal:', order.livreurFinal)
+                
+                if (order.statut === "EN_COURS" && order.livreurFinal) {
+                  statusLabel = "En cours d'expédition"
+                } else if (order.statut === "EN_COURS" && order.livreurPickup) {
+                  statusLabel = "En cours de livraison"
+                }
 
                 return (
-                  <Card key={order.id} className="overflow-hidden">
+                  <Card key={`${order.id}-${order.statut}-${index}`} className="overflow-hidden">
                     <CardHeader className="pb-4">
                       <div className="flex items-start justify-between">
                         <div>
@@ -496,15 +528,20 @@ export default function LivreurDashboard() {
                         </div>
                       )}
 
-                      {order.statut === "ASSIGNEE_FINAL" && order.livreurPickup && (
+                      {(order.statut === "ASSIGNEE_FINAL" || order.statut === "ACCEPTEE_FINAL") && order.livreurPickup && (
                         <div className="p-3 bg-purple-50 rounded-lg">
                           <div className="flex items-start gap-2">
                             <Truck className="h-4 w-4 text-purple-600 mt-0.5" />
                             <div className="flex-1">
                               <p className="text-sm font-medium text-purple-800">Livraison relayée</p>
                               <p className="text-sm text-purple-700">
-                                Le livreur {order.livreurPickup.nom} vous transfère cette commande
+                                Le livreur {order.livreurPickup.nom} {order.expedieVersLivreurFinal ? 'a expédié' : 'va vous transférer'} cette commande
                               </p>
+                              {!order.expedieVersLivreurFinal && (
+                                <p className="text-xs text-purple-600 mt-1">
+                                  ⏳ En attente de l'expédition
+                                </p>
+                              )}
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -519,8 +556,42 @@ export default function LivreurDashboard() {
                         </div>
                       )}
 
+                      {(order.statut === "ACCEPTEE" || order.statut === "EN_COURS_PICKUP") && order.livreurFinal && (
+                        <div className="p-3 bg-blue-50 rounded-lg">
+                          <div className="flex items-start gap-2">
+                            <UserPlus className="h-4 w-4 text-blue-600 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-blue-800">Livreur final assigné</p>
+                              <p className="text-sm text-blue-700">
+                                {order.livreurFinal.nom} - {order.livreurFinal.telephone}
+                              </p>
+                              {order.expedieVersLivreurFinal && (
+                                <p className="text-xs text-green-600 mt-1">
+                                  ✓ Colis expédié au livreur final
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="flex gap-3 pt-4 border-t">
-                        {(order.statut === "ASSIGNEE" || order.statut === "ASSIGNEE_PICKUP" || order.statut === "ASSIGNEE_FINAL") && (
+                        {/* Bouton facture disponible pour tous les statuts */}
+                        {order.statut !== "REFUSEE" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL}/commandes/${order.id}/facture`, '_blank')}
+                            className="mb-2"
+                          >
+                            <Package className="h-4 w-4 mr-2" />
+                            Télécharger la facture
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className="flex gap-3 border-t pt-4">
+                        {(order.statut === "ASSIGNEE" || order.statut === "ASSIGNEE_PICKUP" || order.statut === "ASSIGNEE_FINAL" || order.statut === "EN_TRANSIT_VERS_FINAL") && (
                           <>
                             <Button
                               onClick={() => handleAcceptOrder(order.id)}
@@ -602,7 +673,18 @@ export default function LivreurDashboard() {
                           </>
                         )}
 
-                        {(order.statut === "ACCEPTEE" || order.statut === "ACCEPTEE_FINAL") && (
+                        {order.statut === "ACCEPTEE" && order.livreurFinal && (
+                          <Button
+                            onClick={() => handleStartDelivery(order.id)}
+                            disabled={startDeliveryMutation.isPending}
+                            className="w-full"
+                          >
+                            <Truck className="h-4 w-4 mr-2" />
+                            {startDeliveryMutation.isPending ? "Démarrage..." : "Démarrer l'expédition"}
+                          </Button>
+                        )}
+
+                        {order.statut === "ACCEPTEE" && !order.livreurFinal && (
                           <Button
                             onClick={() => handleStartDelivery(order.id)}
                             disabled={startDeliveryMutation.isPending}
@@ -613,114 +695,87 @@ export default function LivreurDashboard() {
                           </Button>
                         )}
 
-                        {order.statut === "EN_COURS" && (
+                        {order.statut === "ACCEPTEE_FINAL" && (
+                          <div className="w-full space-y-2">
+                            {!order.expedieVersLivreurFinal && (
+                              <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                                <p className="text-sm text-yellow-800 flex items-center gap-2">
+                                  <Clock className="h-4 w-4" />
+                                  En attente de l'expédition du livreur pickup
+                                </p>
+                              </div>
+                            )}
+                            <Button
+                              onClick={() => handleStartDelivery(order.id)}
+                              disabled={startDeliveryMutation.isPending || !order.expedieVersLivreurFinal}
+                              className="w-full"
+                            >
+                              <Truck className="h-4 w-4 mr-2" />
+                              {startDeliveryMutation.isPending ? "Démarrage..." : "Démarrer la livraison"}
+                            </Button>
+                          </div>
+                        )}
+
+                        {order.statut === "EN_COURS" && order.livreurFinal && (
+                          <Button
+                            onClick={async () => {
+                              try {
+                                const response = await apiClient.post<{ success: boolean; message: string }>(
+                                  `/commandes/${order.id}/expedier-vers-final`
+                                )
+                                toast({
+                                  title: "Colis expédié",
+                                  description: "Le livreur final a été notifié",
+                                })
+                                queryClient.invalidateQueries({ queryKey: ["deliveryOrders"] })
+                              } catch (error: any) {
+                                const errorMessage = error?.message || "Impossible d'expédier le colis"
+                                toast({
+                                  title: "Erreur",
+                                  description: errorMessage,
+                                  variant: "destructive",
+                                })
+                              }
+                            }}
+                            className="w-full"
+                          >
+                            <Truck className="h-4 w-4 mr-2" />
+                            Marquer comme expédié
+                          </Button>
+                        )}
+
+                        {order.statut === "EN_COURS" && order.livreurPickup && (
+                          <Button
+                            onClick={() => handleCompleteDelivery(order.id)}
+                            disabled={completeDeliveryMutation.isPending}
+                            className="w-full"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            {completeDeliveryMutation.isPending ? "Finalisation..." : "Marquer comme livrée"}
+                          </Button>
+                        )}
+
+                        {order.statut === "EN_COURS" && !order.livreurPickup && !order.livreurFinal && (
                           <>
-                            {order.livreurFinal ? (
-                              <div className="w-full space-y-3">
-                                <div className="p-3 bg-purple-50 rounded-lg">
-                                  <div className="flex items-start gap-2">
-                                    <UserPlus className="h-4 w-4 text-purple-600 mt-0.5" />
-                                    <div className="flex-1">
-                                      <p className="text-sm font-medium text-purple-800">Livreur final assigné</p>
-                                      <p className="text-sm text-purple-700">
-                                        {order.livreurFinal.nom}
-                                      </p>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => callPhone(order.livreurFinal!.telephone)}
-                                        className="mt-2"
-                                      >
-                                        <Phone className="h-4 w-4 mr-2" />
-                                        Contacter {order.livreurFinal.nom}
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </div>
+                            <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+                              <DialogTrigger asChild>
                                 <Button
-                                  onClick={() => {
-                                    setSelectedOrder(order)
-                                    setSelectedLivreurFinal(String(order.livreurFinal!.id))
-                                    setShowAssignDialog(true)
-                                  }}
                                   variant="outline"
-                                  className="w-full"
+                                  onClick={() => setSelectedOrder(order)}
+                                  className="flex-1"
                                 >
                                   <UserPlus className="h-4 w-4 mr-2" />
-                                  Confirmer ou changer le livreur final
+                                  Assigner livreur final
                                 </Button>
-                              </div>
-                            ) : (
-                              <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
-                                <DialogTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    onClick={() => setSelectedOrder(order)}
-                                    className="flex-1"
-                                  >
-                                    <UserPlus className="h-4 w-4 mr-2" />
-                                    Assigner livreur final
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle>Assigner un livreur final</DialogTitle>
-                                  </DialogHeader>
-                                  <div className="space-y-4">
-                                    <p className="text-sm text-muted-foreground">
-                                      Sélectionnez un livreur pour la livraison finale de la commande #{order.numeroCommande}
-                                    </p>
-                                    <div>
-                                      <label className="text-sm font-medium">Livreur final</label>
-                                      <Select value={selectedLivreurFinal} onValueChange={setSelectedLivreurFinal}>
-                                        <SelectTrigger>
-                                          <SelectValue placeholder="Sélectionnez un livreur" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {livreurs?.map((livreur: any) => (
-                                            <SelectItem key={livreur.id} value={String(livreur.id)}>
-                                              {livreur.nom} - {livreur.zone}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                    <div className="flex gap-3">
-                                      <Button
-                                        variant="outline"
-                                        onClick={() => {
-                                          setShowAssignDialog(false)
-                                          setSelectedLivreurFinal("")
-                                          setSelectedOrder(null)
-                                        }}
-                                        className="flex-1"
-                                      >
-                                        Annuler
-                                      </Button>
-                                      <Button
-                                        onClick={handleAssignLivreurFinal}
-                                        disabled={!selectedLivreurFinal || assignLivreurFinalMutation.isPending}
-                                        className="flex-1"
-                                      >
-                                        {assignLivreurFinalMutation.isPending ? "Assignation..." : "Assigner"}
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </DialogContent>
-                              </Dialog>
-                            )}
-                            <Dialog open={showAssignDialog && !!order.livreurFinal} onOpenChange={setShowAssignDialog}>
+                              </DialogTrigger>
                               <DialogContent>
                                 <DialogHeader>
-                                  <DialogTitle>Confirmer le livreur final</DialogTitle>
+                                  <DialogTitle>Assigner un livreur final</DialogTitle>
                                 </DialogHeader>
                                 <div className="space-y-4">
-                                  <div className="p-3 bg-blue-50 rounded-lg">
-                                    <p className="text-sm font-medium text-blue-800">Livreur suggéré par le commerçant</p>
-                                    <p className="text-sm text-blue-700 mt-1">
-                                      {order.livreurFinal?.nom}
-                                    </p>
-                                  </div>
+                                  <p className="text-sm text-muted-foreground">
+                                    Sélectionnez un livreur pour la livraison finale de la commande #{order.numeroCommande}
+                                  </p>
                                   <div>
                                     <label className="text-sm font-medium">Livreur final</label>
                                     <Select value={selectedLivreurFinal} onValueChange={setSelectedLivreurFinal}>
@@ -731,7 +786,6 @@ export default function LivreurDashboard() {
                                         {livreurs?.map((livreur: any) => (
                                           <SelectItem key={livreur.id} value={String(livreur.id)}>
                                             {livreur.nom} - {livreur.zone}
-                                            {order.livreurFinal?.id === livreur.id && " (Suggéré)"}
                                           </SelectItem>
                                         ))}
                                       </SelectContent>
@@ -754,7 +808,7 @@ export default function LivreurDashboard() {
                                       disabled={!selectedLivreurFinal || assignLivreurFinalMutation.isPending}
                                       className="flex-1"
                                     >
-                                      {assignLivreurFinalMutation.isPending ? "Assignation..." : "Confirmer"}
+                                      {assignLivreurFinalMutation.isPending ? "Assignation..." : "Assigner"}
                                     </Button>
                                   </div>
                                 </div>
@@ -763,7 +817,7 @@ export default function LivreurDashboard() {
                             <Button
                               onClick={() => handleCompleteDelivery(order.id)}
                               disabled={completeDeliveryMutation.isPending}
-                              className="flex-1"
+                              className="w-full"
                             >
                               <CheckCircle className="h-4 w-4 mr-2" />
                               {completeDeliveryMutation.isPending ? "Finalisation..." : "Marquer comme livrée"}

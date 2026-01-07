@@ -146,6 +146,18 @@ export interface ProduitEcommerceDto {
   nombreLikes?: number
   nombreVues?: number
   nombreVentes?: number
+  variants?: ProductVariantDto[]
+}
+
+export interface ProductVariantDto {
+  id?: number
+  produitId?: number
+  couleur?: string
+  taille?: string
+  quantite: number
+  prixSupplement?: number
+  sku?: string
+  imageUrl?: string
 }
 
 export interface ProduitDetailDto {
@@ -174,6 +186,7 @@ export interface ProduitDetailDto {
   dateMiseEnLigne?: string
   enStock: boolean
   favori: boolean
+  variants?: ProductVariantDto[]
 }
 
 export interface CommercantInfo {

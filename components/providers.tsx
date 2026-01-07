@@ -11,6 +11,7 @@ import { SearchProvider } from "@/contexts/search-context"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "sonner"
 import { ApiErrorBoundary } from "@/components/api-error-boundary"
+import { CartDrawer } from "@/components/cart/cart-drawer"
 import { queryClient } from "@/lib/query-client"
 
 
@@ -34,6 +35,7 @@ export function Providers({ children }: { children: ReactNode }) {
             <CartProvider>
               <SearchProvider>
                 {children}
+                <CartDrawer />
                 <Toaster />
                 <SonnerToaster position="top-right" richColors />
               </SearchProvider>

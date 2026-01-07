@@ -395,6 +395,16 @@ export default function MerchantOrderManagement() {
 
                     {/* Action Buttons */}
                     <div className="flex gap-3 pt-4 border-t">
+                      {/* Bouton facture disponible pour toutes les commandes */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL}/commandes/${order.id}/facture`, '_blank')}
+                      >
+                        <Package className="h-4 w-4 mr-2" />
+                        Télécharger la facture
+                      </Button>
+
                       {order.statut === "EN_PREPARATION" && (
                         <Button
                           onClick={() => handleMarkReady(order.id)}

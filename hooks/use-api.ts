@@ -957,11 +957,36 @@ export function useApproveUser() {
 export function useRejectUser() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ userId }: { userId: string; rejectedBy?: string }) =>
-      apiClient.post<Record<string, unknown>>(`/admin/reject-user/${userId}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.pendingUsers })
-      queryClient.invalidateQueries({ queryKey: queryKeys.allUsers })
+    mutationFn: async ({ userId }: { userId: string; rejectedBy?: string }) => {
+      console.log('=== REJECT USER DEBUG ===');
+      console.log('userId:', userId);
+      console.log('userId type:', typeof userId);
+      
+      if (!userId || userId === 'undefined' || userId === 'null') {
+        console.error('❌ Invalid userId:', userId);
+        throw new Error('ID utilisateur invalide');
+      }
+      
+      console.log('Calling API endpoint:', `/admin/reject-user/${userId}`);
+      
+      try {
+        const response = await apiClient.post<Record<string, unknown>>(`/admin/reject-user/${userId}`);
+        console.log('✅ API response:', response);
+        return response;
+      } catch (error: any) {
+        console.error('❌ API error:', error);
+        console.error('Error message:', error.message);
+        throw error;
+      }
+    },
+    onSuccess: async () => {
+      console.log('✅ Rejection successful, refetching queries');
+      await queryClient.invalidateQueries({ queryKey: queryKeys.pendingUsers });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.allUsers });
+      await queryClient.invalidateQueries({ queryKey: ["userAnalytics"] });
+    },
+    onError: (error: any) => {
+      console.error('❌ Mutation error:', error);
     },
   })
 }
@@ -1054,6 +1079,11 @@ export function useAjouterProduitMerchant() {
         formData.append("articleId", produitDto.articleId.toString())
       }
       
+      // Ajouter quantiteEnLigne si fourni
+      if (produitDto.quantiteEnLigne) {
+        formData.append("quantiteEnLigne", produitDto.quantiteEnLigne.toString())
+      }
+      
       // Compresser et ajouter les images
       for (const img of images) {
         const compressed = await compressImage(img)
@@ -1099,6 +1129,51 @@ export function useModifierVisibiliteProduit() {
         visible,
       }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["merchantProduits"] })
+    },
+  })
+}
+
+// Product Variants
+export function useProductVariants(produitId: number) {
+  return useQuery({
+    queryKey: ["productVariants", produitId],
+    queryFn: () => apiClient.get<ApiResponse<any[]>>(`/merchant/produits/${produitId}/variants`),
+    enabled: produitId > 0,
+  })
+}
+
+export function useCreateProductVariant() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ produitId, variant }: { produitId: number; variant: any }) =>
+      apiClient.post<ApiResponse<any>>(`/merchant/produits/${produitId}/variants`, variant),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["productVariants", variables.produitId] })
+      queryClient.invalidateQueries({ queryKey: ["merchantProduits"] })
+    },
+  })
+}
+
+export function useUpdateProductVariant() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ produitId, variantId, variant }: { produitId: number; variantId: number; variant: any }) =>
+      apiClient.put<ApiResponse<any>>(`/merchant/produits/${produitId}/variants/${variantId}`, variant),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["productVariants", variables.produitId] })
+      queryClient.invalidateQueries({ queryKey: ["merchantProduits"] })
+    },
+  })
+}
+
+export function useDeleteProductVariant() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ produitId, variantId }: { produitId: number; variantId: number }) =>
+      apiClient.delete<ApiResponse<void>>(`/merchant/produits/${produitId}/variants/${variantId}`),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["productVariants", variables.produitId] })
       queryClient.invalidateQueries({ queryKey: ["merchantProduits"] })
     },
   })

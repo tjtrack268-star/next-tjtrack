@@ -255,33 +255,54 @@ export default function InscriptionPage() {
         throw new Error("Token non disponible")
       }
       
+      // Extraire userId du token JWT
+      const getUserIdFromToken = () => {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]))
+          return payload.userId || payload.sub // userId ou email comme fallback
+        } catch {
+          return null
+        }
+      }
+      
+      const userId = getUserIdFromToken()
+      if (!userId) {
+        throw new Error("Impossible d'extraire l'ID utilisateur")
+      }
+      
       const uploadFile = async (file: File, endpoint: string) => {
         const uploadFormData = new FormData()
         uploadFormData.append("file", file)
-        uploadFormData.append("profileType", formData.role)
         
-        const response = await fetch(`${API_BASE_URL}/profile-documents/${endpoint}`, {
+        const response = await fetch(`${API_BASE_URL}/profile-documents/${endpoint}?userId=${userId}&profileType=${formData.role}`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           body: uploadFormData
         })
         
         if (!response.ok) {
-          throw new Error(`Upload ${endpoint} échoué`)
+          const errorText = await response.text().catch(() => 'Erreur inconnue')
+          console.error(`Upload ${endpoint} échoué:`, errorText)
+          throw new Error(`Upload ${endpoint} échoué: ${response.status}`)
         }
       }
       
       // Sauvegarder le numéro CNI
       if (formData.cniNumber) {
-        const response = await fetch(
-          `${API_BASE_URL}/profile-documents/save-cni-number?profileType=${formData.role}&cniNumber=${formData.cniNumber}`,
-          { 
-            method: "POST", 
-            headers: { Authorization: `Bearer ${token}` } 
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/profile-documents/save-cni-number?userId=${userId}&profileType=${formData.role}&cniNumber=${formData.cniNumber}`,
+            { 
+              method: "POST", 
+              headers: { Authorization: `Bearer ${token}` } 
+            }
+          )
+          if (!response.ok) {
+            const errorText = await response.text().catch(() => 'Erreur inconnue')
+            console.warn("Sauvegarde CNI échouée:", errorText, "- Continuons avec l'upload des fichiers")
           }
-        )
-        if (!response.ok) {
-          throw new Error("Sauvegarde CNI échouée")
+        } catch (error) {
+          console.warn("Erreur sauvegarde CNI:", error, "- Continuons avec l'upload des fichiers")
         }
       }
       

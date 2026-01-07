@@ -1,7 +1,9 @@
 "use client"
 
+import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { X, Plus, Minus, ShoppingBag, Trash2, ArrowRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -17,6 +19,7 @@ interface CartDrawerProps {
 }
 
 export function CartDrawer({ onCheckout }: CartDrawerProps) {
+  const router = useRouter()
   const { items, isOpen, isLoading, closeCart, totalItems, totalAmount, updateQuantity, removeItem, clearCart } =
     useCart()
   const { isAuthenticated } = useAuth()
@@ -26,7 +29,7 @@ export function CartDrawer({ onCheckout }: CartDrawerProps) {
 
   return (
     <Sheet open={isOpen} onOpenChange={closeCart}>
-      <SheetContent className="w-full sm:max-w-lg glass-card p-0 flex flex-col">
+      <SheetContent className="w-full sm:max-w-lg glass-card p-0 flex flex-col z-[150]">
         <SheetHeader className="p-6 border-b border-border">
           <div className="flex items-center justify-between">
             <SheetTitle className="flex items-center gap-2 text-xl">
@@ -170,7 +173,11 @@ export function CartDrawer({ onCheckout }: CartDrawerProps) {
                   size="lg"
                   onClick={() => {
                     closeCart()
-                    onCheckout?.()
+                    if (onCheckout) {
+                      onCheckout()
+                    } else {
+                      router.push('/checkout')
+                    }
                   }}
                 >
                   Commander

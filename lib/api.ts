@@ -1,5 +1,5 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://147.93.9.170:8080/api/v1.0"
-const API_TIMEOUT = parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '10000')
+const API_TIMEOUT = parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '60000')
 
 interface RequestConfig extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>
@@ -48,8 +48,12 @@ class ApiClient {
     const url = this.buildUrl(endpoint, params)
 
     const headers: HeadersInit = {
-      "Content-Type": "application/json",
       ...config.headers,
+    }
+
+    // Ne pas ajouter Content-Type si c'est un FormData (le navigateur le fera automatiquement)
+    if (!(fetchConfig.body instanceof FormData)) {
+      (headers as Record<string, string>)["Content-Type"] = "application/json"
     }
 
     // Toujours envoyer le token s'il existe (même pour les endpoints publics comme /commandes/creer)
@@ -100,13 +104,15 @@ class ApiClient {
           }
         }
         
-        // Log détaillé pour debug
-        console.error('❌ API Error:', {
-          endpoint,
-          status: response.status,
-          errorData,
-          method: fetchConfig.method || 'GET'
-        })
+        // Log détaillé pour debug (seulement si errorData contient un message)
+        if (errorData?.message) {
+          console.error('❌ API Error:', {
+            endpoint,
+            status: response.status,
+            message: errorData.message,
+            method: fetchConfig.method || 'GET'
+          })
+        }
         
         // Gestion spéciale pour les erreurs d'authentification
         if (response.status === 401 || response.status === 403) {
@@ -179,7 +185,7 @@ class ApiClient {
   ): Promise<T> {
     return this.request<T>(endpoint, {
       method: "POST",
-      body: data ? JSON.stringify(data) : undefined,
+      body: data instanceof FormData ? data : (data ? JSON.stringify(data) : undefined),
       params,
     })
   }

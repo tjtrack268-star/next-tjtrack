@@ -198,49 +198,45 @@ export function CartProvider({ children }: { children: ReactNode }) {
     // If there are guest items, merge them BEFORE refreshing
     if (guestCartItems.length > 0) {
       setIsLoading(true)
-      let mergedCount = 0
+      let userNotFound = false
       
       try {
-        // Batch merge items to reduce API calls
-        const mergePromises = guestCartItems.map(async (guestItem) => {
+        // Try to merge first item to check if user exists
+        for (const guestItem of guestCartItems) {
           try {
             console.log(`Merging item: ${guestItem.articleNom} (ID: ${guestItem.articleId})`)
             await apiClient.post("/panier/ajouter", 
               { articleId: guestItem.articleId, quantite: guestItem.quantite }, 
               { userEmail: user.email }
             )
-            return true
           } catch (error: any) {
-            console.error(`Failed to merge item ${guestItem.articleNom}:`, error?.message || error)
-            // Si l'utilisateur n'existe pas (400), garder le panier local
+            // Si l'utilisateur n'existe pas (400), arrêter et garder le panier local
             if (error?.message?.includes('400') || error?.message?.includes('Utilisateur non trouvé')) {
               console.warn('User not found in database, keeping guest cart locally')
-              throw new Error('USER_NOT_FOUND')
+              userNotFound = true
+              break
             }
-            // Si l'article n'existe plus, ignorer
+            // Si l'article n'existe plus, continuer avec les autres
             if (error?.message?.includes('Article non trouvé')) {
               console.warn(`Article ${guestItem.articleNom} no longer exists, skipping...`)
-              return false
+              continue
             }
-            return false
+            console.warn(`Failed to merge item ${guestItem.articleNom}, skipping...`)
           }
-        })
-        
-        const results = await Promise.allSettled(mergePromises)
-        mergedCount = results.filter(r => r.status === 'fulfilled' && r.value === true).length
-        
-        console.log(`Merged ${mergedCount} items successfully`)
-        
-        // Clear guest cart only if at least one item was merged
-        if (mergedCount > 0) {
-          localStorage.removeItem(LOCAL_CART_KEY)
-          console.log('Guest cart cleared from localStorage')
         }
-      } catch (error: any) {
-        if (error.message === 'USER_NOT_FOUND') {
+        
+        // Si l'utilisateur n'existe pas, garder le panier local
+        if (userNotFound) {
+          console.log('Keeping guest cart in localStorage')
+          setLocalItems(guestCartItems)
           setIsLoading(false)
           return
         }
+        
+        // Clear guest cart after successful merge
+        localStorage.removeItem(LOCAL_CART_KEY)
+        console.log('Guest cart merged and cleared from localStorage')
+      } catch (error: any) {
         console.error('Error merging guest cart:', error)
       } finally {
         setIsLoading(false)
