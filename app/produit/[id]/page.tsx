@@ -82,7 +82,7 @@ export default function ProductPage() {
       await addItem(articleId, quantity, {
         name: product.nom,
         price: product.prix,
-        image: product.images[0] || "/placeholder.svg",
+        image: buildImageUrl(product.images[0]) || "/placeholder.svg",
       })
       toast({
         title: "Ajouté au panier",
