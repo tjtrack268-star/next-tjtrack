@@ -162,6 +162,7 @@ export interface ProductVariantDto {
 
 export interface ProduitDetailDto {
   id: number
+  articleId?: number  // Add this field
   nom: string
   description: string
   descriptionLongue?: string
