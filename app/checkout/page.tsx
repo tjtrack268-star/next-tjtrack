@@ -104,11 +104,33 @@ export default function CheckoutPage() {
     setIsSubmitting(true)
 
     try {
+      // Nettoyer et valider les items
+      console.log('=== CHECKOUT DEBUG ===')
+      console.log('Items bruts:', items)
+      
+      const validItems = items.filter(item => 
+        item.articleId && 
+        item.quantite > 0 && 
+        item.prixUnitaire > 0
+      )
+      
+      if (validItems.length === 0) {
+        toast({ title: "Erreur", description: "Aucun article valide dans le panier", variant: "destructive" })
+        setIsSubmitting(false)
+        return
+      }
+      
+      if (validItems.length < items.length) {
+        console.warn(`${items.length - validItems.length} article(s) invalide(s) retiré(s)`)
+      }
+      
+      console.log('Items valides:', validItems.map(i => ({ id: i.articleId, q: i.quantite, p: i.prixUnitaire })))
+
       if (isAuthenticated && user?.userId) {
         const commandeData = {
           userId: user.userId,
           email: user.email,
-          items: items.map(item => ({
+          items: validItems.map(item => ({
             articleId: item.articleId,
             quantite: item.quantite,
             prixUnitaire: item.prixUnitaire
@@ -153,7 +175,7 @@ export default function CheckoutPage() {
           body: JSON.stringify({
             guestId,
             email: formData.email,
-            items: items.map(item => ({
+            items: validItems.map(item => ({
               articleId: item.articleId,
               quantite: item.quantite,
               prixUnitaire: item.prixUnitaire
