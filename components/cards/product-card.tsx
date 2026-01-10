@@ -26,7 +26,8 @@ export function ProductCard({ product, variant = "default" }: ProductCardProps) 
 
   const isArticle = "codeArticle" in product
 
-  const id = product.id || 0
+  // CRITICAL: For ProduitEcommerceDto, use articleId (not id which is produits_ecommerce.id)
+  const id = isArticle ? (product.id || 0) : (product.articleId || product.id || 0)
   const name = isArticle ? product.designation : product.nom
   const price = isArticle ? product.prixUnitaireTtc || product.prixUnitaireHt : product.prix
   const image = buildImageUrl(isArticle ? product.photo : product.images?.[0])
