@@ -77,7 +77,9 @@ export default function ProductPage() {
     if (!product) return
     
     try {
-      await addItem(product.id, quantity, {
+      // Utiliser product.articleId si disponible, sinon product.id comme fallback
+      const articleId = product.articleId || product.id
+      await addItem(articleId, quantity, {
         name: product.nom,
         price: product.prix,
         image: product.images[0] || "/placeholder.svg",
