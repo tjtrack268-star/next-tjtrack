@@ -1,54 +1,87 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ShoppingCart, Clock, CheckCircle, Truck, Package, MoreVertical, Eye, Edit, AlertTriangle } from "lucide-react"
 import { AdminGuard } from "@/components/admin-guard"
-import { useOrderManagement } from "@/hooks/use-order-management"
+import { apiClient } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
 export default function AdminOrdersPage() {
-  const initialOrders = [
-    { id: "CMD-001", customer: "Jean Dupont", total: 89.99, status: "pending", date: "2024-01-15", items: 3, livreurId: null },
-    { id: "CMD-002", customer: "Marie Martin", total: 156.50, status: "processing", date: "2024-01-15", items: 2, livreurId: null },
-    { id: "CMD-003", customer: "Pierre Durand", total: 45.00, status: "shipped", date: "2024-01-14", items: 1, livreurId: 1 },
-    { id: "CMD-004", customer: "Sophie Bernard", total: 234.99, status: "delivered", date: "2024-01-14", items: 4, livreurId: 2 },
-  ]
-  
-  const { orders, markAsShipped, canMarkAsShipped, assignDelivery } = useOrderManagement(initialOrders)
+  const { toast } = useToast()
+  const [orders, setOrders] = useState<any[]>([])
+  const [stats, setStats] = useState({ pending: 0, processing: 0, shipped: 0, delivered: 0 })
   const [selectedOrder, setSelectedOrder] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadOrders()
+  }, [])
+
+  const loadOrders = async () => {
+    try {
+      setLoading(true)
+      console.log('📥 Chargement des commandes...')
+      const response = await apiClient.get<any>("/commandes")
+      console.log('📦 Réponse API:', response)
+      
+      // L'API retourne un objet ApiResponse avec data
+      const data = response.data || response
+      console.log('✅ Commandes:', data)
+      
+      setOrders(Array.isArray(data) ? data : [])
+      
+      // Calculer les stats
+      const ordersArray = Array.isArray(data) ? data : []
+      const newStats = {
+        pending: ordersArray.filter(o => o.statut === 'EN_ATTENTE').length,
+        processing: ordersArray.filter(o => o.statut === 'EN_COURS').length,
+        shipped: ordersArray.filter(o => o.statut === 'EXPEDIEE').length,
+        delivered: ordersArray.filter(o => o.statut === 'LIVREE').length
+      }
+      setStats(newStats)
+    } catch (err) {
+      console.error('❌ Erreur:', err)
+      toast({ title: "Erreur de chargement", variant: "destructive" })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updateOrderStatus = async (orderId: number, newStatus: string) => {
+    try {
+      await apiClient.put(`/commandes/${orderId}/statut`, { statut: newStatus })
+      toast({ title: "Statut mis à jour" })
+      loadOrders()
+    } catch (err) {
+      toast({ title: "Erreur", variant: "destructive" })
+    }
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'secondary'
-      case 'processing': return 'default'
-      case 'shipped': return 'outline'
-      case 'delivered': return 'default'
+      case 'EN_ATTENTE': return 'secondary'
+      case 'EN_COURS': return 'default'
+      case 'EXPEDIEE': return 'outline'
+      case 'LIVREE': return 'default'
       default: return 'secondary'
     }
   }
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'pending': return 'En attente'
-      case 'processing': return 'En cours'
-      case 'shipped': return 'Expédiée'
-      case 'delivered': return 'Livrée'
+      case 'EN_ATTENTE': return 'En attente'
+      case 'EN_COURS': return 'En cours'
+      case 'EXPEDIEE': return 'Expédiée'
+      case 'LIVREE': return 'Livrée'
       default: return status
     }
-  }
-
-  const handleMarkAsShipped = (order: any) => {
-    markAsShipped(order.id)
-  }
-
-  const handleAssignDelivery = (order: any) => {
-    setSelectedOrder(order)
   }
 
   return (
@@ -67,7 +100,7 @@ export default function AdminOrdersPage() {
                 <Clock className="h-8 w-8 text-orange-500" />
                 <div>
                   <p className="text-sm text-muted-foreground">En attente</p>
-                  <p className="text-2xl font-bold">23</p>
+                  <p className="text-2xl font-bold">{stats.pending}</p>
                 </div>
               </div>
             </CardContent>
@@ -78,7 +111,7 @@ export default function AdminOrdersPage() {
                 <Package className="h-8 w-8 text-blue-500" />
                 <div>
                   <p className="text-sm text-muted-foreground">En cours</p>
-                  <p className="text-2xl font-bold">45</p>
+                  <p className="text-2xl font-bold">{stats.processing}</p>
                 </div>
               </div>
             </CardContent>
@@ -89,7 +122,7 @@ export default function AdminOrdersPage() {
                 <Truck className="h-8 w-8 text-purple-500" />
                 <div>
                   <p className="text-sm text-muted-foreground">Expédiées</p>
-                  <p className="text-2xl font-bold">67</p>
+                  <p className="text-2xl font-bold">{stats.shipped}</p>
                 </div>
               </div>
             </CardContent>
@@ -100,7 +133,7 @@ export default function AdminOrdersPage() {
                 <CheckCircle className="h-8 w-8 text-green-500" />
                 <div>
                   <p className="text-sm text-muted-foreground">Livrées</p>
-                  <p className="text-2xl font-bold">234</p>
+                  <p className="text-2xl font-bold">{stats.delivered}</p>
                 </div>
               </div>
             </CardContent>
@@ -126,104 +159,123 @@ export default function AdminOrdersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {orders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium">{order.id}</TableCell>
-                    <TableCell>{order.customer}</TableCell>
-                    <TableCell>{order.items} articles</TableCell>
-                    <TableCell>€{order.total}</TableCell>
-                    <TableCell>{new Date(order.date).toLocaleDateString('fr-FR')}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={getStatusColor(order.status) as any}>
-                          {getStatusLabel(order.status)}
-                        </Badge>
-                        {!order.livreurId && order.status !== 'delivered' && (
-                          <Badge variant="outline" className="text-orange-600 border-orange-300">
-                            Sans livreur
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Eye className="h-4 w-4 mr-2" />
-                            Voir détails
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Modifier statut
-                          </DropdownMenuItem>
-                          {!order.livreurId && (
-                            <DropdownMenuItem onClick={() => handleAssignDelivery(order)}>
-                              <Truck className="h-4 w-4 mr-2" />
-                              Affecter livreur
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem 
-                            onClick={() => handleMarkAsShipped(order)}
-                            disabled={!canMarkAsShipped(order) || order.status === 'shipped' || order.status === 'delivered'}
-                          >
-                            <Truck className="h-4 w-4 mr-2" />
-                            Marquer expédiée
-                            {!canMarkAsShipped(order) && (
-                              <AlertTriangle className="h-4 w-4 ml-2 text-orange-500" />
-                            )}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8">
+                      Chargement...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : orders.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8">
+                      Aucune commande
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  orders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">{order.numeroCommande}</TableCell>
+                      <TableCell>{order.client?.name || order.emailClient || 'Client'}</TableCell>
+                      <TableCell>{order.items?.length || 0} articles</TableCell>
+                      <TableCell>{order.montantTotal} FCFA</TableCell>
+                      <TableCell>{new Date(order.dateCommande).toLocaleDateString('fr-FR')}</TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusColor(order.statut) as any}>
+                          {getStatusLabel(order.statut)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setSelectedOrder(order)}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              Voir détails
+                            </DropdownMenuItem>
+                            {order.statut === 'EN_ATTENTE' && (
+                              <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'EN_COURS')}>
+                                <Package className="h-4 w-4 mr-2" />
+                                Marquer en cours
+                              </DropdownMenuItem>
+                            )}
+                            {order.statut === 'EN_COURS' && (
+                              <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'EXPEDIEE')}>
+                                <Truck className="h-4 w-4 mr-2" />
+                                Marquer expédiée
+                              </DropdownMenuItem>
+                            )}
+                            {order.statut === 'EXPEDIEE' && (
+                              <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'LIVREE')}>
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Marquer livrée
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
 
-        {/* Dialog pour affecter un livreur */}
+        {/* Dialog détails commande */}
         <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Affecter un livreur</DialogTitle>
+              <DialogTitle>Détails de la commande</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <Alert>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  Cette commande doit avoir un livreur assigné avant de pouvoir être marquée comme expédiée.
-                </AlertDescription>
-              </Alert>
-              
-              <div className="text-sm text-muted-foreground">
-                Commande: <strong>{selectedOrder?.id}</strong><br/>
-                Client: <strong>{selectedOrder?.customer}</strong>
+            {selectedOrder && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">N° Commande</p>
+                    <p className="font-medium">{selectedOrder.numeroCommande}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Client</p>
+                    <p className="font-medium">{selectedOrder.client?.name || selectedOrder.emailClient}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Montant total</p>
+                    <p className="font-medium">{selectedOrder.montantTotal} FCFA</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Statut</p>
+                    <Badge variant={getStatusColor(selectedOrder.statut) as any}>
+                      {getStatusLabel(selectedOrder.statut)}
+                    </Badge>
+                  </div>
+                </div>
+                
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Adresse de livraison</p>
+                  <p className="text-sm">
+                    {selectedOrder.adresseLivraison?.rue}<br/>
+                    {selectedOrder.adresseLivraison?.ville}, {selectedOrder.adresseLivraison?.codePostal}<br/>
+                    Tél: {selectedOrder.adresseLivraison?.telephone}
+                  </p>
+                </div>
+                
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Articles</p>
+                  <div className="space-y-2">
+                    {selectedOrder.items?.map((item: any, idx: number) => (
+                      <div key={idx} className="flex justify-between text-sm">
+                        <span>{item.article?.designation} x {item.quantite}</span>
+                        <span>{item.sousTotal} FCFA</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-              
-              <div className="flex gap-2">
-                <Button 
-                  onClick={() => {
-                    // Simuler l'affectation d'un livreur
-                    if (selectedOrder) {
-                      assignDelivery(selectedOrder.id, 1)
-                      setSelectedOrder(null)
-                    }
-                  }}
-                  className="flex-1"
-                >
-                  Affecter automatiquement
-                </Button>
-                <Button variant="outline" onClick={() => setSelectedOrder(null)}>
-                  Annuler
-                </Button>
-              </div>
-            </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>

@@ -1,17 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Clock, CheckCircle, XCircle, Store, Truck, MapPin, Phone, Mail, Loader2, Users } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import { usePendingUsers, useApproveUser, useRejectUser } from "@/hooks/use-api"
-import type { ProfileResponse } from "@/types/api"
-import { useAuth } from "@/contexts/auth-context"
+import { Clock, CheckCircle, Store, Truck, MapPin, Phone, Mail, Loader2, Users, Eye } from "lucide-react"
+import { usePendingUsers } from "@/hooks/use-api"
 
 const roleConfig = {
   LIVREUR: { label: "Livreur", icon: Truck, color: "bg-yellow-500", priority: 2 },
@@ -21,58 +15,8 @@ const roleConfig = {
 }
 
 export default function AdminValidationsPage() {
-  const [selectedUser, setSelectedUser] = useState<ProfileResponse | null>(null)
-  const [rejectReason, setRejectReason] = useState("")
-  const [showRejectDialog, setShowRejectDialog] = useState<boolean>(false)
-  const { toast } = useToast()
-  const { user } = useAuth()
-
+  const router = useRouter()
   const { data: pendingUsers = [], isLoading, error, refetch } = usePendingUsers()
-  const approveUserMutation = useApproveUser()
-  const rejectUserMutation = useRejectUser()
-
-  const handleApprove = async (userId: string) => {
-    try {
-      await approveUserMutation.mutateAsync({ userId, approvedBy: user?.email || "admin" })
-      toast({
-        title: "Utilisateur approuvé",
-        description: "Le compte a été activé avec succès",
-      })
-      setSelectedUser(null)
-      refetch()
-    } catch (err) {
-      toast({
-        title: "Erreur",
-        description: "Impossible d'approuver l'utilisateur",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleReject = async () => {
-    if (!selectedUser) return
-    try {
-      await rejectUserMutation.mutateAsync({
-        userId: String(selectedUser.userId || selectedUser.email),
-        rejectedBy: user?.email || "admin",
-      })
-      toast({
-        title: "Demande rejetée",
-        description: "L'utilisateur a été notifié du rejet",
-        variant: "destructive",
-      })
-      setSelectedUser(null)
-      setShowRejectDialog(false)
-      setRejectReason("")
-      refetch()
-    } catch (err) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de rejeter l'utilisateur",
-        variant: "destructive",
-      })
-    }
-  }
 
   if (isLoading) {
     return (
@@ -204,27 +148,11 @@ export default function AdminValidationsPage() {
                 </div>
                 <div className="flex gap-2 pt-2">
                   <Button
-                    className="flex-1 bg-transparent"
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedUser(pendingUser)
-                      setShowRejectDialog(true)
-                    }}
-                    disabled={rejectUserMutation.isPending}
-                  >
-                    <XCircle className="h-4 w-4 mr-1" />
-                    Rejeter
-                  </Button>
-                  <Button
                     className="flex-1 gradient-primary text-white"
-                    onClick={() => handleApprove(String(pendingUser.userId || pendingUser.email))} 
-                    disabled={approveUserMutation.isPending} >
-                    {approveUserMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                    ) : (
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                    )}
-                    Approuver
+                    onClick={() => router.push(`/dashboard/admin/validations/${pendingUser.userId}`)}
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    Voir détails
                   </Button>
                 </div>
               </CardContent>
@@ -233,39 +161,6 @@ export default function AdminValidationsPage() {
           })}
         </div>
       )}
-
-      {/* Reject Dialog */}
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rejeter la demande</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="p-3 rounded-lg bg-muted">
-              <p className="font-medium">{String(selectedUser?.enterpriseName || selectedUser?.name || "")}</p>
-              <p className="text-sm text-muted-foreground">{String(selectedUser?.email || "")}</p>
-            </div>
-            <div className="space-y-2">
-              <Label>Motif du rejet</Label>
-              <Textarea
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Expliquez la raison du rejet..."
-                rows={4}
-              />
-            </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
-                Annuler
-              </Button>
-              <Button variant="destructive" onClick={handleReject} disabled={rejectUserMutation.isPending}>
-                {rejectUserMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                Confirmer le rejet
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

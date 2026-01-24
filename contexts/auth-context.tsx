@@ -34,11 +34,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (token && savedUser) {
       try {
         const parsedUser = JSON.parse(savedUser)
+        const normalizedRoles = Array.isArray(parsedUser.roles) 
+          ? parsedUser.roles.map((r: any) => typeof r === 'string' ? r : r.name)
+          : []
+        
+        const cleanUser: ProfileResponse = {
+          userId: parsedUser.userId || parsedUser.email,
+          name: parsedUser.name || '',
+          email: parsedUser.email,
+          isAccountVerified: parsedUser.isAccountVerified ?? true,
+          isApproved: parsedUser.isApproved ?? true,
+          roles: normalizedRoles
+        }
         apiClient.setToken(token)
-        setUser(parsedUser)
+        setUser(cleanUser)
         document.cookie = `tj-track-token=${token}; path=/; max-age=${7 * 24 * 60 * 60}`
         document.cookie = `jwt=${token}; path=/; max-age=${7 * 24 * 60 * 60}`
-        console.log('Auth restored:', parsedUser.email)
+        console.log('Auth restored:', cleanUser.email)
       } catch {
         localStorage.removeItem("tj-track-token")
         localStorage.removeItem("tj-track-user")
@@ -60,16 +72,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log("Login attempt with:", credentials.email)
 
     try {
-      const response = await apiClient.post<{ token: string; email: string; name: string; roles: string[] }>("/login", credentials)
+      const response = await apiClient.post<{ token: string; email: string; name: string; roles: any }>("/login", credentials)
 
       if (response.token) {
+        const normalizedRoles = Array.isArray(response.roles) 
+          ? response.roles.map(r => typeof r === 'string' ? r : r.name)
+          : []
+        
         const user: ProfileResponse = {
           userId: response.email,
           name: response.name,
           email: response.email,
           isAccountVerified: true,
           isApproved: true,
-          roles: response.roles
+          roles: normalizedRoles
         }
         console.log('Setting token:', response.token.substring(0, 20) + '...')
         localStorage.setItem("tj-track-token", response.token)
@@ -106,16 +122,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log("Verify OTP for:", email)
 
     try {
-      const response = await apiClient.post<{ token: string; email: string; name: string; roles: string[] }>("/verify-otp", { email, otp })
+      const response = await apiClient.post<{ token: string; email: string; name: string; roles: any }>("/verify-otp", { email, otp })
 
       if (response.token) {
+        const normalizedRoles = Array.isArray(response.roles) 
+          ? response.roles.map(r => typeof r === 'string' ? r : r.name)
+          : []
+        
         const user: ProfileResponse = {
           userId: response.email,
           name: response.name,
           email: response.email,
           isAccountVerified: true,
           isApproved: true,
-          roles: response.roles
+          roles: normalizedRoles
         }
         localStorage.setItem("tj-track-token", response.token)
         localStorage.setItem("tj-track-user", JSON.stringify(user))

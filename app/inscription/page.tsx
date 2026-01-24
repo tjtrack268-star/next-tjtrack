@@ -248,33 +248,24 @@ export default function InscriptionPage() {
 
   const uploadDocuments = async () => {
     try {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1.0"
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://147.93.9.170:8080/api/v1.0"
       const token = localStorage.getItem("tj-track-token")
       
       if (!token) {
         throw new Error("Token non disponible")
       }
       
-      // Extraire userId du token JWT
-      const getUserIdFromToken = () => {
-        try {
-          const payload = JSON.parse(atob(token.split('.')[1]))
-          return payload.userId || payload.sub // userId ou email comme fallback
-        } catch {
-          return null
-        }
-      }
-      
-      const userId = getUserIdFromToken()
-      if (!userId) {
-        throw new Error("Impossible d'extraire l'ID utilisateur")
+      // Utiliser l'email au lieu de userId pour l'upload
+      const userEmail = formData.email
+      if (!userEmail) {
+        throw new Error("Email utilisateur non disponible")
       }
       
       const uploadFile = async (file: File, endpoint: string) => {
         const uploadFormData = new FormData()
         uploadFormData.append("file", file)
         
-        const response = await fetch(`${API_BASE_URL}/profile-documents/${endpoint}?userId=${userId}&profileType=${formData.role}`, {
+        const response = await fetch(`${API_BASE_URL}/profile-documents/${endpoint}?userEmail=${encodeURIComponent(userEmail)}&profileType=${formData.role}`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           body: uploadFormData
@@ -291,7 +282,7 @@ export default function InscriptionPage() {
       if (formData.cniNumber) {
         try {
           const response = await fetch(
-            `${API_BASE_URL}/profile-documents/save-cni-number?userId=${userId}&profileType=${formData.role}&cniNumber=${formData.cniNumber}`,
+            `${API_BASE_URL}/profile-documents/save-cni-number?userEmail=${encodeURIComponent(userEmail)}&profileType=${formData.role}&cniNumber=${formData.cniNumber}`,
             { 
               method: "POST", 
               headers: { Authorization: `Bearer ${token}` } 
@@ -392,10 +383,10 @@ export default function InscriptionPage() {
               <CardTitle className="text-2xl">Vérification</CardTitle>
               <CardDescription>Entrez le code envoyé à {formData.email}</CardDescription>
               <div className="flex justify-center gap-2 mt-4">
-                <div className="h-2 w-8 rounded-full gradient-primary" />
-                <div className="h-2 w-8 rounded-full gradient-primary" />
-                <div className="h-2 w-8 rounded-full gradient-primary" />
-                <div className="h-2 w-8 rounded-full gradient-primary" />
+                <div className="h-2 w-8 rounded-full bg-primary/30" />
+                <div className="h-2 w-8 rounded-full bg-primary/30" />
+                <div className="h-2 w-8 rounded-full bg-primary/30" />
+                <div className="h-2 w-8 rounded-full gradient-primary animate-pulse" />
               </div>
             </CardHeader>
 
@@ -458,10 +449,9 @@ export default function InscriptionPage() {
             </CardDescription>
             {needsExtraInfo && (
               <div className="flex justify-center gap-2 mt-4">
-                <div className={`h-2 w-8 rounded-full ${step >= 1 ? "gradient-primary" : "bg-muted"}`} />
-                <div className={`h-2 w-8 rounded-full ${step >= 2 ? "gradient-primary" : "bg-muted"}`} />
-                <div className={`h-2 w-8 rounded-full ${step >= 3 ? "gradient-primary" : "bg-muted"}`} />
-                <div className={`h-2 w-8 rounded-full ${otpSent ? "gradient-primary" : "bg-muted"}`} />
+                <div className={`h-2 w-8 rounded-full transition-all ${step >= 1 ? "gradient-primary" : "bg-muted"}`} />
+                <div className={`h-2 w-8 rounded-full transition-all ${step >= 2 ? "gradient-primary" : "bg-muted"}`} />
+                <div className={`h-2 w-8 rounded-full transition-all ${step >= 3 ? "gradient-primary" : "bg-muted"}`} />
               </div>
             )}
           </CardHeader>

@@ -1,5 +1,6 @@
 import type React from "react"
 import { Sidebar, MobileSidebarToggle } from "@/components/layout/sidebar"
+import { DashboardHeader } from "@/components/layout/dashboard-header"
 
 export default function DashboardLayout({
   children,
@@ -11,7 +12,8 @@ export default function DashboardLayout({
       <Sidebar />
       <MobileSidebarToggle />
       <main className="lg:pl-64">
-        <div className="container mx-auto p-6 lg:p-8 pt-16 lg:pt-6">{children}</div>
+        <DashboardHeader />
+        <div className="container mx-auto p-6 lg:p-8">{children}</div>
       </main>
     </div>
   )

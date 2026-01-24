@@ -8,14 +8,14 @@
   "theme_color": "#1fad9f",
   "icons": [
     {
-      "src": "/logo_tjtrack.jpg",
+      "src": "/logo_tjtrack.png",
       "sizes": "192x192",
-      "type": "image/jpeg"
+      "type": "image/png"
     },
     {
-      "src": "/logo_tjtrack.jpg",
+      "src": "/logo_tjtrack.png",
       "sizes": "512x512",
-      "type": "image/jpeg"
+      "type": "image/png"
     }
   ]
 }

@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { apiClient } from "@/lib/api"
 
 interface StaticLocationSelectorProps {
   selectedVille?: string
@@ -13,45 +14,10 @@ interface StaticLocationSelectorProps {
   disabled?: boolean
 }
 
-// Données statiques pour test
 const villes = [
   { id: 1, nom: "Yaoundé" },
-  { id: 2, nom: "Douala" },
-  { id: 3, nom: "Bafoussam" },
-  { id: 4, nom: "Bamenda" },
-  { id: 5, nom: "Garoua" }
+  { id: 2, nom: "Douala" }
 ]
-
-const quartiersByVille: Record<string, Array<{id: number, nom: string}>> = {
-  "Yaoundé": [
-    { id: 1, nom: "Bastos" },
-    { id: 2, nom: "Melen" },
-    { id: 3, nom: "Kondengui" },
-    { id: 4, nom: "Emombo" },
-    { id: 5, nom: "Nlongkak" }
-  ],
-  "Douala": [
-    { id: 6, nom: "Akwa" },
-    { id: 7, nom: "Bonanjo" },
-    { id: 8, nom: "Deido" },
-    { id: 9, nom: "New Bell" },
-    { id: 10, nom: "Bonapriso" }
-  ],
-  "Bafoussam": [
-    { id: 11, nom: "Centre-ville" },
-    { id: 12, nom: "Tamdja" },
-    { id: 13, nom: "Djeleng" }
-  ],
-  "Bamenda": [
-    { id: 14, nom: "Commercial Avenue" },
-    { id: 15, nom: "Up Station" },
-    { id: 16, nom: "Down Town" }
-  ],
-  "Garoua": [
-    { id: 17, nom: "Centre" },
-    { id: 18, nom: "Plateau" }
-  ]
-}
 
 export function StaticLocationSelector({
   selectedVille,
@@ -61,12 +27,29 @@ export function StaticLocationSelector({
   required = false,
   disabled = false
 }: StaticLocationSelectorProps) {
-  const [quartiers, setQuartiers] = useState<Array<{id: number, nom: string}>>([])
+  const [quartiers, setQuartiers] = useState<string[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (selectedVille) {
+      setLoading(true)
+      apiClient.get<string[]>(`/quartiers/${selectedVille.toLowerCase()}`)
+        .then(data => {
+          setQuartiers([...new Set(data || [])])
+        })
+        .catch((error) => {
+          console.warn('Erreur chargement quartiers:', error)
+          setQuartiers([])
+        })
+        .finally(() => setLoading(false))
+    } else {
+      setQuartiers([])
+    }
+  }, [selectedVille])
 
   const handleVilleChange = (villeName: string) => {
     onVilleChange(villeName)
     onQuartierChange("") // Reset quartier
-    setQuartiers(quartiersByVille[villeName] || [])
   }
 
   return (
@@ -100,27 +83,28 @@ export function StaticLocationSelector({
         <Select 
           value={selectedQuartier} 
           onValueChange={onQuartierChange}
-          disabled={disabled || !selectedVille}
+          disabled={disabled || !selectedVille || loading}
         >
           <SelectTrigger>
             <SelectValue 
               placeholder={
+                loading ? "Chargement..." :
                 selectedVille 
                   ? "Sélectionnez votre quartier" 
                   : "Sélectionnez d'abord une ville"
               } 
             />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="max-h-[300px]">
             {quartiers.map((quartier) => (
-              <SelectItem key={quartier.id} value={quartier.nom}>
-                {quartier.nom}
+              <SelectItem key={quartier} value={quartier}>
+                {quartier}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
-          Permet de vous localiser automatiquement pour les livraisons et services à proximité
+          {selectedVille && quartiers.length > 0 && `${quartiers.length} quartiers disponibles`}
         </p>
       </div>
     </div>

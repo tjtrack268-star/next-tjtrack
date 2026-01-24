@@ -7,10 +7,11 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/contexts/auth-context"
 import { apiClient } from "@/lib/api"
+import { useRouter } from "next/navigation"
 
 interface Notification {
   id: number
-  type: "ORDER_ASSIGNED" | "ORDER_ACCEPTED" | "ORDER_REFUSED" | "DELIVERY_STARTED" | "DELIVERY_COMPLETED"
+  type: string
   title: string
   message: string
   orderId?: number
@@ -20,16 +21,21 @@ interface Notification {
   priority: "LOW" | "MEDIUM" | "HIGH"
 }
 
-const notificationConfig = {
+const notificationConfig: Record<string, { icon: any, color: string, textColor: string }> = {
+  ORDER: { icon: Truck, color: "bg-blue-500", textColor: "text-blue-600" },
   ORDER_ASSIGNED: { icon: Truck, color: "bg-blue-500", textColor: "text-blue-600" },
   ORDER_ACCEPTED: { icon: CheckCircle, color: "bg-green-500", textColor: "text-green-600" },
   ORDER_REFUSED: { icon: AlertTriangle, color: "bg-red-500", textColor: "text-red-600" },
   DELIVERY_STARTED: { icon: Truck, color: "bg-orange-500", textColor: "text-orange-600" },
   DELIVERY_COMPLETED: { icon: CheckCircle, color: "bg-emerald-500", textColor: "text-emerald-600" },
+  CHAT: { icon: Info, color: "bg-purple-500", textColor: "text-purple-600" },
+  MESSAGE: { icon: Info, color: "bg-purple-500", textColor: "text-purple-600" },
+  SYSTEM: { icon: Info, color: "bg-gray-500", textColor: "text-gray-600" },
 }
 
 export default function DeliveryNotifications() {
   const { user } = useAuth()
+  const router = useRouter()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
@@ -88,6 +94,58 @@ export default function DeliveryNotifications() {
     }
   }
 
+  const handleNotificationClick = async (notification: Notification) => {
+    console.log('=== NOTIFICATION CLICK ====')
+    console.log('Notification:', notification)
+    console.log('User role:', user?.role)
+    console.log('Notification type:', notification.type)
+    console.log('Order ID:', notification.orderId)
+    
+    if (!notification.read) {
+      await markAsRead(notification.id)
+    }
+    setIsOpen(false)
+    
+    // Navigate based on notification type and user role
+    const notifType = notification.type.toUpperCase()
+    console.log('Notification type uppercase:', notifType)
+    
+    if (notifType === 'ORDER' || notifType.startsWith('ORDER_')) {
+      // Order notifications
+      if (notification.orderId) {
+        console.log('Navigating for ORDER notification...')
+        if (user?.role === 'COMMERCANT') {
+          const url = `/merchant/orders/${notification.orderId}`
+          console.log('Navigating to:', url)
+          router.push(url)
+        } else if (user?.role === 'LIVREUR') {
+          console.log('Navigating to: /delivery/orders')
+          router.push('/delivery/orders')
+        } else if (user?.role === 'CLIENT') {
+          console.log('Navigating to: /orders')
+          router.push('/orders')
+        }
+      } else {
+        console.log('No orderId found')
+      }
+    } else if (notifType === 'CHAT' || notifType === 'MESSAGE') {
+      // Chat/Message notifications
+      console.log('Navigating to: /messages')
+      router.push('/messages')
+    } else if (notifType === 'DELIVERY') {
+      // Delivery notifications
+      if (user?.role === 'LIVREUR') {
+        console.log('Navigating to: /delivery/orders')
+        router.push('/delivery/orders')
+      } else {
+        console.log('Navigating to: /orders')
+        router.push('/orders')
+      }
+    } else {
+      console.log('Unknown notification type, no navigation')
+    }
+  }
+
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp)
     const now = new Date()
@@ -139,11 +197,15 @@ export default function DeliveryNotifications() {
               </div>
             ) : (
               notifications.map((notification) => {
-                const config = notificationConfig[notification.type]
+                const config = notificationConfig[notification.type] || notificationConfig['SYSTEM']
                 const Icon = config.icon
 
                 return (
-                  <Card key={notification.id} className={`m-2 ${!notification.read ? 'bg-blue-50 border-blue-200' : ''}`}>
+                  <Card 
+                    key={notification.id} 
+                    className={`m-2 cursor-pointer hover:bg-gray-50 ${!notification.read ? 'bg-blue-50 border-blue-200' : ''}`}
+                    onClick={() => handleNotificationClick(notification)}
+                  >
                     <CardContent className="p-3">
                       <div className="flex items-start gap-3">
                         <div className={`p-2 rounded-full ${config.color}`}>
@@ -165,7 +227,10 @@ export default function DeliveryNotifications() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => deleteNotification(notification.id)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                deleteNotification(notification.id)
+                              }}
                               className="h-6 w-6 p-0 ml-2"
                             >
                               <X className="h-3 w-3" />
@@ -179,7 +244,10 @@ export default function DeliveryNotifications() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => markAsRead(notification.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  markAsRead(notification.id)
+                                }}
                                 className="text-xs h-6 px-2"
                               >
                                 Marquer lu
