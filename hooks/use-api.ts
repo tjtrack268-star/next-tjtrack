@@ -803,8 +803,10 @@ export function useUpdateCommandeStatus() {
       // Force immediate refetch for better UX
       queryClient.refetchQueries({ queryKey: ["commandesMerchant"] });
     },
-    onError: (error, variables) => {
+    onError: (error: any, variables) => {
       console.error(`Failed to update order ${variables.id}:`, error);
+      const message = error?.message || "Erreur lors de la mise à jour du statut";
+      // Note: toast will be shown by the component using this hook
     },
     // Reduce timeout for better UX
     retry: 2,
@@ -988,6 +990,56 @@ export function useRejectUser() {
     onError: (error: any) => {
       console.error('❌ Mutation error:', error);
     },
+  })
+}
+
+export function useDeleteUser() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      console.log('=== DELETE USER DEBUG ===');
+      console.log('userId:', userId);
+      
+      if (!userId || userId === 'undefined' || userId === 'null') {
+        console.error('❌ Invalid userId:', userId);
+        throw new Error('ID utilisateur invalide');
+      }
+      
+      console.log('Calling API endpoint:', `/admin/users/${userId}`);
+      
+      try {
+        const response = await apiClient.delete<void>(`/admin/users/${userId}`);
+        console.log('✅ API response:', response);
+        return response;
+      } catch (error: any) {
+        console.error('❌ API error:', error);
+        console.error('Error message:', error.message);
+        throw error;
+      }
+    },
+    onSuccess: async () => {
+      console.log('✅ Deletion successful, refetching queries');
+      await queryClient.invalidateQueries({ queryKey: queryKeys.pendingUsers });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.allUsers });
+      await queryClient.invalidateQueries({ queryKey: ["userAnalytics"] });
+    },
+    onError: (error: any) => {
+      console.error('❌ Mutation error:', error);
+    },
+  })
+}
+
+export function useUserDocuments(userEmail: string, enabled: boolean = true) {
+  return useQuery({
+    queryKey: ["userDocuments", userEmail],
+    queryFn: () => apiClient.get<Array<{
+      id: number
+      documentType: string
+      objectName: string
+      status: string
+      uploadedAt: string
+    }>>("/profile-documents", { userEmail }),
+    enabled: !!userEmail && enabled,
   })
 }
 

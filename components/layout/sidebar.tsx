@@ -36,8 +36,9 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { safeUserName, safeUserRole } from "@/lib/safe-render"
+import { useSidebarBadges } from "@/hooks/use-sidebar-badges"
 
-const getMenuItems = (role?: string) => {
+const getMenuItems = (role?: string, badges?: any) => {
   const baseItems = [
     {
       title: "Accueil",
@@ -63,8 +64,8 @@ const getMenuItems = (role?: string) => {
         title: "Administration",
         items: [
           { name: "Utilisateurs", href: "/dashboard/admin/utilisateurs", icon: Users },
-          { name: "Validations", href: "/dashboard/admin/validations", icon: ShieldCheck, badge: 12 },
-          { name: "Communication", href: "/dashboard/admin/communication", icon: MessageSquare, badge: 6 },
+          { name: "Validations", href: "/dashboard/admin/validations", icon: ShieldCheck, badge: badges?.validations || 0 },
+          { name: "Communication", href: "/dashboard/admin/communication", icon: MessageSquare, badge: badges?.communication || 0 },
         ],
       },
       {
@@ -88,7 +89,7 @@ const getMenuItems = (role?: string) => {
       {
         title: "Support & Contenu",
         items: [
-          { name: "Tickets Support", href: "/dashboard/admin/support", icon: Ticket, badge: 8 },
+          { name: "Tickets Support", href: "/dashboard/admin/support", icon: Ticket, badge: badges?.support || 0 },
           { name: "Gestion Contenu", href: "/dashboard/admin/contenu", icon: FileText },
           { name: "SEO Manager", href: "/dashboard/admin/seo", icon: Search },
         ],
@@ -98,7 +99,7 @@ const getMenuItems = (role?: string) => {
         items: [
           { name: "Inventaire", href: "/dashboard/inventaire", icon: Box },
           { name: "Articles", href: "/dashboard/articles", icon: Package },
-          { name: "Alertes", href: "/dashboard/alertes", icon: AlertTriangle, badge: 5 },
+          { name: "Alertes", href: "/dashboard/alertes", icon: AlertTriangle, badge: badges?.alertes || 0 },
         ],
       },
       {
@@ -136,6 +137,11 @@ const getMenuItems = (role?: string) => {
         ],
       },
       {
+        title: "Communication",
+        href: "/dashboard/communication",
+        icon: MessageSquare,
+      },
+      {
         title: "Configuration",
         href: "/dashboard/parametres",
         icon: Settings,
@@ -150,10 +156,15 @@ const getMenuItems = (role?: string) => {
         title: "Mes Livraisons",
         items: [
           { name: "Dashboard Livreur", href: "/dashboard/livreur", icon: Truck },
-          { name: "Nouvelles Assignations", href: "/dashboard/livreur?tab=nouvelles", icon: Package, badge: 3 },
+          { name: "Nouvelles Assignations", href: "/dashboard/livreur?tab=nouvelles", icon: Package, badge: badges?.nouvelles || 0 },
           { name: "En Cours", href: "/dashboard/livreur?tab=en-cours", icon: Truck },
           { name: "Historique", href: "/dashboard/livreur?tab=terminees", icon: FileText },
         ],
+      },
+      {
+        title: "Communication",
+        href: "/dashboard/communication",
+        icon: MessageSquare,
       },
       {
         title: "Configuration",
@@ -181,6 +192,11 @@ const getMenuItems = (role?: string) => {
         ],
       },
       {
+        title: "Communication",
+        href: "/dashboard/communication",
+        icon: MessageSquare,
+      },
+      {
         title: "Configuration",
         href: "/dashboard/parametres",
         icon: Settings,
@@ -199,6 +215,11 @@ const getMenuItems = (role?: string) => {
       ],
     },
     {
+      title: "Communication",
+      href: "/dashboard/communication",
+      icon: MessageSquare,
+    },
+    {
       title: "Configuration",
       href: "/dashboard/parametres",
       icon: Settings,
@@ -210,7 +231,8 @@ const getMenuItems = (role?: string) => {
 function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
   const pathname = usePathname()
   const { user, logout, isAuthenticated } = useAuth()
-  const menuItems = getMenuItems(user?.roles?.[0])
+  const badges = useSidebarBadges()
+  const menuItems = getMenuItems(user?.roles?.[0], badges)
 
   return (
     <div className="flex h-full flex-col">
@@ -248,7 +270,7 @@ function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
                       >
                         <item.icon className="h-4 w-4" />
                         <span className="flex-1">{item.name}</span>
-                        {item.badge && (
+                        {item.badge !== undefined && item.badge > 0 && (
                           <Badge variant="destructive" className="h-5 min-w-5 px-1.5">
                             {item.badge}
                           </Badge>

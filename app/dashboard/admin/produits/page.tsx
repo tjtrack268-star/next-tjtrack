@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,15 +9,47 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Package, Search, MoreVertical, Eye, EyeOff, Edit, Trash2, Plus, AlertTriangle } from "lucide-react"
 import { AdminGuard } from "@/components/admin-guard"
+import { apiClient } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
+import { buildImageUrl } from "@/lib/image-utils"
 
 export default function AdminProductsPage() {
+  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
+  const [products, setProducts] = useState<any[]>([])
+  const [stats, setStats] = useState({ total: 0, active: 0, lowStock: 0, outOfStock: 0 })
+  const [loading, setLoading] = useState(true)
 
-  const products = [
-    { id: 1, name: "T-shirt Rouge", category: "Vêtements", price: 29.99, stock: 15, status: "active", sales: 45 },
-    { id: 2, name: "Jeans Bleu", category: "Vêtements", price: 79.99, stock: 3, status: "active", sales: 23 },
-    { id: 3, name: "Sneakers", category: "Chaussures", price: 129.99, stock: 0, status: "inactive", sales: 67 },
-  ]
+  useEffect(() => {
+    loadProducts()
+  }, [])
+
+  const loadProducts = async () => {
+    try {
+      setLoading(true)
+      const response = await apiClient.get<any>("/ecommerce/produits")
+      const data = response.data || response
+      console.log('📦 Produits chargés:', data)
+      if (data.length > 0) {
+        console.log('📦 Premier produit:', data[0])
+      }
+      setProducts(Array.isArray(data) ? data : [])
+      
+      // Calculer les stats
+      const productsArray = Array.isArray(data) ? data : []
+      setStats({
+        total: productsArray.length,
+        active: productsArray.filter(p => p.actif).length,
+        lowStock: productsArray.filter(p => p.stockEnLigne > 0 && p.stockEnLigne <= 10).length,
+        outOfStock: productsArray.filter(p => p.stockEnLigne === 0).length
+      })
+    } catch (err) {
+      console.error(err)
+      toast({ title: "Erreur de chargement", variant: "destructive" })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <AdminGuard>
@@ -41,7 +73,7 @@ export default function AdminProductsPage() {
                 <Package className="h-8 w-8 text-blue-500" />
                 <div>
                   <p className="text-sm text-muted-foreground">Total Produits</p>
-                  <p className="text-2xl font-bold">1,234</p>
+                  <p className="text-2xl font-bold">{stats.total}</p>
                 </div>
               </div>
             </CardContent>
@@ -52,7 +84,7 @@ export default function AdminProductsPage() {
                 <Eye className="h-8 w-8 text-green-500" />
                 <div>
                   <p className="text-sm text-muted-foreground">Actifs</p>
-                  <p className="text-2xl font-bold">1,156</p>
+                  <p className="text-2xl font-bold">{stats.active}</p>
                 </div>
               </div>
             </CardContent>
@@ -63,7 +95,7 @@ export default function AdminProductsPage() {
                 <AlertTriangle className="h-8 w-8 text-orange-500" />
                 <div>
                   <p className="text-sm text-muted-foreground">Stock Faible</p>
-                  <p className="text-2xl font-bold">23</p>
+                  <p className="text-2xl font-bold">{stats.lowStock}</p>
                 </div>
               </div>
             </CardContent>
@@ -74,7 +106,7 @@ export default function AdminProductsPage() {
                 <EyeOff className="h-8 w-8 text-red-500" />
                 <div>
                   <p className="text-sm text-muted-foreground">Rupture</p>
-                  <p className="text-2xl font-bold">12</p>
+                  <p className="text-2xl font-bold">{stats.outOfStock}</p>
                 </div>
               </div>
             </CardContent>
@@ -90,57 +122,88 @@ export default function AdminProductsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Image</TableHead>
                   <TableHead>Produit</TableHead>
+                  <TableHead>Commerçant</TableHead>
                   <TableHead>Catégorie</TableHead>
                   <TableHead>Prix</TableHead>
                   <TableHead>Stock</TableHead>
-                  <TableHead>Ventes</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell>{product.category}</TableCell>
-                    <TableCell>€{product.price}</TableCell>
-                    <TableCell>
-                      <Badge variant={product.stock === 0 ? "destructive" : product.stock < 10 ? "secondary" : "default"}>
-                        {product.stock} unités
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{product.sales}</TableCell>
-                    <TableCell>
-                      <Badge variant={product.status === "active" ? "default" : "secondary"}>
-                        {product.status === "active" ? "Actif" : "Inactif"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Modifier
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            {product.status === "active" ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
-                            {product.status === "active" ? "Désactiver" : "Activer"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Supprimer
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8">
+                      Chargement...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : products.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8">
+                      Aucun produit
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  products.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell>
+                        {product.imageUrl ? (
+                          <img 
+                            src={buildImageUrl(product.imageUrl) || ''}
+                            alt={product.nom}
+                            className="w-12 h-12 object-cover rounded"
+                            onError={(e) => {
+                              e.currentTarget.src = '/placeholder-product.png'
+                            }}
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-muted rounded flex items-center justify-center">
+                            <Package className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-medium">{product.nom}</TableCell>
+                      <TableCell>{product.nomCommercant || product.nomEntreprise || '-'}</TableCell>
+                      <TableCell>{product.categorieName || '-'}</TableCell>
+                      <TableCell>{product.prix} FCFA</TableCell>
+                      <TableCell>
+                        <Badge variant={product.stockEnLigne === 0 ? "destructive" : product.stockEnLigne < 10 ? "secondary" : "default"}>
+                          {product.stockEnLigne} unités
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={product.actif ? "default" : "secondary"}>
+                          {product.actif ? "Actif" : "Inactif"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Modifier
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              {product.actif ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                              {product.actif ? "Désactiver" : "Activer"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive">
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Supprimer
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>

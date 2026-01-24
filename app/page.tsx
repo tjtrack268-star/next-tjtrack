@@ -226,7 +226,7 @@ export default function HomePage() {
   }
 
   const ProductCard = ({ product }: { product: ProduitEcommerceDto }) => {
-    // Utiliser quantiteEnLigne ou quantite pour vérifier la disponibilité
+    const [imgError, setImgError] = useState(false)
     const stockDisponible = product.quantiteEnLigne ?? product.quantite ?? 0
     const estEnRupture = stockDisponible === 0
     const stockFaible = stockDisponible > 0 && stockDisponible <= 5
@@ -256,12 +256,13 @@ export default function HomePage() {
           )}
         </div>
         <Image
-          src={buildImageUrl(product.images?.[0]) || "/placeholder.svg"}
+          src={imgError ? "/placeholder.svg" : (buildImageUrl(product.images?.[0]) || "/placeholder.svg")}
           alt={product.nom || "Produit"}
           fill
           sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
           className="object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
+          onError={() => setImgError(true)}
         />
         <Button 
           variant="ghost" 

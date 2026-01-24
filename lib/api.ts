@@ -36,10 +36,13 @@ class ApiClient {
       '/ecommerce/categories',
       '/panier/',
       '/publicite/',
+      '/quartiers/',
       '/login',
       '/register',
+      '/payments/',
+      '/communication/',
     ]
-    // /commandes/creer est public mais doit recevoir le token si disponible
+    // /commandes/creer et /payments/* sont publics mais doivent recevoir le token si disponible
     return publicEndpoints.some(path => endpoint.includes(path))
   }
 

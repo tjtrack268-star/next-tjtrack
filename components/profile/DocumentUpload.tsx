@@ -8,15 +8,15 @@ import { Label } from "@/components/ui/label"
 import { Upload, CheckCircle, AlertCircle, FileText } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1.0"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://147.93.9.170:8080/api/v1.0"
 
 interface DocumentUploadProps {
-  userId: number
+  userEmail: string
   profileType: "LIVREUR" | "COMMERCANT"
   onComplete?: () => void
 }
 
-export default function DocumentUpload({ userId, profileType, onComplete }: DocumentUploadProps) {
+export default function DocumentUpload({ userEmail, profileType, onComplete }: DocumentUploadProps) {
   const { toast } = useToast()
   const [cniNumber, setCniNumber] = useState("")
   const [cniRecto, setCniRecto] = useState<File | null>(null)
@@ -27,11 +27,9 @@ export default function DocumentUpload({ userId, profileType, onComplete }: Docu
   const uploadFile = async (file: File, endpoint: string) => {
     const formData = new FormData()
     formData.append("file", file)
-    formData.append("userId", userId.toString())
-    formData.append("profileType", profileType)
 
     const token = localStorage.getItem("tj-track-token")
-    const response = await fetch(`${API_BASE_URL}/profile-documents/${endpoint}`, {
+    const response = await fetch(`${API_BASE_URL}/profile-documents/${endpoint}?userEmail=${encodeURIComponent(userEmail)}&profileType=${profileType}`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: formData
@@ -55,7 +53,7 @@ export default function DocumentUpload({ userId, profileType, onComplete }: Docu
     try {
       const token = localStorage.getItem("tj-track-token")
       await fetch(
-        `${API_BASE_URL}/profile-documents/save-cni-number?userId=${userId}&profileType=${profileType}&cniNumber=${cniNumber}`,
+        `${API_BASE_URL}/profile-documents/save-cni-number?userEmail=${encodeURIComponent(userEmail)}&profileType=${profileType}&cniNumber=${cniNumber}`,
         { method: "POST", headers: { Authorization: `Bearer ${token}` } }
       )
 

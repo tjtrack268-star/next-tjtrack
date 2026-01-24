@@ -15,7 +15,7 @@ const nextConfig = {
       },
       {
         protocol: 'http',
-        hostname: 'localhost',
+        hostname: '147.93.9.170',
         port: '8080',
         pathname: '/api/v1.0/images/**',
       },

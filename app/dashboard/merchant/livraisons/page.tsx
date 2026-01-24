@@ -399,7 +399,7 @@ export default function LivraisonsPage() {
                           </div>
                           <div>
                             <span className="text-gray-600">Montant:</span>
-                            <p className="font-medium">{commande.montantTotal}€</p>
+                            <p className="font-medium">{commande.montantTotal.toLocaleString()} XAF</p>
                           </div>
                           <div>
                             <span className="text-gray-600">Date:</span>

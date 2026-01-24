@@ -10,6 +10,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://147.93.9.170:808
  * @returns L'URL complète de l'image ou null si pas d'image
  */
 export function buildImageUrl(imagePath: string | null | undefined): string | null {
+  console.log('buildImageUrl called with:', { imagePath, type: typeof imagePath })
+  
   if (!imagePath) return null
   
   // Si c'est déjà une URL complète (http/https), la retourner telle quelle

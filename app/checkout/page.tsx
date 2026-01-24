@@ -15,7 +15,9 @@ import { useCart } from "@/contexts/cart-context"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { useCreerCommande } from "@/hooks/use-api"
-import { CreditCard, DollarSign, Loader2, MapPin, Mail, Phone, User, Package, ShieldCheck, Truck, CheckCircle2 } from "lucide-react"
+import { StaticLocationSelector } from "@/components/ui/static-location-selector"
+import { Truck, User, Mail, Phone, CreditCard, DollarSign, CheckCircle2, Loader2, ShieldCheck, Package } from "lucide-react"
+import { apiClient } from "@/lib/api"
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -56,6 +58,7 @@ export default function CheckoutPage() {
     address: user?.address ?? "",
     postalCode: "",
     paymentMethod: "cash",
+    phoneNumberPayment: "",
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -150,10 +153,84 @@ export default function CheckoutPage() {
         console.log('📦 Données commande envoyées:', JSON.stringify(commandeData, null, 2))
         
         creerCommande(commandeData, {
-          onSuccess: (response) => {
+          onSuccess: async (response) => {
+            const orderId = response.data?.numeroCommande || `ORDER-${Date.now()}`
+            
+            console.log('Payment method selected:', formData.paymentMethod)
+            console.log('Checking if VISA:', formData.paymentMethod === "VISA")
+            
+            // Traiter le paiement selon la méthode choisie
+            if (formData.paymentMethod === "VISA") {
+              try {
+                console.log('Initiating Stripe payment...')
+                const payment = await apiClient.post<{ sessionId: string; checkoutUrl: string }>("/payments/visa", {
+                  orderId,
+                  amount: finalTotal,
+                  currency: "XAF"
+                })
+                console.log('Stripe checkout URL:', payment.checkoutUrl)
+                clearCart()
+                // Rediriger vers la page de paiement Stripe
+                window.location.href = payment.checkoutUrl
+                return
+              } catch (err: any) {
+                console.error('Stripe payment error:', err)
+                toast({ title: "Erreur de paiement Stripe", description: err.message, variant: "destructive" })
+                setIsSubmitting(false)
+                return
+              }
+            } else if (formData.paymentMethod === "ORANGE_MONEY") {
+              try {
+                console.log('Initiating CinetPay Orange Money payment...')
+                const payment = await apiClient.post<{ transactionId: string; paymentUrl: string }>("/payments/orange-money", {
+                  orderId,
+                  amount: finalTotal
+                })
+                console.log('CinetPay response:', payment)
+                
+                if (!payment.paymentUrl) {
+                  throw new Error('URL de paiement non reçue du serveur')
+                }
+                
+                console.log('CinetPay Orange Money URL:', payment.paymentUrl)
+                clearCart()
+                window.location.href = payment.paymentUrl
+                return
+              } catch (err: any) {
+                console.error('Orange Money payment error:', err)
+                toast({ title: "Erreur de paiement Orange Money", description: err.message, variant: "destructive" })
+                setIsSubmitting(false)
+                return
+              }
+            } else if (formData.paymentMethod === "MTN_MONEY") {
+              try {
+                console.log('Initiating CinetPay MTN Money payment...')
+                const payment = await apiClient.post<{ transactionId: string; paymentUrl: string }>("/payments/mtn-money", {
+                  orderId,
+                  amount: finalTotal
+                })
+                console.log('CinetPay response:', payment)
+                
+                if (!payment.paymentUrl) {
+                  throw new Error('URL de paiement non reçue du serveur')
+                }
+                
+                console.log('CinetPay MTN Money URL:', payment.paymentUrl)
+                clearCart()
+                window.location.href = payment.paymentUrl
+                return
+              } catch (err: any) {
+                console.error('MTN Money payment error:', err)
+                toast({ title: "Erreur de paiement MTN Money", description: err.message, variant: "destructive" })
+                setIsSubmitting(false)
+                return
+              }
+            }
+            
+            // Pour le paiement à la livraison (cash)
             toast({
               title: "Commande confirmée !",
-              description: `Commande ${response.data?.numeroCommande} créée avec succès`,
+              description: `Commande ${orderId} créée avec succès`,
             })
             clearCart()
             router.push('/')
@@ -188,7 +265,8 @@ export default function CheckoutPage() {
               ville: formData.city,
               codePostal: formData.postalCode,
               pays: "Cameroun"
-            }
+            },
+            modePaiement: formData.paymentMethod
           })
         })
 
@@ -198,6 +276,73 @@ export default function CheckoutPage() {
             throw new Error(errorData.message || "Erreur lors de la création de la commande")
           } catch {
             throw new Error(`Erreur serveur (${response.status}): Le service est temporairement indisponible`)
+          }
+        }
+
+        const orderData = await response.json()
+        const orderId = orderData.numeroCommande || `ORDER-${Date.now()}`
+
+        // Traiter le paiement selon la méthode choisie
+        if (formData.paymentMethod === "VISA") {
+          try {
+            const payment = await apiClient.post<{ sessionId: string; checkoutUrl: string }>("/payments/visa", {
+              orderId,
+              amount: finalTotal,
+              currency: "XAF",
+              email: formData.email
+            })
+            clearCart()
+            localStorage.removeItem('guestId')
+            window.location.href = payment.checkoutUrl
+            return
+          } catch (err: any) {
+            toast({ title: "Erreur de paiement Stripe", description: err.message, variant: "destructive" })
+            setIsSubmitting(false)
+            return
+          }
+        } else if (formData.paymentMethod === "ORANGE_MONEY") {
+          try {
+            const payment = await apiClient.post<{ transactionId: string; paymentUrl: string }>("/payments/orange-money", {
+              orderId,
+              amount: finalTotal,
+              email: formData.email
+            })
+            console.log('CinetPay response:', payment)
+            
+            if (!payment.paymentUrl) {
+              throw new Error('URL de paiement non reçue du serveur')
+            }
+            
+            clearCart()
+            localStorage.removeItem('guestId')
+            window.location.href = payment.paymentUrl
+            return
+          } catch (err: any) {
+            toast({ title: "Erreur de paiement Orange Money", description: err.message, variant: "destructive" })
+            setIsSubmitting(false)
+            return
+          }
+        } else if (formData.paymentMethod === "MTN_MONEY") {
+          try {
+            const payment = await apiClient.post<{ transactionId: string; paymentUrl: string }>("/payments/mtn-money", {
+              orderId,
+              amount: finalTotal,
+              email: formData.email
+            })
+            console.log('CinetPay response:', payment)
+            
+            if (!payment.paymentUrl) {
+              throw new Error('URL de paiement non reçue du serveur')
+            }
+            
+            clearCart()
+            localStorage.removeItem('guestId')
+            window.location.href = payment.paymentUrl
+            return
+          } catch (err: any) {
+            toast({ title: "Erreur de paiement MTN Money", description: err.message, variant: "destructive" })
+            setIsSubmitting(false)
+            return
           }
         }
 
@@ -290,33 +435,13 @@ export default function CheckoutPage() {
                         </div>
                       </div>
 
-                      <div className="space-y-2.5">
-                        <Label htmlFor="address" className="text-sm font-medium flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          Adresse complète
-                        </Label>
-                        <Input id="address" name="address" value={formData.address} onChange={handleInputChange} className={`h-11 ${errors.address ? "border-destructive" : ""}`} placeholder="Rue, bâtiment, quartier..." />
-                        {errors.address && <p className="text-sm text-destructive flex items-center gap-1"><span className="text-xs">⚠</span>{errors.address}</p>}
-                      </div>
-
-                      <div className="grid sm:grid-cols-2 gap-5">
-                        <div className="space-y-2.5">
-                          <Label htmlFor="city" className="text-sm font-medium">Ville</Label>
-                          <Select value={formData.city} onValueChange={(value) => setFormData((prev) => ({ ...prev, city: value }))}>
-                            <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {CAMEROON_CITIES.map((city) => (
-                                <SelectItem key={city} value={city}>{city}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {errors.city && <p className="text-sm text-destructive flex items-center gap-1"><span className="text-xs">⚠</span>{errors.city}</p>}
-                        </div>
-                        <div className="space-y-2.5">
-                          <Label htmlFor="postalCode" className="text-sm font-medium">Code postal</Label>
-                          <Input id="postalCode" name="postalCode" value={formData.postalCode} onChange={handleInputChange} className="h-11" placeholder="Optionnel" />
-                        </div>
-                      </div>
+                      <StaticLocationSelector
+                        selectedVille={formData.city}
+                        selectedQuartier={formData.address}
+                        onVilleChange={(ville) => setFormData((prev) => ({ ...prev, city: ville, address: "" }))}
+                        onQuartierChange={(quartier) => setFormData((prev) => ({ ...prev, address: quartier }))}
+                        required
+                      />
                     </div>
                   </div>
 
@@ -339,19 +464,42 @@ export default function CheckoutPage() {
                               <DollarSign className="h-4 w-4" />
                               Paiement à la livraison
                             </div>
-                            <p className="text-sm text-muted-foreground">Payez en espèces lors de la réception de votre commande</p>
+                            <p className="text-sm text-muted-foreground">Payez en espèces lors de la réception</p>
                           </Label>
-                          <CheckCircle2 className="h-5 w-5 text-primary" />
+                          {formData.paymentMethod === "cash" && <CheckCircle2 className="h-5 w-5 text-primary" />}
                         </div>
-                        <div className="relative flex items-start space-x-4 p-5 rounded-xl border border-border/50 bg-muted/20 cursor-not-allowed opacity-60">
-                          <RadioGroupItem value="card" id="card" disabled className="mt-1" />
-                          <Label htmlFor="card" className="flex-1 cursor-not-allowed">
+                        <div className="relative flex items-start space-x-4 p-5 rounded-xl border border-border/50 hover:border-primary/50 cursor-pointer transition-all duration-200 hover:shadow-md">
+                          <RadioGroupItem value="VISA" id="visa" className="mt-1" />
+                          <Label htmlFor="visa" className="flex-1 cursor-pointer">
                             <div className="flex items-center gap-2 font-semibold text-base mb-1">
                               <CreditCard className="h-4 w-4" />
-                              Carte bancaire
+                              Carte Visa/Mastercard
                             </div>
-                            <p className="text-sm text-muted-foreground">Bientôt disponible</p>
+                            <p className="text-sm text-muted-foreground">Paiement sécurisé par Stripe</p>
                           </Label>
+                          {formData.paymentMethod === "VISA" && <CheckCircle2 className="h-5 w-5 text-primary" />}
+                        </div>
+                        <div className="relative flex items-start space-x-4 p-5 rounded-xl border border-border/50 hover:border-primary/50 cursor-pointer transition-all duration-200 hover:shadow-md">
+                          <RadioGroupItem value="ORANGE_MONEY" id="orange" className="mt-1" />
+                          <Label htmlFor="orange" className="flex-1 cursor-pointer">
+                            <div className="flex items-center gap-2 font-semibold text-base mb-1">
+                              <Phone className="h-4 w-4 text-orange-500" />
+                              Orange Money
+                            </div>
+                            <p className="text-sm text-muted-foreground">Paiement mobile sécurisé via CinetPay</p>
+                          </Label>
+                          {formData.paymentMethod === "ORANGE_MONEY" && <CheckCircle2 className="h-5 w-5 text-primary" />}
+                        </div>
+                        <div className="relative flex items-start space-x-4 p-5 rounded-xl border border-border/50 hover:border-primary/50 cursor-pointer transition-all duration-200 hover:shadow-md">
+                          <RadioGroupItem value="MTN_MONEY" id="mtn" className="mt-1" />
+                          <Label htmlFor="mtn" className="flex-1 cursor-pointer">
+                            <div className="flex items-center gap-2 font-semibold text-base mb-1">
+                              <Phone className="h-4 w-4 text-yellow-500" />
+                              MTN Mobile Money
+                            </div>
+                            <p className="text-sm text-muted-foreground">Paiement mobile sécurisé via CinetPay</p>
+                          </Label>
+                          {formData.paymentMethod === "MTN_MONEY" && <CheckCircle2 className="h-5 w-5 text-primary" />}
                         </div>
                       </RadioGroup>
                     </div>
