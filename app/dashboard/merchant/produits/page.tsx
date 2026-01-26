@@ -340,7 +340,11 @@ export default function MerchantProductsPage() {
                       rows={3}
                       value={newProduct.descriptionLongue}
                       onChange={(e) => setNewProduct({ ...newProduct, descriptionLongue: e.target.value })}
+                      maxLength={5000}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      {newProduct.descriptionLongue.length}/5000 caractères
+                    </p>
                   </div>
 
                   {/* Images */}
@@ -399,7 +403,11 @@ export default function MerchantProductsPage() {
                       placeholder="Description en quelques mots..."
                       value={newProduct.description}
                       onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                      maxLength={1000}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      {newProduct.description.length}/1000 caractères
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label>Description longue</Label>
@@ -408,7 +416,11 @@ export default function MerchantProductsPage() {
                       rows={4}
                       value={newProduct.descriptionLongue}
                       onChange={(e) => setNewProduct({ ...newProduct, descriptionLongue: e.target.value })}
+                      maxLength={5000}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      {newProduct.descriptionLongue.length}/5000 caractères
+                    </p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -506,7 +518,11 @@ export default function MerchantProductsPage() {
                     value={editingProduct.description || ""}
                     onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
                     rows={3}
+                    maxLength={1000}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    {(editingProduct.description || "").length}/1000 caractères
+                  </p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
