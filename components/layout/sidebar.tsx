@@ -74,6 +74,13 @@ const getMenuItems = (role?: string, badges?: any) => {
           { name: "Produits", href: "/dashboard/admin/produits", icon: Package },
           { name: "Commandes", href: "/dashboard/admin/commandes", icon: ShoppingBag },
           { name: "Promotions", href: "/dashboard/admin/promotions", icon: Percent },
+          { name: "Tarifs Livraison", href: "/dashboard/admin/tarifs-livraison", icon: Truck },
+        ],
+      },
+      {
+        title: "Livraison",
+        items: [
+          { name: "Calculateur", href: "/dashboard/calculateur-livraison", icon: BarChart3 },
         ],
       },
       {

@@ -25,9 +25,9 @@ export function useSidebarBadges() {
         // Pour ADMIN
         if (user.roles?.includes('ADMIN')) {
           // Validations en attente
-          const usersData = await apiClient.get<any>('/users')
-          const users = Array.isArray(usersData) ? usersData : []
-          const pendingValidations = users.filter(u => !u.isApproved).length
+          const pendingUsersData = await apiClient.get<any>('/admin/pending-users')
+          const pendingUsers = Array.isArray(pendingUsersData) ? pendingUsersData : []
+          const pendingValidations = pendingUsers.length
 
           setBadges({
             validations: pendingValidations,

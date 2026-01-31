@@ -8,12 +8,12 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Users, Search, MoreVertical, UserCheck, UserX, Mail, Store, Truck, ShieldCheck, Loader2, ChevronLeft, ChevronRight, Clock } from "lucide-react"
-import { useAllUsers, useApproveUser, useUserAnalytics, useRejectUser } from "@/hooks/use-api"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Users, Search, MoreVertical, UserCheck, UserX, Mail, Store, Truck, ShieldCheck, Loader2, ChevronLeft, ChevronRight, Clock, Trash2, AlertCircle } from "lucide-react"
+import { useAllUsers, useApproveUser, useUserAnalytics, useRejectUser, useDeleteUser } from "@/hooks/use-api"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { AdminGuard } from "@/components/admin-guard"
-import { useConfirm } from "@/hooks/use-confirm"
 import { useDebounce } from "@/hooks/use-debounce"
 import { useQueryClient } from "@tanstack/react-query"
 
@@ -30,9 +30,10 @@ export default function AdminUsersPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [roleFilter, setRoleFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<{ userId: string; name: string } | null>(null)
   const { toast } = useToast()
   const { user } = useAuth()
-  const { confirm } = useConfirm()
   const queryClient = useQueryClient()
   
   const debouncedSearch = useDebounce(searchQuery, 300)
@@ -51,16 +52,7 @@ export default function AdminUsersPage() {
   const totalPages = Math.ceil((data?.total || 0) / 20)
   const approveUserMutation = useApproveUser()
   const rejectUserMutation = useRejectUser()
-
-  useEffect(() => {
-    if (users.length > 0) {
-      console.log('=== USERS DATA DEBUG ===')
-      console.log('Total users:', users.length)
-      console.log('First user sample:', users[0])
-      console.log('First user userId:', users[0]?.userId)
-      console.log('First user email:', users[0]?.email)
-    }
-  }, [users])
+  const deleteUserMutation = useDeleteUser()
 
   const handleApprove = async (userId: string) => {
     try {
@@ -92,6 +84,32 @@ export default function AdminUsersPage() {
       toast({
         title: "Erreur",
         description: "Impossible de rejeter l'utilisateur",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDelete = async (userId: string, userName: string) => {
+    setUserToDelete({ userId, name: userName })
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!userToDelete) return
+
+    try {
+      await deleteUserMutation.mutateAsync(userToDelete.userId)
+      toast({
+        title: "Compte supprimé",
+        description: "Le compte a été supprimé avec succès",
+      })
+      setDeleteDialogOpen(false)
+      setUserToDelete(null)
+      refetch()
+    } catch (err) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer le compte",
         variant: "destructive",
       })
     }
@@ -347,6 +365,14 @@ export default function AdminUsersPage() {
                               <Mail className="h-4 w-4 mr-2" />
                               Contacter
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onSelect={() => handleDelete(String(userItem.userId || userItem.email), userItem.name || userItem.email)}
+                              disabled={deleteUserMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Supprimer le compte
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -358,6 +384,36 @@ export default function AdminUsersPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer le compte</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer définitivement le compte de <strong>{userToDelete?.name}</strong> ? Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+            <div className="flex gap-3">
+              <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-destructive">Attention</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Le compte sera désactivé et les données personnelles seront anonymisées.
+                </p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete} disabled={deleteUserMutation.isPending}>
+              {deleteUserMutation.isPending ? "Suppression..." : "Supprimer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminGuard>
   )
 }

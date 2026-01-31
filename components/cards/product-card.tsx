@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { useCart } from "@/contexts/cart-context"
+import { useFavorites } from "@/hooks/use-favorites"
 import { cn } from "@/lib/utils"
 import { buildImageUrl } from "@/lib/image-utils"
 import type { ArticleDto, ProduitEcommerceDto } from "@/types/api"
@@ -20,14 +21,16 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, variant = "default" }: ProductCardProps) {
-  const [isLiked, setIsLiked] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const { addItem, openCart } = useCart()
+  const { isFavorite, toggleFavorite } = useFavorites()
 
   const isArticle = "codeArticle" in product
 
   // CRITICAL: For ProduitEcommerceDto, use articleId (not id which is produits_ecommerce.id)
   const id = isArticle ? (product.id || 0) : (product.articleId || product.id || 0)
+  const produitId = isArticle ? (product.id || 0) : (product.id || 0)
+  const isLiked = !isArticle && isFavorite(produitId)
   const name = isArticle ? product.designation : product.nom
   const price = isArticle ? product.prixUnitaireTtc || product.prixUnitaireHt : product.prix
   const image = buildImageUrl(isArticle ? product.photo : product.images?.[0])
@@ -67,7 +70,10 @@ export function ProductCard({ product, variant = "default" }: ProductCardProps) 
   const handleLike = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setIsLiked(!isLiked)
+    if (!isArticle) {
+      console.log('💗 ProductCard handleLike:', { produitId, productName: name })
+      toggleFavorite(produitId)
+    }
   }
 
   if (variant === "horizontal") {

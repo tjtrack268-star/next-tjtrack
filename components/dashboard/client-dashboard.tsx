@@ -19,7 +19,8 @@ import { Badge } from "@/components/ui/badge"
 import { Spinner } from "@/components/ui/spinner"
 import { useAuth } from "@/contexts/auth-context"
 import { apiClient } from "@/lib/api"
-import type { Commande, ProduitEcommerceDto } from "@/types/api"
+import { useFavorites } from "@/hooks/use-favorites"
+import type { Commande } from "@/types/api"
 
 function useClientDashboard() {
   return useQuery({
@@ -32,13 +33,6 @@ function useUserOrders() {
   return useQuery({
     queryKey: ["userOrders"],
     queryFn: () => apiClient.get<Commande[]>("/commandes/client"),
-  })
-}
-
-function useFavorites() {
-  return useQuery({
-    queryKey: ["favorites"],
-    queryFn: () => apiClient.get<ProduitEcommerceDto[]>("/ecommerce/favoris"),
   })
 }
 
@@ -55,7 +49,7 @@ export function ClientDashboard() {
   const { user } = useAuth()
   const { data: dashboardData, isLoading: isDashboardLoading } = useClientDashboard()
   const { data: orders, isLoading: isOrdersLoading } = useUserOrders()
-  const { data: favorites, isLoading: isFavoritesLoading } = useFavorites()
+  const { favorites, isLoading: isFavoritesLoading } = useFavorites()
 
   const formatPrice = (price: number) => new Intl.NumberFormat("fr-FR").format(price) + " XAF"
   const formatDate = (date: string) => new Date(date).toLocaleDateString("fr-FR")

@@ -48,6 +48,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Header } from "@/components/layout/header"
 import { ProductSidebar } from "@/components/layout/product-sidebar"
 import { useRouter } from "next/navigation"
+import { AdminProductDelete } from "@/components/admin/admin-product-delete"
 
 // Hook pour récupérer les produits e-commerce
 function useEcommerceProducts() {
@@ -68,8 +69,6 @@ export default function HomePage() {
   const router = useRouter()
   const { data: apiProducts, isLoading, error } = useEcommerceProducts()
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
-
-  console.log('HomePage - Auth state:', { user: user ? 'logged in' : 'not logged in', isAuthenticated })
   
   const products = apiProducts || []
 
@@ -230,6 +229,7 @@ export default function HomePage() {
     const stockDisponible = product.quantiteEnLigne ?? product.quantite ?? 0
     const estEnRupture = stockDisponible === 0
     const stockFaible = stockDisponible > 0 && stockDisponible <= 5
+    const isAdmin = user?.roles?.includes("ADMIN")
     
     return (
     <Card 
@@ -264,6 +264,9 @@ export default function HomePage() {
           loading="lazy"
           onError={() => setImgError(true)}
         />
+        {isAdmin && (
+          <AdminProductDelete productId={product.id!} productName={product.nom!} />
+        )}
         <Button 
           variant="ghost" 
           size="icon" 
