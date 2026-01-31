@@ -50,8 +50,8 @@ export function validateStatusTransition(currentStatus: string, newStatus: strin
     'CONFIRMEE': ['EN_PREPARATION', 'ANNULEE'],
     'EN_PREPARATION': ['EXPEDIEE', 'ANNULEE'],
     'EXPEDIEE': ['LIVREE'],
-    'LIVREE': [], // Statut final
-    'ANNULEE': [] // Statut final
+    'LIVREE': [], 
+    'ANNULEE': [] 
   }
 
   // Vérifier si la transition est autorisée

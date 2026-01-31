@@ -53,16 +53,27 @@ export default function UserDetailsPage() {
 
   const handleReject = async () => {
     if (!selectedUser) return
+    if (!rejectReason.trim()) {
+      toast({
+        title: "Motif requis",
+        description: "Veuillez indiquer le motif du rejet",
+        variant: "destructive",
+      })
+      return
+    }
     try {
       await rejectUserMutation.mutateAsync({
         userId: String(selectedUser.userId),
         rejectedBy: user?.email || "admin",
+        reason: rejectReason,
       })
       toast({
         title: "Demande rejetée",
-        description: "L'utilisateur a été notifié du rejet",
+        description: "L'utilisateur a été notifié du rejet par email",
         variant: "destructive",
       })
+      setShowRejectDialog(false)
+      setRejectReason("")
       router.push("/dashboard/admin/validations")
     } catch (err) {
       toast({
@@ -155,6 +166,12 @@ export default function UserDetailsPage() {
                   <p className="font-medium">{String(selectedUser.town || "N/A")}</p>
                 </div>
               </div>
+              {selectedUser.address && (
+                <div className="space-y-1 md:col-span-2">
+                  <Label className="text-muted-foreground">Adresse complète</Label>
+                  <p className="font-medium">{String(selectedUser.address)}</p>
+                </div>
+              )}
               <div className="space-y-1">
                 <Label className="text-muted-foreground">Date d'inscription</Label>
                 <div className="flex items-center gap-2">
@@ -277,13 +294,15 @@ export default function UserDetailsPage() {
               <p className="text-sm text-muted-foreground">{String(selectedUser.email || "")}</p>
             </div>
             <div className="space-y-2">
-              <Label>Motif du rejet</Label>
+              <Label>Motif du rejet <span className="text-destructive">*</span></Label>
               <Textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 placeholder="Expliquez la raison du rejet..."
                 rows={4}
+                required
               />
+              <p className="text-xs text-muted-foreground">Ce motif sera envoyé par email à l'utilisateur</p>
             </div>
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={() => setShowRejectDialog(false)}>

@@ -99,7 +99,7 @@ export default function AdminValidationsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {pendingUsers.map((pendingUser) => {
-            // Get the highest priority role
+            // Get the highest priority role for display
             const primaryRole = pendingUser.roles?.reduce((highest, current) => {
               const currentConfig = roleConfig[current as keyof typeof roleConfig]
               const highestConfig = roleConfig[highest as keyof typeof roleConfig]
@@ -117,10 +117,18 @@ export default function AdminValidationsPage() {
             >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
-                  <Badge variant="outline" className="gap-1">
-                    <roleInfo.icon className="h-3 w-3" />
-                    {roleInfo.label}
-                  </Badge>
+                  <div className="flex gap-1 flex-wrap">
+                    {pendingUser.roles?.map((role) => {
+                      const config = roleConfig[role as keyof typeof roleConfig]
+                      if (!config) return null
+                      return (
+                        <Badge key={role} variant="outline" className="gap-1">
+                          <config.icon className="h-3 w-3" />
+                          {config.label}
+                        </Badge>
+                      )
+                    })}
+                  </div>
                   <span className="text-xs text-muted-foreground">
                     {pendingUser.createdAt ? new Date(String(pendingUser.createdAt)).toLocaleDateString("fr-FR") : "N/A"}
                   </span>

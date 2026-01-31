@@ -97,7 +97,7 @@ export default function TestConnectionPage() {
             <li>Create database: <code className="bg-gray-100 px-1 rounded">createdb tjtrack_dev</code></li>
             <li>Start Spring Boot backend: <code className="bg-gray-100 px-1 rounded">mvn spring-boot:run</code></li>
             <li>Check backend logs for any errors</li>
-            <li>Verify CORS configuration allows 147.93.9.170:3000</li>
+            <li>Verify CORS configuration allows localhost:3000</li>
           </ol>
         </CardContent>
       </Card>

@@ -63,7 +63,9 @@ export function Header() {
       setNotifications(data.notifications)
       setUnreadCount(data.unreadCount)
     } catch (err) {
-      console.error(err)
+      // Silently fail - notifications endpoint may not exist yet
+      setNotifications([])
+      setUnreadCount(0)
     }
   }
 
@@ -72,7 +74,7 @@ export function Header() {
       await apiClient.put(`/notifications/${id}/read`, {})
       loadNotifications()
     } catch (err) {
-      console.error(err)
+      // Silently fail
     }
   }
 
