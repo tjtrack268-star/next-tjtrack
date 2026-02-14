@@ -12,8 +12,8 @@ export const metadata: Metadata = {
   keywords: ["stock", "inventory", "ecommerce", "gestion", "marchand"],
   authors: [{ name: "TJ-Track" }],
   icons: {
-    icon: "/logo_tjtrack.jpg",
-    apple: "/logo_tjtrack.jpg",
+    icon: "/logo_tjtrack.png",
+    apple: "/logo_tjtrack.png",
   },
 }
 
