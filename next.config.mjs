@@ -35,6 +35,11 @@ const nextConfig = {
         source: '/api/proxy/:path*',
         destination: `${process.env.NEXT_PUBLIC_API_URL || 'https://api.tjtracks.com/api/v1.0'}/:path*`,
       },
+      // Rediriger les appels API directs vers le bon domaine
+      {
+        source: '/api/v1.0/:path*',
+        destination: `${process.env.NEXT_PUBLIC_API_URL || 'https://api.tjtracks.com/api/v1.0'}/:path*`,
+      },
     ]
   },
   // CORS headers

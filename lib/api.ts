@@ -19,7 +19,9 @@ class ApiClient {
   }
 
   private buildUrl(endpoint: string, params?: Record<string, string | number | boolean | undefined>): string {
-    const url = new URL(`${this.baseUrl}${endpoint}`)
+    // S'assurer que l'endpoint commence par /
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
+    const url = new URL(`${this.baseUrl}${cleanEndpoint}`)
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined) {
@@ -27,6 +29,7 @@ class ApiClient {
         }
       })
     }
+    console.log('🌐 URL construite:', url.toString())
     return url.toString()
   }
 
