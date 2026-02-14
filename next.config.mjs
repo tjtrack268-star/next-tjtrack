@@ -4,18 +4,14 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: false,
-    domains: ['api.tjtracks.com', 'tjtracks.com'],
+    unoptimized: true,
+    domains: ['localhost'], // Add your backend domain here
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'api.tjtracks.com',
-        pathname: '/api/v1.0/images/products/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'api.tjtracks.com',
-        pathname: '/api/v1.0/images/articles/**',
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '8080',
+        pathname: '/api/v1.0/images/**',
       },
       {
         protocol: 'http',
@@ -24,25 +20,17 @@ const nextConfig = {
         pathname: '/api/v1.0/images/**',
       },
     ],
-    minimumCacheTTL: 60,
-    dangerouslyAllowSVG: true,
-    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
   // API routes configuration
   async rewrites() {
     return [
       {
         source: '/api/proxy/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'https://api.tjtracks.com/api/v1.0'}/:path*`,
-      },
-      // Rediriger les appels API directs vers le bon domaine
-      {
-        source: '/api/v1.0/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'https://api.tjtracks.com/api/v1.0'}/:path*`,
+        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://147.93.9.170:8080/api/v1.0'}/:path*`,
       },
     ]
   },
-  // CORS headers
+  // CORS headers for development
   async headers() {
     return [
       {
@@ -51,12 +39,6 @@ const nextConfig = {
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS' },
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
-        ],
-      },
-      {
-        source: '/_next/static/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
     ]

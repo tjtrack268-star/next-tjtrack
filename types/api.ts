@@ -147,6 +147,7 @@ export interface ProduitEcommerceDto {
   nombreVues?: number
   nombreVentes?: number
   variants?: ProductVariantDto[]
+  migrateImages?: boolean  // Flag pour créer le point de stockage article_produit
 }
 
 export interface ProductVariantDto {

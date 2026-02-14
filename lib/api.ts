@@ -1,6 +1,6 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tjtracks.com/api/v1.0"
 const API_TIMEOUT = parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000') // Réduit à 30s
-const IMAGE_TIMEOUT = 10000 // 10s pour les images
+const IMAGE_TIMEOUT = 30000 // 10s pour les images
 
 interface RequestConfig extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>
@@ -19,9 +19,7 @@ class ApiClient {
   }
 
   private buildUrl(endpoint: string, params?: Record<string, string | number | boolean | undefined>): string {
-    // S'assurer que l'endpoint commence par /
-    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
-    const url = new URL(`${this.baseUrl}${cleanEndpoint}`)
+    const url = new URL(`${this.baseUrl}${endpoint}`)
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined) {
@@ -29,7 +27,6 @@ class ApiClient {
         }
       })
     }
-    console.log('🌐 URL construite:', url.toString())
     return url.toString()
   }
 
@@ -190,16 +187,6 @@ class ApiClient {
 
   async get<T>(endpoint: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
     return this.request<T>(endpoint, { method: "GET", params })
-  }
-
-  // Méthode spéciale pour vérifier l'existence d'une image
-  async checkImageExists(imageUrl: string): Promise<boolean> {
-    try {
-      const response = await fetch(imageUrl, { method: 'HEAD', signal: AbortSignal.timeout(5000) })
-      return response.ok
-    } catch {
-      return false
-    }
   }
 
   async post<T>(
