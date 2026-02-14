@@ -263,7 +263,8 @@ export default function MerchantStockPage() {
           quantite: parseInt(productData.quantiteEnLigne) || 0,
           quantiteEnLigne: parseInt(productData.quantiteEnLigne) || 0,
           categorieId: (article.categorieId as number) || 1,
-          visibleEnLigne: productData.visibleEnLigne
+          visibleEnLigne: productData.visibleEnLigne,
+          migrateImages: true // Créer le point de stockage article_produit
         },
         images: imagesToUpload,
         merchantUserId: user?.email || ""
