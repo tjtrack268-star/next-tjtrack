@@ -10,7 +10,12 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'api.tjtracks.com',
-        pathname: '/api/v1.0/images/**',
+        pathname: '/api/v1.0/images/products/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'api.tjtracks.com',
+        pathname: '/api/v1.0/images/articles/**',
       },
       {
         protocol: 'http',
