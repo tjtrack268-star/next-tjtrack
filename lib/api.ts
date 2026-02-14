@@ -189,6 +189,16 @@ class ApiClient {
     return this.request<T>(endpoint, { method: "GET", params })
   }
 
+  // Méthode spéciale pour vérifier l'existence d'une image
+  async checkImageExists(imageUrl: string): Promise<boolean> {
+    try {
+      const response = await fetch(imageUrl, { method: 'HEAD', signal: AbortSignal.timeout(5000) })
+      return response.ok
+    } catch {
+      return false
+    }
+  }
+
   async post<T>(
     endpoint: string,
     data?: unknown,

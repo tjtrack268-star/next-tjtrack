@@ -10,6 +10,7 @@ interface OptimizedImageProps {
   height?: number
   className?: string
   fallback?: string
+  productId?: string // Pour gérer les sources multiples
 }
 
 export default function OptimizedImage({ 
@@ -18,15 +19,38 @@ export default function OptimizedImage({
   width = 300, 
   height = 300, 
   className = '',
-  fallback = '/placeholder.svg'
+  fallback = '/placeholder.svg',
+  productId
 }: OptimizedImageProps) {
   const [imgSrc, setImgSrc] = useState(src)
   const [isLoading, setIsLoading] = useState(true)
-  const [hasError, setHasError] = useState(false)
+  const [attemptCount, setAttemptCount] = useState(0)
+
+  // Sources alternatives pour les images
+  const getAlternativeSources = (originalSrc: string, id?: string) => {
+    if (!id) return []
+    
+    const sources = []
+    
+    // Si c'est une image produit, essayer articles
+    if (originalSrc.includes('/products/')) {
+      sources.push(originalSrc.replace('/products/', '/articles/'))
+    }
+    // Si c'est une image article, essayer produits
+    else if (originalSrc.includes('/articles/')) {
+      sources.push(originalSrc.replace('/articles/', '/products/'))
+    }
+    
+    return sources
+  }
 
   const handleError = () => {
-    if (!hasError) {
-      setHasError(true)
+    const alternatives = getAlternativeSources(src, productId)
+    
+    if (attemptCount < alternatives.length) {
+      setAttemptCount(prev => prev + 1)
+      setImgSrc(alternatives[attemptCount])
+    } else {
       setImgSrc(fallback)
     }
   }
@@ -50,7 +74,7 @@ export default function OptimizedImage({
         onLoad={handleLoad}
         priority={false}
         loading="lazy"
-        unoptimized={hasError}
+        unoptimized={imgSrc === fallback}
       />
     </div>
   )
