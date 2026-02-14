@@ -1,5 +1,6 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tjtracks.com/api/v1.0"
-const API_TIMEOUT = parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '60000')
+const API_TIMEOUT = parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000') // Réduit à 30s
+const IMAGE_TIMEOUT = 10000 // 10s pour les images
 
 interface RequestConfig extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>
@@ -51,6 +52,10 @@ class ApiClient {
     const url = this.buildUrl(endpoint, params)
 
     const headers: HeadersInit = {
+      'Cache-Control': 'no-cache',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       ...config.headers,
     }
 
@@ -75,10 +80,13 @@ class ApiClient {
     }
 
     const controller = new AbortController()
+    const isImageRequest = endpoint.includes('/images/')
+    const timeout = isImageRequest ? IMAGE_TIMEOUT : API_TIMEOUT
+    
     const timeoutId = setTimeout(() => {
-      console.warn(`Request timeout for ${endpoint} after ${API_TIMEOUT}ms`)
+      console.warn(`Request timeout for ${endpoint} after ${timeout}ms`)
       controller.abort()
-    }, API_TIMEOUT)
+    }, timeout)
 
     try {
       const startTime = performance.now()
