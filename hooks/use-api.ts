@@ -33,6 +33,10 @@ import type {
   ProduitEcommerceDto,
   LigneCommandeFournisseur,
   LigneCommandeClient,
+  PayoutOverview,
+  PayoutTransaction,
+  PayoutConfig,
+  UpdatePayoutConfigRequest,
 } from "@/types/api"
 
 // Query Keys
@@ -79,6 +83,9 @@ export const queryKeys = {
   commandeFournisseurLignes: (id: number) => ["commandeFournisseurLignes", id] as const,
   mouvementsByArticle: (articleId: number) => ["mouvements", "article", articleId] as const,
   mouvementsByPeriode: (debut: string, fin: string) => ["mouvements", "periode", debut, fin] as const,
+  payoutOverview: ["payoutOverview"] as const,
+  payoutTransactions: ["payoutTransactions"] as const,
+  payoutConfig: ["payoutConfig"] as const,
 }
 
 interface CatalogueParams {
@@ -246,6 +253,7 @@ export function useCreerCommande() {
         pays?: string
       }
       modePaiement?: string
+      fraisLivraison?: number
     }) => apiClient.post<ApiResponse<Commande>>("/commandes/creer", data, { userId: data.userId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["commandes"] })
@@ -1113,7 +1121,7 @@ export function useAjouterProduitMerchant() {
       merchantUserId: string
     }) => {
       const token = localStorage.getItem("tj-track-token")
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://147.93.9.170:8080/api/v1.0"
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tjtracks.com/api/v1.0"
       const formData = new FormData()
       
       // Ajouter chaque champ du DTO séparément
@@ -1279,7 +1287,7 @@ export function useAjouterArticleMerchantAvecImage() {
       userId: string
     }) => {
       const token = localStorage.getItem("tj-track-token")
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://147.93.9.170:8080/api/v1.0"
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tjtracks.com/api/v1.0"
       const formData = new FormData()
       
       // Ajouter les champs de l'article
@@ -1523,6 +1531,66 @@ export function useSystemAlerts() {
       priority: 'high' | 'medium' | 'low'
       time: string
     }>>("/admin/alerts"),
+  })
+}
+
+export function usePayoutOverview() {
+  return useQuery({
+    queryKey: queryKeys.payoutOverview,
+    queryFn: () => apiClient.get<PayoutOverview>("/admin/payouts/overview"),
+  })
+}
+
+export function usePayoutTransactions() {
+  return useQuery({
+    queryKey: queryKeys.payoutTransactions,
+    queryFn: () => apiClient.get<PayoutTransaction[]>("/admin/payouts/transactions"),
+  })
+}
+
+export function useProcessPendingPayouts() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (limit: number = 50) => apiClient.post<{ processed: number; limit: number }>(`/admin/payouts/process-pending?limit=${limit}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.payoutOverview })
+      queryClient.invalidateQueries({ queryKey: queryKeys.payoutTransactions })
+    },
+  })
+}
+
+export function useRetryPayout() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => apiClient.post<PayoutTransaction>(`/admin/payouts/retry/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.payoutOverview })
+      queryClient.invalidateQueries({ queryKey: queryKeys.payoutTransactions })
+    },
+  })
+}
+
+export function usePayoutConfig() {
+  return useQuery({
+    queryKey: queryKeys.payoutConfig,
+    queryFn: () => apiClient.get<PayoutConfig>("/admin/payout-config"),
+  })
+}
+
+export function useUpdatePayoutConfig() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ data, updatedBy }: { data: UpdatePayoutConfigRequest; updatedBy?: string }) =>
+      apiClient.put<{ message: string }>(`/admin/payout-config?updatedBy=${encodeURIComponent(updatedBy || "admin")}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.payoutConfig })
+    },
+  })
+}
+
+export function useTestCinetPayConnection() {
+  return useMutation({
+    mutationFn: () => apiClient.post<{ success: boolean; message: string }>("/admin/payout-config/test-cinetpay"),
   })
 }
 

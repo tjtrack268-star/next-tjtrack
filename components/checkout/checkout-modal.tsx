@@ -13,11 +13,16 @@ import { useCart } from "@/contexts/cart-context"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { useCreerCommande } from "@/hooks/use-api"
+import { apiClient } from "@/lib/api"
 import { CreditCard, DollarSign, Loader2 } from "lucide-react"
 
 interface CheckoutModalProps {
   isOpen: boolean
   onClose: () => void
+}
+
+interface DeliveryQuoteResponse {
+  coutLivraison?: number
 }
 
 export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
@@ -56,6 +61,8 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [shippingCost, setShippingCost] = useState(0)
+  const [isShippingLoading, setIsShippingLoading] = useState(false)
 
   const CAMEROON_CITIES = [
     "Douala",
@@ -97,8 +104,42 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
     }
   }
 
-  const shippingCost = totalAmount > 50000 ? 0 : 2500
   const finalTotal = totalAmount + shippingCost
+
+  useEffect(() => {
+    if (!formData.city) return
+
+    let isCancelled = false
+    const fallbackShipping = totalAmount > 50000 ? 0 : 2500
+
+    const runQuote = async () => {
+      setIsShippingLoading(true)
+      try {
+        const quote = await apiClient.post<DeliveryQuoteResponse>("/delivery/tarifs/quote", {
+          villeArrivee: formData.city,
+          quartierArrivee: formData.address || undefined,
+          articleIds: items.map(item => item.articleId).filter((id): id is number => typeof id === "number"),
+          typeLivraison: "STANDARD",
+          montantCommande: totalAmount,
+        })
+        if (isCancelled) return
+        const quoteCost = Number(quote?.coutLivraison)
+        setShippingCost(Number.isFinite(quoteCost) && quoteCost >= 0 ? quoteCost : fallbackShipping)
+      } catch {
+        if (isCancelled) return
+        setShippingCost(fallbackShipping)
+      } finally {
+        if (!isCancelled) {
+          setIsShippingLoading(false)
+        }
+      }
+    }
+
+    runQuote()
+    return () => {
+      isCancelled = true
+    }
+  }, [formData.address, formData.city, items, totalAmount])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -136,7 +177,8 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
             codePostal: formData.postalCode,
             pays: "Cameroun"
           },
-          modePaiement: formData.paymentMethod
+          modePaiement: formData.paymentMethod,
+          fraisLivraison: shippingCost
         }
         
         console.log('📦 Données commande envoyées:', JSON.stringify(commandeData, null, 2))
@@ -183,7 +225,9 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
               ville: formData.city,
               codePostal: formData.postalCode,
               pays: "Cameroun"
-            }
+            },
+            modePaiement: formData.paymentMethod,
+            fraisLivraison: shippingCost
           })
         })
 
@@ -407,7 +451,11 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Livraison</span>
                   <span className={shippingCost === 0 ? "text-green-500 font-medium" : ""}>
-                    {shippingCost === 0 ? "Gratuite" : `${shippingCost.toLocaleString()} FCFA`}
+                    {isShippingLoading
+                      ? "Calcul..."
+                      : shippingCost === 0
+                        ? "Gratuite"
+                        : `${shippingCost.toLocaleString()} FCFA`}
                   </span>
                 </div>
               </div>

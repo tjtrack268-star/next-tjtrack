@@ -28,26 +28,29 @@ export function PaymentMethodSelector({ orderId, amount, onSuccess }: PaymentMet
       let payment
       
       if (paymentMethod === "VISA") {
-        payment = await apiClient.post("/payments/visa", {
+        payment = await apiClient.post<{ checkoutUrl: string }>("/payments/visa", {
           orderId,
           amount,
           currency: "XAF"
         })
-        toast({ title: "Redirection vers Stripe..." })
+        window.location.href = payment.checkoutUrl
+        return
       } else if (paymentMethod === "ORANGE_MONEY") {
-        payment = await apiClient.post("/payments/orange-money", {
+        payment = await apiClient.post<{ paymentUrl: string }>("/payments/orange-money", {
           orderId,
           amount,
           phoneNumber
         })
-        toast({ title: "Paiement initié", description: "Composez #150# pour valider" })
+        window.location.href = payment.paymentUrl
+        return
       } else if (paymentMethod === "MTN_MONEY") {
-        payment = await apiClient.post("/payments/mtn-money", {
+        payment = await apiClient.post<{ paymentUrl: string }>("/payments/mtn-money", {
           orderId,
           amount,
           phoneNumber
         })
-        toast({ title: "Paiement initié", description: "Composez *126# pour valider" })
+        window.location.href = payment.paymentUrl
+        return
       }
       
       onSuccess?.(payment)

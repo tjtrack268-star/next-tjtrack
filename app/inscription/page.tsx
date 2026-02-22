@@ -248,7 +248,7 @@ export default function InscriptionPage() {
 
   const uploadDocuments = async () => {
     try {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://147.93.9.170:8080/api/v1.0"
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tjtracks.com/api/v1.0"
       const token = localStorage.getItem("tj-track-token")
       
       if (!token) {
