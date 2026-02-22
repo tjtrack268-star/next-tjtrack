@@ -27,6 +27,7 @@ import {
   Globe,
   Menu,
   X,
+  Banknote,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -73,6 +74,7 @@ const getMenuItems = (role?: string, badges?: any) => {
         items: [
           { name: "Produits", href: "/dashboard/admin/produits", icon: Package },
           { name: "Commandes", href: "/dashboard/admin/commandes", icon: ShoppingBag },
+          { name: "Payouts", href: "/dashboard/admin/payouts", icon: Banknote },
           { name: "Promotions", href: "/dashboard/admin/promotions", icon: Percent },
           { name: "Tarifs Livraison", href: "/dashboard/admin/tarifs-livraison", icon: Truck },
         ],
@@ -111,8 +113,10 @@ const getMenuItems = (role?: string, badges?: any) => {
       },
       {
         title: "Configuration",
-        href: "/dashboard/parametres",
-        icon: Settings,
+        items: [
+          { name: "Paramètres", href: "/dashboard/parametres", icon: Settings },
+          { name: "Config Payout", href: "/dashboard/admin/payout-config", icon: Banknote },
+        ],
       },
     ]
   }

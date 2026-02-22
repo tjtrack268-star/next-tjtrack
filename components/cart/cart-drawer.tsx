@@ -24,8 +24,7 @@ export function CartDrawer({ onCheckout }: CartDrawerProps) {
     useCart()
   const { isAuthenticated } = useAuth()
 
-  const shippingCost = totalAmount > 50000 ? 0 : 2500
-  const finalTotal = totalAmount + shippingCost
+  const finalTotal = totalAmount
 
   return (
     <Sheet open={isOpen} onOpenChange={closeCart}>
@@ -151,19 +150,16 @@ export function CartDrawer({ onCheckout }: CartDrawerProps) {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Livraison</span>
-                  <span className={cn(shippingCost === 0 && "text-green-500 font-medium")}>
-                    {shippingCost === 0 ? "Gratuite" : `${shippingCost.toLocaleString()} FCFA`}
+                  <span className="text-muted-foreground">
+                    Calculée à la caisse
                   </span>
                 </div>
-                {shippingCost > 0 && (
-                  <p className="text-xs text-muted-foreground">Livraison gratuite à partir de 50 000 FCFA</p>
-                )}
               </div>
 
               <Separator />
 
               <div className="flex justify-between text-lg font-bold">
-                <span>Total</span>
+                <span>Total articles</span>
                 <span className="text-primary">{finalTotal.toLocaleString()} FCFA</span>
               </div>
 

@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://147.93.9.170:8080/api/v1.0" || "https://api.tjtracks.com/api/v1.0"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tjtracks.com/api/v1.0"
 
 export interface Ville {
   id: number

@@ -10,7 +10,7 @@ import { useCommandesMerchant } from '@/hooks/use-api'
 import { useAuth } from '@/contexts/auth-context'
 import DualDeliveryAssignment from '@/components/delivery/DualDeliveryAssignment'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://147.93.9.170:8080/api/v1.0"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tjtracks.com/api/v1.0"
 
 function DeliveryAssignmentComponent({ commandeId, onAssigned }: { commandeId: number, onAssigned: (result: any) => void }) {
   const [livreurs, setLivreurs] = useState<any[]>([])

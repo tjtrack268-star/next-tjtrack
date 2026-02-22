@@ -80,7 +80,7 @@ export default function TestConnectionPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-2 text-sm">
-            <p><strong>API URL:</strong> {process.env.NEXT_PUBLIC_API_URL || "http://147.93.9.170:8080/api/v1.0"}</p>
+            <p><strong>API URL:</strong> {process.env.NEXT_PUBLIC_API_URL || "https://api.tjtracks.com/api/v1.0"}</p>
             <p><strong>Expected Backend:</strong> Spring Boot on port 8080</p>
             <p><strong>Expected Database:</strong> PostgreSQL on port 5432</p>
           </div>

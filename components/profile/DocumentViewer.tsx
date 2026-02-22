@@ -8,7 +8,7 @@ import { FileText, CheckCircle, XCircle, Clock, Eye } from "lucide-react"
 import { buildImageUrl } from "@/lib/image-utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://147.93.9.170:8080/api/v1.0"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tjtracks.com/api/v1.0"
 
 interface DocumentStatus {
   cniNumber?: string

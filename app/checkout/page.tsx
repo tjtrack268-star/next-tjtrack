@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Header } from "@/components/layout/header"
 import { ProductSidebar } from "@/components/layout/product-sidebar"
@@ -18,6 +17,13 @@ import { useCreerCommande } from "@/hooks/use-api"
 import { StaticLocationSelector } from "@/components/ui/static-location-selector"
 import { Truck, User, Mail, Phone, CreditCard, DollarSign, CheckCircle2, Loader2, ShieldCheck, Package } from "lucide-react"
 import { apiClient } from "@/lib/api"
+
+interface DeliveryQuoteResponse {
+  coutLivraison?: number
+  distanceKm?: number
+  delaiJours?: number
+  gratuit?: boolean
+}
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -62,11 +68,11 @@ export default function CheckoutPage() {
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
-
-  const CAMEROON_CITIES = [
-    "Douala", "Yaoundé", "Garoua", "Bamenda", "Limbe",
-    "Kumba", "Bafoussam", "Buea", "Foumban", "Ebolowa",
-  ]
+  const [shippingCost, setShippingCost] = useState(0)
+  const [shippingDistanceKm, setShippingDistanceKm] = useState<number | null>(null)
+  const [shippingDelayDays, setShippingDelayDays] = useState<number | null>(null)
+  const [isShippingLoading, setIsShippingLoading] = useState(false)
+  const [shippingError, setShippingError] = useState<string | null>(null)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -93,8 +99,52 @@ export default function CheckoutPage() {
     }
   }
 
-  const shippingCost = totalAmount > 50000 ? 0 : 2500
   const finalTotal = totalAmount + shippingCost
+
+  useEffect(() => {
+    if (!formData.city) return
+
+    let isCancelled = false
+    const fallbackShipping = totalAmount > 50000 ? 0 : 2500
+
+    const runQuote = async () => {
+      setIsShippingLoading(true)
+      setShippingError(null)
+      try {
+        const quote = await apiClient.post<DeliveryQuoteResponse>("/delivery/tarifs/quote", {
+          villeArrivee: formData.city,
+          quartierArrivee: formData.address || undefined,
+          articleIds: items.map(item => item.articleId).filter((id): id is number => typeof id === "number"),
+          typeLivraison: "STANDARD",
+          montantCommande: totalAmount,
+        })
+
+        if (isCancelled) return
+
+        const quoteCost = Number(quote?.coutLivraison)
+        const resolvedCost = Number.isFinite(quoteCost) && quoteCost >= 0 ? quoteCost : fallbackShipping
+        setShippingCost(resolvedCost)
+        setShippingDistanceKm(typeof quote?.distanceKm === "number" ? quote.distanceKm : null)
+        setShippingDelayDays(typeof quote?.delaiJours === "number" ? quote.delaiJours : null)
+      } catch (error) {
+        if (isCancelled) return
+        console.warn("Erreur calcul livraison, fallback appliqué", error)
+        setShippingError("Tarif estimé (calcul exact indisponible)")
+        setShippingCost(fallbackShipping)
+        setShippingDistanceKm(null)
+        setShippingDelayDays(null)
+      } finally {
+        if (!isCancelled) {
+          setIsShippingLoading(false)
+        }
+      }
+    }
+
+    runQuote()
+    return () => {
+      isCancelled = true
+    }
+  }, [formData.address, formData.city, items, totalAmount])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -147,7 +197,8 @@ export default function CheckoutPage() {
             codePostal: formData.postalCode,
             pays: "Cameroun"
           },
-          modePaiement: formData.paymentMethod
+          modePaiement: formData.paymentMethod,
+          fraisLivraison: shippingCost
         }
         
         console.log('📦 Données commande envoyées:', JSON.stringify(commandeData, null, 2))
@@ -266,7 +317,8 @@ export default function CheckoutPage() {
               codePostal: formData.postalCode,
               pays: "Cameroun"
             },
-            modePaiement: formData.paymentMethod
+            modePaiement: formData.paymentMethod,
+            fraisLivraison: shippingCost
           })
         })
 
@@ -555,9 +607,19 @@ export default function CheckoutPage() {
                         Livraison
                       </span>
                       <span className={shippingCost === 0 ? "text-green-600 font-semibold" : "font-medium"}>
-                        {shippingCost === 0 ? "Gratuite" : `${shippingCost.toLocaleString()} FCFA`}
+                        {isShippingLoading
+                          ? "Calcul..."
+                          : shippingCost === 0
+                            ? "Gratuite"
+                            : `${shippingCost.toLocaleString()} FCFA`}
                       </span>
                     </div>
+                    {(shippingDistanceKm !== null || shippingDelayDays !== null || shippingError) && (
+                      <p className="text-xs text-muted-foreground">
+                        {shippingError ||
+                          `Distance: ${shippingDistanceKm ?? 0} km${shippingDelayDays !== null ? ` • Délai estimé: ${shippingDelayDays} j` : ""}`}
+                      </p>
+                    )}
                   </div>
 
                   {shippingCost > 0 && (

@@ -14,11 +14,6 @@ interface StaticLocationSelectorProps {
   disabled?: boolean
 }
 
-const villes = [
-  { id: 1, nom: "Yaoundé" },
-  { id: 2, nom: "Douala" }
-]
-
 export function StaticLocationSelector({
   selectedVille,
   selectedQuartier,
@@ -27,8 +22,21 @@ export function StaticLocationSelector({
   required = false,
   disabled = false
 }: StaticLocationSelectorProps) {
+  const [villes, setVilles] = useState<string[]>(["Yaoundé", "Douala"])
   const [quartiers, setQuartiers] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    apiClient.get<string[]>("/quartiers")
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setVilles(data)
+        }
+      })
+      .catch((error) => {
+        console.warn("Erreur chargement villes:", error)
+      })
+  }, [])
 
   useEffect(() => {
     if (selectedVille) {
@@ -68,8 +76,8 @@ export function StaticLocationSelector({
           </SelectTrigger>
           <SelectContent>
             {villes.map((ville) => (
-              <SelectItem key={ville.id} value={ville.nom}>
-                {ville.nom}
+              <SelectItem key={ville} value={ville}>
+                {ville}
               </SelectItem>
             ))}
           </SelectContent>
