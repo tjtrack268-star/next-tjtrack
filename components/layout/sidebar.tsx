@@ -66,6 +66,7 @@ const getMenuItems = (role?: string, badges?: any) => {
         items: [
           { name: "Utilisateurs", href: "/dashboard/admin/utilisateurs", icon: Users },
           { name: "Validations", href: "/dashboard/admin/validations", icon: ShieldCheck, badge: badges?.validations || 0 },
+          { name: "Validation campagnes", href: "/dashboard/admin/validation-campagnes", icon: Megaphone },
           { name: "Communication", href: "/dashboard/admin/communication", icon: MessageSquare, badge: badges?.communication || 0 },
         ],
       },

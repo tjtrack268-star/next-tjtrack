@@ -1410,6 +1410,28 @@ export function useIncrementerClics() {
   })
 }
 
+export function useAdminCampagnes(statut?: "EN_ATTENTE" | "ACTIVE" | "EXPIREE" | "SUSPENDUE" | "ANNULEE") {
+  return useQuery({
+    queryKey: ["adminCampagnes", statut || "ALL"],
+    queryFn: () =>
+      apiClient.get<ApiResponse<CampagnePublicitaire[]>>("/api/publicite/admin/campagnes", statut ? { statut } : undefined),
+  })
+}
+
+export function useUpdateCampagneStatutAdmin() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ campagneId, statut }: { campagneId: number; statut: "EN_ATTENTE" | "ACTIVE" | "EXPIREE" | "SUSPENDUE" | "ANNULEE" }) =>
+      apiClient.put<ApiResponse<CampagnePublicitaire>>(`/api/publicite/admin/campagnes/${campagneId}/statut`, undefined, { statut }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["adminCampagnes"] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.publiciteAdminDashboard("day") })
+      queryClient.invalidateQueries({ queryKey: queryKeys.publiciteAdminDashboard("week") })
+      queryClient.invalidateQueries({ queryKey: queryKeys.publiciteAdminDashboard("month") })
+    },
+  })
+}
+
 // Merchant Publicite
 export function useMesCampagnes(userId: string) {
   return useQuery({
