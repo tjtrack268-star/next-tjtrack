@@ -621,14 +621,14 @@ export default function HomePage() {
 
           <div className="pt-8 border-t border-white/20 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <Image
-                src="/logo-tjtracks.png"
-                alt="TJ-Track Logo"
-                width={48}
-                height={48}
-                className="rounded bg-white p-1 object-contain"
-              />
-              <span className="font-bold text-xl">TRACK</span>
+             <Image
+                           src="/logo-tjtracks.png"
+                           alt="TJ-Track Logo"
+                           width={150}
+                           height={150}
+                           className="rounded-lg object-contain"
+                         />
+              {/* <span className="font-bold text-xl">TRACK</span> */}
             </div>
             <div className="flex items-center gap-3 flex-wrap">
               <div className="h-8 w-12 bg-white rounded flex items-center justify-center">
