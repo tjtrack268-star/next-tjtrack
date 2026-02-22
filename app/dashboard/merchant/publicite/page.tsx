@@ -68,8 +68,9 @@ export default function MerchantPublicitePage() {
   const { toast } = useToast()
   const { user } = useAuth()
 
-  const { data: campaignsResponse, isLoading, error, refetch } = useMesCampagnes(user?.id || user?.email || "")
-  const { data: productsResponse } = useMerchantProduits(user?.id || user?.email || "")
+  const currentUserRef = user?.userId || user?.id || user?.email || ""
+  const { data: campaignsResponse, isLoading, error, refetch } = useMesCampagnes(currentUserRef)
+  const { data: productsResponse } = useMerchantProduits(currentUserRef)
   const { data: tarifResponse } = useMerchantCalculerTarif(selectedType, selectedPeriod)
   const createCampaignMutation = useCreerCampagne()
 
@@ -84,14 +85,25 @@ export default function MerchantPublicitePage() {
 
   const handleCreateCampaign = async () => {
     if (!selectedProduct || !selectedType) return
+    const montantPaye = Number(tarif) || 0
+    if (montantPaye <= 0) {
+      toast({
+        title: "Tarif indisponible",
+        description: "Impossible de calculer le montant de la campagne",
+        variant: "destructive",
+      })
+      return
+    }
 
     try {
       await createCampaignMutation.mutateAsync({
-        userId: user?.id || user?.email || "",
+        userId: currentUserRef,
         data: {
           produitId: Number(selectedProduct),
-          typeMiseEnAvant: selectedType,
-          periode: selectedPeriod,
+          typeCampagne: selectedType as "MISE_EN_AVANT_SIMPLE" | "MISE_EN_AVANT_PREMIUM" | "BANNIERE_PRINCIPALE" | "CARROUSEL_ACCUEIL",
+          periodeTarification: selectedPeriod as "JOUR" | "SEMAINE" | "MOIS",
+          modePaiement: "ESPECES",
+          montantPaye,
         },
       })
       toast({
