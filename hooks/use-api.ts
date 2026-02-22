@@ -838,11 +838,18 @@ export function useCommandesLivreur(livreurEmail: string) {
   return useQuery({
     queryKey: ["commandesLivreur", livreurEmail],
     queryFn: async () => {
-      const response = await apiClient.get<ApiResponse<any[]>>("/commandes/livreur")
+      const response = await apiClient.get<ApiResponse<any[]>>("/commandes/livreur", { livreurEmail })
       console.log('Livreur orders API response:', JSON.stringify(response, null, 2))
       return response
     },
     enabled: !!livreurEmail,
+  })
+}
+
+export function useCommandesAll() {
+  return useQuery({
+    queryKey: ["commandes"],
+    queryFn: () => apiClient.get<Commande[]>("/commandes"),
   })
 }
 

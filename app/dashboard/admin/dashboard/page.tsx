@@ -17,7 +17,7 @@ import {
 } from "lucide-react"
 import { AdminGuard } from "@/components/admin-guard"
 import { 
-  useDashboardStats, useAllUsers, useCommandesClient, useMerchantProduits,
+  useDashboardStats, useAllUsers, useCommandesAll, useMerchantProduits,
   useEcommerceStats, useStockStats, useSystemAlerts, useRevenueAnalytics,
   useTopProducts, useOrderAnalytics
 } from "@/hooks/use-api"
@@ -39,7 +39,7 @@ export default function AdminDashboardPage() {
   
   const { data: dashboardStats, isLoading: statsLoading } = useDashboardStats()
   const { data: usersData } = useAllUsers({ page: 1, limit: 1000 })
-  const { data: ordersData } = useCommandesClient()
+  const { data: ordersData } = useCommandesAll()
   const { data: ecommerceStats } = useEcommerceStats()
   const { data: stockStats } = useStockStats()
   const { data: systemAlerts } = useSystemAlerts()

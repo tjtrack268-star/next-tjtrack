@@ -89,7 +89,7 @@ export default function CommandesPage() {
   const itemsPerPage = 10
 
   const { user } = useAuth()
-  const { data: commandesResponse, isLoading, error, refetch } = useCommandesMerchant(user?.userId || "")
+  const { data: commandesResponse, isLoading, error, refetch } = useCommandesMerchant(user?.userId || user?.email || "")
   const deleteCommandeMutation = useDeleteCommandeClient()
   const expedierCommandeMutation = useExpedierCommande()
   const updateStatusMutation = useUpdateCommandeStatus()

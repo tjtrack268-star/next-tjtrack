@@ -44,7 +44,7 @@ export default function StatistiquesPage() {
   const { user } = useAuth()
   const { data: ecommerceStats, isLoading: isLoadingEcommerce, error: errorEcommerce, refetch: refetchEcommerce } = useEcommerceStats()
   const { data: stockStats, isLoading: isLoadingStock, error: errorStock, refetch: refetchStock } = useStockStats()
-  const { data: commandesResponse, isLoading: isLoadingCommandes } = useCommandesMerchant(user?.userId || "")
+  const { data: commandesResponse, isLoading: isLoadingCommandes } = useCommandesMerchant(user?.userId || user?.email || "")
 
   const isLoading = isLoadingEcommerce || isLoadingStock || isLoadingCommandes
   const error = errorEcommerce || errorStock
