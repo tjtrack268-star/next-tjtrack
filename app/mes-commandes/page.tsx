@@ -26,12 +26,14 @@ import { apiClient } from "@/lib/api"
 import type { Commande } from "@/types/api"
 
 function useUserOrders() {
+  const { user } = useAuth()
   return useQuery({
-    queryKey: ["userOrders"],
+    queryKey: ["userOrders", user?.email || user?.userId],
     queryFn: async () => {
-      const response = await apiClient.get("/commandes/client") as any
+      const response = await apiClient.get("/commandes/client", (user?.email || user?.userId) ? { userId: user?.email || user?.userId } : undefined) as any
       return Array.isArray(response) ? response : (response.data || [])
     },
+    enabled: !!(user?.email || user?.userId),
   })
 }
 
@@ -53,7 +55,6 @@ const paymentStatusConfig = {
 }
 
 export default function MyOrdersPage() {
-  const { user } = useAuth()
   const { toast } = useToast()
   const { data: orders, isLoading, error, refetch } = useUserOrders()
   const [selectedTab, setSelectedTab] = useState("all")
@@ -102,7 +103,7 @@ export default function MyOrdersPage() {
 
   const handleConfirmDelivery = async (orderId: number) => {
     try {
-      await apiClient.put(`/commandes/livraisons/${orderId}/confirmer-reception`)
+      await apiClient.put(`/commandes/${orderId}/confirmer-reception`)
       toast({
         title: "Livraison confirmée",
         description: "Merci d'avoir confirmé la réception de votre commande",

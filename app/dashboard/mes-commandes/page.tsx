@@ -21,14 +21,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Spinner } from "@/components/ui/spinner"
 import { useToast } from "@/hooks/use-toast"
 import { apiClient } from "@/lib/api"
+import { useAuth } from "@/contexts/auth-context"
 
-function useUserOrders() {
+function useUserOrders(userId?: string) {
   return useQuery({
-    queryKey: ["userOrders"],
+    queryKey: ["userOrders", userId],
     queryFn: async () => {
-      const response = await apiClient.get("/commandes/client") as any
+      const response = await apiClient.get("/commandes/client", userId ? { userId } : undefined) as any
       return Array.isArray(response) ? response : (response.data || [])
     },
+    enabled: !!userId,
   })
 }
 
@@ -50,8 +52,9 @@ const paymentStatusConfig = {
 }
 
 export default function MyOrdersPage() {
+  const { user } = useAuth()
   const { toast } = useToast()
-  const { data: orders, isLoading, error, refetch } = useUserOrders()
+  const { data: orders, isLoading, error, refetch } = useUserOrders(user?.email || user?.userId)
   const [selectedTab, setSelectedTab] = useState("all")
 
   const formatPrice = (price: number) => new Intl.NumberFormat("fr-FR").format(price) + " XAF"
@@ -95,7 +98,7 @@ export default function MyOrdersPage() {
 
   const handleConfirmDelivery = async (orderId: number) => {
     try {
-      await apiClient.put(`/commandes/livraisons/${orderId}/confirmer-reception`)
+      await apiClient.put(`/commandes/${orderId}/confirmer-reception`)
       toast({
         title: "Livraison confirmée",
         description: "Merci d'avoir confirmé la réception de votre commande",
