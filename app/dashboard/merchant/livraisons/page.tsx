@@ -298,7 +298,7 @@ export default function LivraisonsPage() {
   const [assignedDelivery, setAssignedDelivery] = useState<any>(null)
 
   const { user } = useAuth()
-  const { data: commandesResponse, isLoading, error, refetch } = useCommandesMerchant(user?.userId || "")
+  const { data: commandesResponse, isLoading, error, refetch } = useCommandesMerchant(user?.userId || user?.email || "")
   const commandesData = Array.isArray(commandesResponse?.data) ? commandesResponse.data : []
 
   // Filtrer et mapper les commandes comme dans la page Commandes Clients

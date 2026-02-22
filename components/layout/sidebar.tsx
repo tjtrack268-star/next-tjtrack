@@ -360,7 +360,11 @@ export function MobileSidebarToggle() {
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="lg:hidden fixed top-4 left-4 z-50 bg-background/80 backdrop-blur-sm border shadow-sm">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="lg:hidden fixed top-4 left-4 z-[70] bg-background/90 backdrop-blur-sm border shadow-sm pointer-events-auto"
+        >
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
