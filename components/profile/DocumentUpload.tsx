@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Upload, CheckCircle, AlertCircle, FileText } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://147.93.9.170:8080/api/v1.0"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tjtracks.com/api/v1.0"
 
 interface DocumentUploadProps {
   userEmail: string

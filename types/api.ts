@@ -571,3 +571,62 @@ export interface CampagneRequest {
   modePaiement: "CARTE_BANCAIRE" | "PAYPAL" | "VIREMENT" | "ESPECES" | "MOBILE_MONEY" | "CHEQUE"
   montantPaye: number
 }
+
+export interface PayoutTransaction {
+  id: number
+  paymentId: number
+  orderId: string
+  beneficiaryType: "MERCHANT" | "DELIVERY" | "ADMIN"
+  beneficiaryKey: string
+  beneficiaryName?: string
+  phoneNumber?: string
+  amount: number
+  currency: string
+  provider: "ORANGE_MONEY" | "MTN_MONEY" | "WALLET" | "BANK"
+  status: "PENDING" | "PROCESSING" | "SUCCESS" | "FAILED"
+  externalReference?: string
+  externalTransactionId?: string
+  responsePayload?: string
+  errorMessage?: string
+  attemptCount?: number
+  processedAt?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface PayoutOverview {
+  pendingCount: number
+  successCount: number
+  failedCount: number
+  pendingAmount: number
+  successAmount: number
+  recentTransactions: PayoutTransaction[]
+}
+
+export interface PayoutConfig {
+  provider: string
+  realEnabled: boolean
+  autoProcessOnDistribution: boolean
+  adminName: string
+  adminPhone: string
+  cinetpayTransferBaseUrl: string
+  cinetpayTransferLang: string
+  cinetpayTransferNotifyUrl: string
+  cinetpayApiKeyMasked: string
+  cinetpayTransferPasswordMasked: string
+  hasCinetpayApiKey: boolean
+  hasCinetpayTransferPassword: boolean
+}
+
+export interface UpdatePayoutConfigRequest {
+  provider: string
+  realEnabled: boolean
+  autoProcessOnDistribution: boolean
+  adminName: string
+  adminPhone: string
+  cinetpayTransferBaseUrl: string
+  cinetpayTransferLang: string
+  cinetpayTransferNotifyUrl: string
+  cinetpayApiKey?: string
+  cinetpayTransferPassword?: string
+}

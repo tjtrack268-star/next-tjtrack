@@ -1,5 +1,5 @@
 export async function testBackendConnection() {
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://147.93.9.170:8080/api/v1.0"
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tjtracks.com/api/v1.0"
   
   try {
     console.log('Testing connection to:', API_BASE_URL)
@@ -36,7 +36,7 @@ export async function testBackendConnection() {
 }
 
 export async function testDatabaseConnection() {
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://147.93.9.170:8080/api/v1.0" || "https://api.tjtracks.com/api/v1.0"
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tjtracks.com/api/v1.0"
   
   try {
     // Test an endpoint that requires database access
