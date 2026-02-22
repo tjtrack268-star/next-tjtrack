@@ -88,11 +88,11 @@ export function Header() {
             <Image
               src="/logo-tjtracks.png"
               alt="TJ-Track Logo"
-              width={48}
-              height={48}
+              width={150}
+              height={150}
               className="rounded-lg object-contain"
             />
-            <span className="text-xl font-bold text-gradient">Track</span>
+            {/* <span className="text-xl font-bold text-gradient">Track</span> */}
           </Link>
 
           {/* Search Bar */}
