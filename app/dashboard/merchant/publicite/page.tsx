@@ -355,7 +355,18 @@ export default function MerchantPublicitePage() {
                         {typeInfo && <typeInfo.icon className={`h-5 w-5 ${typeInfo.color}`} />}
                       </div>
                       <div>
-                        <p className="font-medium">{campaign.produit || campaign.produitNom || "Produit"}</p>
+                        <p className="font-medium">
+                          {(() => {
+                            const p = campaign.produit
+                            if (typeof p === "string" && p.trim()) return p
+                            if (p && typeof p === "object") {
+                              const produit = p as { nom?: string; article?: { designation?: string } }
+                              if (produit.nom && produit.nom.trim()) return produit.nom
+                              if (produit.article?.designation && produit.article.designation.trim()) return produit.article.designation
+                            }
+                            return campaign.produitNom || "Produit"
+                          })()}
+                        </p>
                         <p className="text-sm text-muted-foreground">{typeInfo?.name || "Campagne"}</p>
                       </div>
                     </div>
