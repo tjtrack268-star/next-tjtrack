@@ -622,7 +622,7 @@ export default function HomePage() {
           <div className="pt-8 border-t border-white/20 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <Image
-                src="/logo_tjtrack.png"
+                src="/logo-tjtracks.png"
                 alt="TJ-Track Logo"
                 width={48}
                 height={48}
