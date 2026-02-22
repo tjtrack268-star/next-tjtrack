@@ -25,7 +25,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<ProfileResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Check for existing session on mount
   useEffect(() => {
     const token = localStorage.getItem("tj-track-token")
     const savedUser = localStorage.getItem("tj-track-user")
