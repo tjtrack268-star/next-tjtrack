@@ -766,6 +766,17 @@ export default function InscriptionPage() {
                 Se connecter
               </Link>
             </p>
+            <p className="text-xs text-muted-foreground text-center leading-relaxed">
+              En créant un compte, vous acceptez nos{" "}
+              <Link href="/conditions-utilisation" className="text-primary hover:underline">
+                Conditions d&apos;utilisation
+              </Link>{" "}
+              et notre{" "}
+              <Link href="/politique-confidentialite" className="text-primary hover:underline">
+                Politique de confidentialité
+              </Link>
+              .
+            </p>
           </CardFooter>
         </Card>
       </main>
