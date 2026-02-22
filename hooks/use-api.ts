@@ -1425,9 +1425,8 @@ export function useUpdateCampagneStatutAdmin() {
       apiClient.put<ApiResponse<CampagnePublicitaire>>(`/api/publicite/admin/campagnes/${campagneId}/statut`, undefined, { statut }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminCampagnes"] })
-      queryClient.invalidateQueries({ queryKey: queryKeys.publiciteAdminDashboard("day") })
-      queryClient.invalidateQueries({ queryKey: queryKeys.publiciteAdminDashboard("week") })
-      queryClient.invalidateQueries({ queryKey: queryKeys.publiciteAdminDashboard("month") })
+      queryClient.invalidateQueries({ queryKey: ["publiciteAdminDashboard"] })
+      queryClient.invalidateQueries({ queryKey: ["campagnes"] })
     },
   })
 }
