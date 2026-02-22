@@ -145,6 +145,17 @@ export default function ConnexionPage() {
                   Créer un compte
                 </Link>
               </p>
+              <p className="text-xs text-muted-foreground text-center leading-relaxed">
+                En continuant, vous acceptez nos{" "}
+                <Link href="/conditions-utilisation" className="text-primary hover:underline">
+                  Conditions d&apos;utilisation
+                </Link>{" "}
+                et notre{" "}
+                <Link href="/politique-confidentialite" className="text-primary hover:underline">
+                  Politique de confidentialité
+                </Link>
+                .
+              </p>
             </CardFooter>
           </form>
         </Card>

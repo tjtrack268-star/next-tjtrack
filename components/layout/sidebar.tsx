@@ -39,6 +39,30 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import { safeUserName, safeUserRole } from "@/lib/safe-render"
 import { useSidebarBadges } from "@/hooks/use-sidebar-badges"
 
+type AppRole = "ADMIN" | "COMMERCANT" | "LIVREUR" | "FOURNISSEUR" | "CLIENT"
+
+function normalizeRole(role?: string): AppRole {
+  const normalized = String(role || "")
+    .trim()
+    .toUpperCase()
+    .replace(/^ROLE_/, "")
+
+  if (normalized === "ADMIN" || normalized === "MANAGER") return "ADMIN"
+  if (normalized === "COMMERCANT" || normalized === "MERCHANT") return "COMMERCANT"
+  if (normalized === "LIVREUR" || normalized === "DELIVERY") return "LIVREUR"
+  if (normalized === "FOURNISSEUR" || normalized === "SUPPLIER") return "FOURNISSEUR"
+  return "CLIENT"
+}
+
+function resolvePrimaryRole(roles?: string[]): AppRole {
+  const normalized = (roles || []).map(normalizeRole)
+  if (normalized.includes("ADMIN")) return "ADMIN"
+  if (normalized.includes("COMMERCANT")) return "COMMERCANT"
+  if (normalized.includes("LIVREUR")) return "LIVREUR"
+  if (normalized.includes("FOURNISSEUR")) return "FOURNISSEUR"
+  return "CLIENT"
+}
+
 const getMenuItems = (role?: string, badges?: any) => {
   const baseItems = [
     {
@@ -58,7 +82,9 @@ const getMenuItems = (role?: string, badges?: any) => {
     },
   ]
 
-  if (role === "ADMIN") {
+  const normalizedRole = normalizeRole(role)
+
+  if (normalizedRole === "ADMIN") {
     return [
       ...baseItems,
       {
@@ -122,7 +148,7 @@ const getMenuItems = (role?: string, badges?: any) => {
     ]
   }
 
-  if (role === "COMMERCANT") {
+  if (normalizedRole === "COMMERCANT") {
     return [
       ...baseItems,
       {
@@ -139,6 +165,7 @@ const getMenuItems = (role?: string, badges?: any) => {
           { name: "Commandes Clients", href: "/dashboard/commandes", icon: ShoppingBag },
           { name: "Livraisons", href: "/dashboard/merchant/livraisons", icon: Truck },
           { name: "Statistiques", href: "/dashboard/statistiques", icon: BarChart3 },
+          { name: "Mes Commandes", href: "/dashboard/mes-commandes", icon: Package },
         ],
       },
       {
@@ -161,7 +188,7 @@ const getMenuItems = (role?: string, badges?: any) => {
     ]
   }
 
-  if (role === "LIVREUR") {
+  if (normalizedRole === "LIVREUR") {
     return [
       ...baseItems,
       {
@@ -171,6 +198,7 @@ const getMenuItems = (role?: string, badges?: any) => {
           { name: "Nouvelles Assignations", href: "/dashboard/livreur?tab=nouvelles", icon: Package, badge: badges?.nouvelles || 0 },
           { name: "En Cours", href: "/dashboard/livreur?tab=en-cours", icon: Truck },
           { name: "Historique", href: "/dashboard/livreur?tab=terminees", icon: FileText },
+          { name: "Mes Commandes", href: "/dashboard/mes-commandes", icon: ShoppingBag },
         ],
       },
       {
@@ -186,7 +214,7 @@ const getMenuItems = (role?: string, badges?: any) => {
     ]
   }
 
-  if (role === "FOURNISSEUR") {
+  if (normalizedRole === "FOURNISSEUR") {
     return [
       ...baseItems,
       {
@@ -201,6 +229,7 @@ const getMenuItems = (role?: string, badges?: any) => {
         items: [
           { name: "Commandes Reçues", href: "/dashboard/supplier/commandes", icon: ShoppingBag },
           { name: "Historique", href: "/dashboard/supplier/historique", icon: TrendingUp },
+          { name: "Mes Commandes", href: "/dashboard/mes-commandes", icon: Package },
         ],
       },
       {
@@ -244,7 +273,8 @@ function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
   const pathname = usePathname()
   const { user, logout, isAuthenticated } = useAuth()
   const badges = useSidebarBadges()
-  const menuItems = getMenuItems(user?.roles?.[0], badges)
+  const primaryRole = resolvePrimaryRole(user?.roles)
+  const menuItems = getMenuItems(primaryRole, badges)
 
   return (
     <div className="flex h-full flex-col">
