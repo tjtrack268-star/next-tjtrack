@@ -5,12 +5,12 @@ import "./globals.css"
 import { Providers } from "@/components/providers"
 
 export const metadata: Metadata = {
-  title: "TJ-Track | Gestion de Stock & E-commerce",
+  title: "TJ-Track",
   description: "Plateforme moderne de gestion de stock et e-commerce pour marchands et fournisseurs",
   generator: "Next.js",
   manifest: "/manifest.json",
   keywords: ["stock", "inventory", "ecommerce", "gestion", "marchand"],
-  authors: [{ name: "TJ-Track" }],
+  authors: [{ name: "richardmogou99@gmail.com" }],
   icons: {
     icon: "/logo_tjtrack.png",
     apple: "/logo_tjtrack.png",
