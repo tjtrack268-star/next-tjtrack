@@ -16,7 +16,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 interface TarifLivraison {
   id?: number
-  ville: string | null
+  ville: string
   typeLivraison: "STANDARD" | "EXPRESS"
   zoneLivraison: "URBAINE" | "INTERURBAINE"
   distanceMinKm?: number
@@ -24,6 +24,9 @@ interface TarifLivraison {
   tarif: number
   delaiJoursOuvres: number
   seuilGratuite?: number
+  poidsInclusKg?: number
+  surcoutParKg?: number
+  pourcentageMontantCommande?: number
   actif: boolean
 }
 
@@ -40,6 +43,9 @@ export default function TarifsLivraisonPage() {
     tarif: 1500,
     delaiJoursOuvres: 1,
     seuilGratuite: 30000,
+    poidsInclusKg: 5,
+    surcoutParKg: 200,
+    pourcentageMontantCommande: 0,
     actif: true
   })
 
@@ -84,6 +90,9 @@ export default function TarifsLivraisonPage() {
       tarif: 1500,
       delaiJoursOuvres: 1,
       seuilGratuite: 30000,
+      poidsInclusKg: 5,
+      surcoutParKg: 200,
+      pourcentageMontantCommande: 0,
       actif: true
     })
     setEditingTarif(null)
@@ -135,6 +144,8 @@ export default function TarifsLivraisonPage() {
                   <TableHead>Type</TableHead>
                   <TableHead>Tarif</TableHead>
                   <TableHead>Délai</TableHead>
+                  <TableHead>Poids</TableHead>
+                  <TableHead>% Article</TableHead>
                   <TableHead>Seuil gratuit</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -160,6 +171,10 @@ export default function TarifsLivraisonPage() {
                     </TableCell>
                     <TableCell>{tarif.tarif.toLocaleString()} FCFA</TableCell>
                     <TableCell>{tarif.delaiJoursOuvres} jour{tarif.delaiJoursOuvres > 1 ? 's' : ''}</TableCell>
+                    <TableCell>
+                      {(tarif.poidsInclusKg ?? 5)} kg + {(tarif.surcoutParKg ?? 200).toLocaleString()} FCFA/kg
+                    </TableCell>
+                    <TableCell>{(tarif.pourcentageMontantCommande ?? 0)}%</TableCell>
                     <TableCell>{tarif.seuilGratuite ? `${tarif.seuilGratuite.toLocaleString()} FCFA` : '-'}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded text-xs ${tarif.actif ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
@@ -189,7 +204,7 @@ export default function TarifsLivraisonPage() {
             <div className="space-y-4">
               <div>
                 <Label>Zone de livraison</Label>
-                <Select value={formData.zoneLivraison} onValueChange={(v: any) => setFormData({...formData, zoneLivraison: v, ville: v === 'URBAINE' ? 'Douala' : null})}>
+                <Select value={formData.zoneLivraison} onValueChange={(v: any) => setFormData({...formData, zoneLivraison: v, ville: v === 'URBAINE' ? 'Douala' : 'INTERURBAINE'})}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -203,7 +218,7 @@ export default function TarifsLivraisonPage() {
               {formData.zoneLivraison === 'URBAINE' ? (
                 <div>
                   <Label>Ville</Label>
-                  <Select value={formData.ville || ''} onValueChange={(v) => setFormData({...formData, ville: v})}>
+                  <Select value={formData.ville} onValueChange={(v) => setFormData({...formData, ville: v})}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -247,6 +262,35 @@ export default function TarifsLivraisonPage() {
               <div>
                 <Label>Seuil livraison gratuite (FCFA)</Label>
                 <Input type="number" value={formData.seuilGratuite || ''} onChange={(e) => setFormData({...formData, seuilGratuite: e.target.value ? Number(e.target.value) : undefined})} placeholder="Optionnel" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <Label>Poids inclus (kg)</Label>
+                  <Input
+                    type="number"
+                    value={formData.poidsInclusKg ?? ''}
+                    onChange={(e) => setFormData({...formData, poidsInclusKg: e.target.value ? Number(e.target.value) : undefined})}
+                    placeholder="Ex: 5"
+                  />
+                </div>
+                <div>
+                  <Label>Surcoût par kg (FCFA)</Label>
+                  <Input
+                    type="number"
+                    value={formData.surcoutParKg ?? ''}
+                    onChange={(e) => setFormData({...formData, surcoutParKg: e.target.value ? Number(e.target.value) : undefined})}
+                    placeholder="Ex: 200"
+                  />
+                </div>
+                <div>
+                  <Label>Pourcentage sur article (%)</Label>
+                  <Input
+                    type="number"
+                    value={formData.pourcentageMontantCommande ?? ''}
+                    onChange={(e) => setFormData({...formData, pourcentageMontantCommande: e.target.value ? Number(e.target.value) : undefined})}
+                    placeholder="Ex: 2.5"
+                  />
+                </div>
               </div>
             </div>
             <DialogFooter>
