@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
 import { apiClient } from "@/lib/api"
 
 interface StaticLocationSelectorProps {
@@ -25,6 +26,8 @@ export function StaticLocationSelector({
   const [villes, setVilles] = useState<string[]>(["Yaoundé", "Douala"])
   const [quartiers, setQuartiers] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [villeQuery, setVilleQuery] = useState("")
+  const [quartierQuery, setQuartierQuery] = useState("")
 
   useEffect(() => {
     apiClient.get<string[]>("/quartiers")
@@ -58,7 +61,19 @@ export function StaticLocationSelector({
   const handleVilleChange = (villeName: string) => {
     onVilleChange(villeName)
     onQuartierChange("") // Reset quartier
+    setQuartierQuery("")
   }
+
+  const normalize = (value: string) =>
+    value
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+
+  const filteredVilles = villes.filter((ville) => normalize(ville).includes(normalize(villeQuery)))
+  const filteredQuartiers = quartiers.filter((quartier) =>
+    normalize(quartier).includes(normalize(quartierQuery)),
+  )
 
   return (
     <div className="space-y-4">
@@ -75,11 +90,22 @@ export function StaticLocationSelector({
             <SelectValue placeholder="Sélectionnez votre ville" />
           </SelectTrigger>
           <SelectContent>
-            {villes.map((ville) => (
+            <div className="p-2">
+              <Input
+                value={villeQuery}
+                onChange={(e) => setVilleQuery(e.target.value)}
+                placeholder="Rechercher une ville..."
+                className="h-9"
+              />
+            </div>
+            {filteredVilles.map((ville) => (
               <SelectItem key={ville} value={ville}>
                 {ville}
               </SelectItem>
             ))}
+            {filteredVilles.length === 0 && (
+              <div className="px-3 py-2 text-sm text-muted-foreground">Aucune ville trouvée</div>
+            )}
           </SelectContent>
         </Select>
       </div>
@@ -104,11 +130,22 @@ export function StaticLocationSelector({
             />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
-            {quartiers.map((quartier) => (
+            <div className="p-2">
+              <Input
+                value={quartierQuery}
+                onChange={(e) => setQuartierQuery(e.target.value)}
+                placeholder="Rechercher un quartier..."
+                className="h-9"
+              />
+            </div>
+            {filteredQuartiers.map((quartier) => (
               <SelectItem key={quartier} value={quartier}>
                 {quartier}
               </SelectItem>
             ))}
+            {filteredQuartiers.length === 0 && (
+              <div className="px-3 py-2 text-sm text-muted-foreground">Aucun quartier trouvé</div>
+            )}
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">

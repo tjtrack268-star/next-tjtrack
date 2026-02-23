@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useCart } from "@/contexts/cart-context"
 import { useAuth } from "@/contexts/auth-context"
@@ -15,6 +14,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useCreerCommande } from "@/hooks/use-api"
 import { apiClient } from "@/lib/api"
 import { CreditCard, DollarSign, Loader2 } from "lucide-react"
+import { StaticLocationSelector } from "@/components/ui/static-location-selector"
 
 interface CheckoutModalProps {
   isOpen: boolean
@@ -63,19 +63,6 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [shippingCost, setShippingCost] = useState(0)
   const [isShippingLoading, setIsShippingLoading] = useState(false)
-
-  const CAMEROON_CITIES = [
-    "Douala",
-    "Yaoundé",
-    "Garoua",
-    "Bamenda",
-    "Limbe",
-    "Kumba",
-    "Bafoussam",
-    "Buea",
-    "Foumban",
-    "Ebolowa",
-  ]
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -335,38 +322,17 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="address">Adresse</Label>
-                  <Input
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    className={errors.address ? "border-destructive" : ""}
-                    placeholder="Rue, bâtiment, etc."
-                  />
-                  {errors.address && <p className="text-sm text-destructive">{errors.address}</p>}
-                </div>
-
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="city">Ville</Label>
-                    <Select
-                      value={formData.city}
-                      onValueChange={(value) => setFormData((prev) => ({ ...prev, city: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CAMEROON_CITIES.map((city) => (
-                          <SelectItem key={city} value={city}>
-                            {city}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <StaticLocationSelector
+                      selectedVille={formData.city}
+                      selectedQuartier={formData.address}
+                      onVilleChange={(ville) => setFormData((prev) => ({ ...prev, city: ville, address: "" }))}
+                      onQuartierChange={(quartier) => setFormData((prev) => ({ ...prev, address: quartier }))}
+                      required
+                    />
                     {errors.city && <p className="text-sm text-destructive">{errors.city}</p>}
+                    {errors.address && <p className="text-sm text-destructive">{errors.address}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="postalCode">Code postal</Label>
