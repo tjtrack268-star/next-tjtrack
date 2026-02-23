@@ -269,19 +269,19 @@ export default function CommandesPage() {
         </style>
       </head>
       <body>
-        <div class="watermark">TJ-TRACK</div>
+        <div class="watermark">TJTRACK</div>
 
         <table class="header-table">
           <tr>
             <td>
-              <div class="logo-text">TJ-TRACK</div>
+              <div class="logo-text">TJTRACK</div>
               <div style="color: #3498db; font-weight: bold; font-size: 14px;">Logistics & Delivery</div>
             </td>
             <td class="company-info">
-              <p><strong>TJ-TRACK Sarl</strong></p>
+              <p><strong>TJTRACK Sarl</strong></p>
               <p>Plateforme de Livraison Digitale</p>
               <p>Douala / Yaoundé, Cameroun</p>
-              <p>Email: tj-track268@gmail.com</p>
+              <p>Email: tjtrack268@gmail.com</p>
             </td>
           </tr>
         </table>
@@ -308,7 +308,7 @@ export default function CommandesPage() {
           </div>
           <div class="detail-box">
             <h3>Expéditeur (Marchand)</h3>
-            <p><strong>Boutique :</strong> ${commande.merchantNom || 'TJ-Track Central'}</p>
+            <p><strong>Boutique :</strong> ${commande.merchantNom || 'TJTrack Central'}</p>
             <p><strong>Ville :</strong> ${commande.merchantVille || 'Cameroun'}</p>
           </div>
         </div>
@@ -361,7 +361,7 @@ export default function CommandesPage() {
         </div>
 
         <div class="footer">
-          <p>Merci d'avoir choisi <strong>TJ-Track</strong> pour vos achats et livraisons.</p>
+          <p>Merci d'avoir choisi <strong>TJTrack</strong> pour vos achats et livraisons.</p>
           <p>Ce document certifie la passation de propriété des biens listés ci-dessus.</p>
           <p><em>Généré numériquement le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</em></p>
         </div>
