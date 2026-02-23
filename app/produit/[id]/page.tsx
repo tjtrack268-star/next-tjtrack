@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { 
@@ -72,6 +72,9 @@ export default function ProductPage() {
   const [selectedVariant, setSelectedVariant] = useState<number | null>(null)
 
   const formatPrice = (price: number) => new Intl.NumberFormat("fr-FR").format(price) + " XAF"
+  const uniqueBy = (arr: string[]) => Array.from(new Set(arr.filter(Boolean)))
+  const selectedVariantObj = product?.variants?.find((v) => v.id === selectedVariant)
+  const computedUnitPrice = Number(product?.prix || 0) + Number(selectedVariantObj?.prixSupplement || 0)
 
   const handleAddToCart = async () => {
     if (!product) return
@@ -81,12 +84,12 @@ export default function ProductPage() {
       const articleId = product.articleId || product.id
       await addItem(articleId, quantity, {
         name: product.nom,
-        price: product.prix,
+        price: computedUnitPrice,
         image: buildImageUrl(product.images[0]) || "/placeholder.svg",
       })
       toast({
         title: "Ajouté au panier",
-        description: `${quantity} x ${product.nom} ajouté(s) au panier`,
+        description: `${quantity} x ${product.nom}${selectedVariantObj ? ` (${[selectedVariantObj.couleur, selectedVariantObj.taille, selectedVariantObj.variete].filter(Boolean).join(" - ")})` : ""} ajouté(s) au panier`,
       })
     } catch (error) {
       toast({
@@ -198,7 +201,27 @@ export default function ProductPage() {
     )
   }
 
-  const images = product.images?.map(img => buildImageUrl(img) || "/placeholder.svg") || ["/placeholder.svg"]
+  const images = useMemo(() => {
+    const collected = uniqueBy([
+      buildImageUrl(product.imageprincipale || "") || "",
+      ...(product.images?.map((img) => buildImageUrl(img) || "") || []),
+    ])
+    return collected.length > 0 ? collected : ["/placeholder.svg"]
+  }, [product.imageprincipale, product.images])
+
+  useEffect(() => {
+    if (selectedImageIndex >= images.length) {
+      setSelectedImageIndex(0)
+    }
+  }, [images.length, selectedImageIndex])
+
+  useEffect(() => {
+    if (selectedVariant !== null || !product.variants || product.variants.length === 0) return
+    const firstAvailable = product.variants.find((v) => v.quantite > 0)?.id
+    if (firstAvailable) {
+      setSelectedVariant(firstAvailable)
+    }
+  }, [product.variants, selectedVariant])
   const relatedProductsFiltered = relatedProducts?.filter(p => p.id !== product.id).slice(0, 4) || []
 
   return (
@@ -222,12 +245,34 @@ export default function ProductPage() {
         <div className="grid lg:grid-cols-2 gap-8 mb-12">
           {/* Images */}
           <div className="space-y-4">
-            <div className="aspect-square bg-muted rounded-lg overflow-hidden">
+            <div className="relative aspect-square bg-muted rounded-lg overflow-hidden">
               <img
                 src={images[selectedImageIndex]}
                 alt={product.nom}
                 className="w-full h-full object-cover"
               />
+              {images.length > 1 && (
+                <>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8"
+                    onClick={() => setSelectedImageIndex((prev) => (prev - 1 + images.length) % images.length)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
+                    onClick={() => setSelectedImageIndex((prev) => (prev + 1) % images.length)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
             </div>
             {images.length > 1 && (
               <div className="flex gap-2 overflow-x-auto">
@@ -324,6 +369,29 @@ export default function ProductPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Varietes */}
+                {Array.from(new Set(product.variants.map(v => v.variete).filter(Boolean))).length > 0 && (
+                  <div>
+                    <span className="font-medium block mb-2">Variété:</span>
+                    <div className="flex flex-wrap gap-2">
+                      {Array.from(new Set(product.variants.map(v => v.variete).filter(Boolean))).map((variete) => {
+                        const variantsWithVariete = product.variants!.filter(v => v.variete === variete)
+                        const isSelected = selectedVariant !== null && variantsWithVariete.some(v => v.id === selectedVariant)
+                        return (
+                          <Button
+                            key={variete}
+                            variant={isSelected ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setSelectedVariant(variantsWithVariete[0].id!)}
+                          >
+                            {variete}
+                          </Button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
                 
                 {/* Selected Variant Info */}
                 {selectedVariant && (() => {
@@ -333,7 +401,7 @@ export default function ProductPage() {
                     <div className="p-3 bg-muted rounded-lg space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium">
-                          {[variant.couleur, variant.taille].filter(Boolean).join(" - ")}
+                          {[variant.couleur, variant.taille, variant.variete].filter(Boolean).join(" - ")}
                         </span>
                         {variant.prixSupplement && variant.prixSupplement > 0 && (
                           <span className="text-sm text-primary font-medium">

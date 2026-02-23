@@ -155,6 +155,7 @@ export interface ProductVariantDto {
   produitId?: number
   couleur?: string
   taille?: string
+  variete?: string
   quantite: number
   prixSupplement?: number
   sku?: string
