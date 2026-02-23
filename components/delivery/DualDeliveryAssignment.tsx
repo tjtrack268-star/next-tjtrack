@@ -9,6 +9,8 @@ import { MapPin, Phone, Clock, Truck, Star, MessageCircle, ArrowRight, Package }
 import { deliveryApi } from '@/lib/delivery-api'
 import { apiClient } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
+import DeliveryMap from '@/components/maps/DeliveryMap'
+import { getCityCoordinates } from '@/lib/geo'
 
 interface Livreur {
   id: number
@@ -52,6 +54,13 @@ export default function DualDeliveryAssignment({
     loadInfoLivraison()
     loadLivreurs()
   }, [merchantLat, merchantLon, commandeId])
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadLivreurs()
+    }, 10000)
+    return () => clearInterval(interval)
+  }, [merchantLat, merchantLon, commandeId, infoLivraison?.memeVille, clientVille, merchantVille])
 
   const loadInfoLivraison = async () => {
     try {
@@ -321,6 +330,26 @@ export default function DualDeliveryAssignment({
           </p>
         </CardHeader>
         <CardContent>
+          <DeliveryMap
+            center={getCityCoordinates(villeAffichage) || { lat: merchantLat || 3.848, lon: merchantLon || 11.5021 }}
+            zoom={12}
+            markers={[
+              {
+                id: "merchant-city",
+                label: `Marchand (${villeAffichage})`,
+                lat: merchantLat || (getCityCoordinates(villeAffichage)?.lat ?? 3.848),
+                lon: merchantLon || (getCityCoordinates(villeAffichage)?.lon ?? 11.5021),
+                markerType: "merchant",
+              },
+              ...livreursPickup.map((l) => ({
+                id: `pickup-${l.id}`,
+                label: `${l.nom} - ${l.zone || villeAffichage}`,
+                lat: l.latitude,
+                lon: l.longitude,
+                markerType: "delivery" as const,
+              })),
+            ]}
+          />
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -361,6 +390,24 @@ export default function DualDeliveryAssignment({
   // Livraison inter-villes - deux livreurs
   const villeClientAffichage = infoLivraison?.clientVille || clientVille
   const villeMarchandAffichage = infoLivraison?.merchantVille || merchantVille
+  const marchantCoords =
+    (infoLivraison?.merchantLatitude != null && infoLivraison?.merchantLongitude != null
+      ? { lat: Number(infoLivraison.merchantLatitude), lon: Number(infoLivraison.merchantLongitude) }
+      : null) ||
+    getCityCoordinates(villeMarchandAffichage) ||
+    { lat: merchantLat || 3.848, lon: merchantLon || 11.5021 }
+
+  const clientCoords =
+    (infoLivraison?.clientLatitude != null && infoLivraison?.clientLongitude != null
+      ? { lat: Number(infoLivraison.clientLatitude), lon: Number(infoLivraison.clientLongitude) }
+      : null) ||
+    getCityCoordinates(villeClientAffichage) ||
+    { lat: 4.0511, lon: 9.7679 }
+
+  const liveLivreurCoords =
+    (infoLivraison?.livreurLatitude != null && infoLivraison?.livreurLongitude != null)
+      ? { lat: Number(infoLivraison.livreurLatitude), lon: Number(infoLivraison.livreurLongitude) }
+      : null
   
   return (
     <Card>
@@ -374,6 +421,48 @@ export default function DualDeliveryAssignment({
         </p>
       </CardHeader>
       <CardContent>
+        <DeliveryMap
+          center={marchantCoords}
+          zoom={8}
+          drawRoute
+          markers={[
+            {
+              id: "merchant-city",
+              label: `Départ marchand (${villeMarchandAffichage})`,
+              lat: marchantCoords.lat,
+              lon: marchantCoords.lon,
+              markerType: "merchant",
+            },
+            ...livreursPickup.map((l) => ({
+              id: `pickup-${l.id}`,
+              label: `Pickup: ${l.nom}`,
+              lat: l.latitude,
+              lon: l.longitude,
+              markerType: "delivery" as const,
+            })),
+            {
+              id: "client-city",
+              label: `Ville client (${villeClientAffichage})`,
+              lat: clientCoords.lat,
+              lon: clientCoords.lon,
+              markerType: "client",
+            },
+            ...(liveLivreurCoords ? [{
+              id: "livreur-live",
+              label: "Position livreur en temps réel",
+              lat: liveLivreurCoords.lat,
+              lon: liveLivreurCoords.lon,
+              markerType: "live" as const,
+            }] : []),
+            ...livreursDelivery.map((l) => ({
+              id: `delivery-${l.id}`,
+              label: `Final: ${l.nom}`,
+              lat: l.latitude,
+              lon: l.longitude,
+              markerType: "delivery" as const,
+            })),
+          ]}
+        />
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>

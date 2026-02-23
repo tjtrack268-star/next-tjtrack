@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { MapPin, Phone, Clock, Truck, Star, MessageCircle } from 'lucide-react'
 import { deliveryApi } from '@/lib/delivery-api'
 import { useToast } from '@/hooks/use-toast'
+import DeliveryMap from '@/components/maps/DeliveryMap'
 
 interface Livreur {
   id: number
@@ -39,6 +40,13 @@ export default function DeliveryAssignment({
 
   useEffect(() => {
     loadLivreurs()
+  }, [merchantLat, merchantLon])
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadLivreurs()
+    }, 10000)
+    return () => clearInterval(interval)
   }, [merchantLat, merchantLon])
 
   const loadLivreurs = async () => {
@@ -228,7 +236,31 @@ export default function DeliveryAssignment({
             </Button>
           </div>
         ) : (
-          <div className="space-y-4 max-h-96 overflow-y-auto">
+          <div className="space-y-4">
+            <DeliveryMap
+              center={{ lat: merchantLat || 3.848, lon: merchantLon || 11.5021 }}
+              zoom={12}
+              drawRoute={false}
+              markers={[
+                {
+                  id: "merchant",
+                  label: "Point marchand",
+                  lat: merchantLat || 3.848,
+                  lon: merchantLon || 11.5021,
+                  markerType: "merchant",
+                },
+                ...livreurs
+                  .filter((l) => Number.isFinite(l.latitude) && Number.isFinite(l.longitude))
+                  .map((l) => ({
+                    id: `livreur-${l.id}`,
+                    label: `${l.nom} (${l.distance > 0 ? `${l.distance.toFixed(1)} km` : "disponible"})`,
+                    lat: l.latitude,
+                    lon: l.longitude,
+                    markerType: "delivery" as const,
+                  })),
+              ]}
+            />
+            <div className="space-y-4 max-h-96 overflow-y-auto">
             {livreurs
               .sort((a, b) => {
                 // Prioritize available drivers, then by distance
@@ -308,6 +340,7 @@ export default function DeliveryAssignment({
                 </div>
               </div>
             ))}
+            </div>
           </div>
         )}
         

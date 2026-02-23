@@ -47,6 +47,7 @@
     "date-fns": "^4.1.0",
     "embla-carousel-react": "latest",
     "input-otp": "latest",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.454.0",
     "next": "^16.0.7",
     "next-themes": "latest",
@@ -54,6 +55,7 @@
     "react-day-picker": "latest",
     "react-dom": "^19.2.1",
     "react-hook-form": "latest",
+    "react-leaflet": "^5.0.0",
     "react-resizable-panels": "latest",
     "recharts": "latest",
     "sonner": "latest",
@@ -64,6 +66,7 @@
   },
   "devDependencies": {
     "@tanstack/react-query-devtools": "^5.91.2",
+    "@types/leaflet": "^1.9.21",
     "@types/node": "^22.19.7",
     "@types/react": "^19.2.8",
     "@types/react-dom": "^19",

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { MapPin, Navigation, Clock, Phone } from 'lucide-react'
+import DeliveryMap from '@/components/maps/DeliveryMap'
+import { apiClient } from '@/lib/api'
 
 interface LiveTrackingProps {
   commandeId: number
@@ -18,6 +20,10 @@ interface TrackingData {
   longitude: number
   timestamp: number
   status: string
+  merchantLatitude?: number
+  merchantLongitude?: number
+  clientLatitude?: number
+  clientLongitude?: number
 }
 
 export default function LiveTracking({ commandeId, livreurInfo }: LiveTrackingProps) {
@@ -25,17 +31,34 @@ export default function LiveTracking({ commandeId, livreurInfo }: LiveTrackingPr
   const [connected, setConnected] = useState(false)
 
   useEffect(() => {
-    // Simulation WebSocket (à remplacer par vraie connexion)
-    const interval = setInterval(() => {
-      // Simulation de mouvement du livreur
-      setTrackingData({
-        latitude: 48.8566 + (Math.random() - 0.5) * 0.01,
-        longitude: 2.3522 + (Math.random() - 0.5) * 0.01,
-        timestamp: Date.now(),
-        status: 'EN_ROUTE'
-      })
-      setConnected(true)
-    }, 5000)
+    const loadLive = async () => {
+      try {
+        const response = await apiClient.get<any>(`/commandes/${commandeId}/info-livraison`)
+        const info = response?.data || response
+        const lat = info?.livreurLatitude ?? info?.latitude
+        const lon = info?.livreurLongitude ?? info?.longitude
+        if (lat == null || lon == null) {
+          setConnected(false)
+          return
+        }
+        setTrackingData({
+          latitude: Number(lat),
+          longitude: Number(lon),
+          timestamp: info?.positionUpdatedAt ? new Date(info.positionUpdatedAt).getTime() : Date.now(),
+          status: String(info?.statut || 'EN_ROUTE'),
+          merchantLatitude: info?.merchantLatitude != null ? Number(info.merchantLatitude) : undefined,
+          merchantLongitude: info?.merchantLongitude != null ? Number(info.merchantLongitude) : undefined,
+          clientLatitude: info?.clientLatitude != null ? Number(info.clientLatitude) : undefined,
+          clientLongitude: info?.clientLongitude != null ? Number(info.clientLongitude) : undefined,
+        })
+        setConnected(true)
+      } catch (error) {
+        setConnected(false)
+      }
+    }
+
+    loadLive()
+    const interval = setInterval(loadLive, 10000)
 
     return () => clearInterval(interval)
   }, [commandeId])
@@ -43,8 +66,10 @@ export default function LiveTracking({ commandeId, livreurInfo }: LiveTrackingPr
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'EN_ROUTE': return 'bg-blue-500'
+      case 'EN_COURS': return 'bg-blue-500'
       case 'ARRIVE': return 'bg-green-500'
       case 'LIVRE': return 'bg-gray-500'
+      case 'LIVREE': return 'bg-gray-500'
       default: return 'bg-yellow-500'
     }
   }
@@ -52,8 +77,10 @@ export default function LiveTracking({ commandeId, livreurInfo }: LiveTrackingPr
   const getStatusText = (status: string) => {
     switch (status) {
       case 'EN_ROUTE': return 'En route'
+      case 'EN_COURS': return 'En cours'
       case 'ARRIVE': return 'Arrivé'
       case 'LIVRE': return 'Livré'
+      case 'LIVREE': return 'Livré'
       default: return 'En attente'
     }
   }
@@ -111,14 +138,34 @@ export default function LiveTracking({ commandeId, livreurInfo }: LiveTrackingPr
               </div>
             </div>
 
-            {/* Simulation d'une mini-carte */}
-            <div className="bg-blue-50 rounded-lg p-6 text-center">
-              <MapPin className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-              <p className="text-sm text-gray-600">
-                Carte interactive disponible<br />
-                <span className="text-xs">Position mise à jour en temps réel</span>
-              </p>
-            </div>
+            <DeliveryMap
+              center={{ lat: trackingData.latitude, lon: trackingData.longitude }}
+              zoom={14}
+              markers={[
+                ...(trackingData.merchantLatitude != null && trackingData.merchantLongitude != null ? [{
+                  id: "merchant-live",
+                  label: "Marchand",
+                  lat: trackingData.merchantLatitude,
+                  lon: trackingData.merchantLongitude,
+                  markerType: "merchant" as const,
+                }] : []),
+                {
+                  id: "livreur-live",
+                  label: "Livreur en temps réel",
+                  lat: trackingData.latitude,
+                  lon: trackingData.longitude,
+                  markerType: "live",
+                },
+                ...(trackingData.clientLatitude != null && trackingData.clientLongitude != null ? [{
+                  id: "client-live",
+                  label: "Client",
+                  lat: trackingData.clientLatitude,
+                  lon: trackingData.clientLongitude,
+                  markerType: "client" as const,
+                }] : []),
+              ]}
+              drawRoute
+            />
 
             <div className="text-xs text-gray-500 text-center">
               Dernière mise à jour: {new Date(trackingData.timestamp).toLocaleString()}
