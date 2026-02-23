@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { MapPin, Phone, Clock, Truck, Package, CheckCircle } from 'lucide-react'
+import DeliveryMap from '@/components/maps/DeliveryMap'
+import { apiClient } from '@/lib/api'
 
 interface ClientTrackingProps {
   commandeId: number
@@ -25,6 +27,11 @@ interface TrackingInfo {
     statut: 'completed' | 'current' | 'pending'
     timestamp?: string
   }[]
+  merchantLatitude?: number
+  merchantLongitude?: number
+  clientLatitude?: number
+  clientLongitude?: number
+  positionUpdatedAt?: string
 }
 
 export default function ClientTracking({ commandeId, numeroCommande }: ClientTrackingProps) {
@@ -33,28 +40,43 @@ export default function ClientTracking({ commandeId, numeroCommande }: ClientTra
 
   useEffect(() => {
     loadTrackingInfo()
-    const interval = setInterval(loadTrackingInfo, 30000) // Actualiser toutes les 30s
+    const interval = setInterval(loadTrackingInfo, 10000) // Actualiser toutes les 10s
     return () => clearInterval(interval)
   }, [commandeId])
 
   const loadTrackingInfo = async () => {
     try {
-      // Simulation des données de suivi
+      const response = await apiClient.get<any>(`/commandes/${commandeId}/info-livraison`)
+      const info = response?.data || response
+      const statut = info?.statut || 'EN_COURS'
+      const steps = [
+        { nom: 'Commande confirmée', key: 'CONFIRMEE' },
+        { nom: 'En préparation', key: 'EN_PREPARATION' },
+        { nom: 'Expédiée', key: 'EXPEDIEE' },
+        { nom: 'Livrée', key: 'LIVREE' },
+      ]
+      const currentStepIndex = Math.max(
+        0,
+        steps.findIndex((s) => s.key === statut)
+      )
       setTracking({
-        statut: 'EXPEDIEE',
-        livreur: {
-          nom: 'Jean Dupont',
-          telephone: '+33 6 12 34 56 78',
-          latitude: 48.8566,
-          longitude: 2.3522
-        },
-        tempsEstime: '25 min',
-        etapes: [
-          { nom: 'Commande confirmée', statut: 'completed', timestamp: '14:30' },
-          { nom: 'En préparation', statut: 'completed', timestamp: '14:45' },
-          { nom: 'Expédiée', statut: 'current', timestamp: '15:10' },
-          { nom: 'Livrée', statut: 'pending' }
-        ]
+        statut,
+        livreur: (info?.livreurLatitude != null && info?.livreurLongitude != null) ? {
+          nom: 'Livreur assigné',
+          telephone: '-',
+          latitude: Number(info.livreurLatitude),
+          longitude: Number(info.livreurLongitude)
+        } : undefined,
+        tempsEstime: statut === 'LIVREE' ? undefined : 'Mise à jour en temps réel',
+        etapes: steps.map((step, index) => ({
+          nom: step.nom,
+          statut: index < currentStepIndex ? 'completed' : index === currentStepIndex ? 'current' : 'pending'
+        })),
+        merchantLatitude: info?.merchantLatitude != null ? Number(info.merchantLatitude) : undefined,
+        merchantLongitude: info?.merchantLongitude != null ? Number(info.merchantLongitude) : undefined,
+        clientLatitude: info?.clientLatitude != null ? Number(info.clientLatitude) : undefined,
+        clientLongitude: info?.clientLongitude != null ? Number(info.clientLongitude) : undefined,
+        positionUpdatedAt: info?.positionUpdatedAt
       })
       setLoading(false)
     } catch (error) {
@@ -182,19 +204,45 @@ export default function ClientTracking({ commandeId, numeroCommande }: ClientTra
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="bg-blue-50 rounded-lg p-6 text-center">
-              <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Truck className="h-8 w-8 text-white" />
-              </div>
-              <h4 className="font-medium mb-2">Livreur en route</h4>
-              <p className="text-sm text-gray-600 mb-4">
-                Position mise à jour en temps réel
+            <DeliveryMap
+              center={{
+                lat: tracking.livreur.latitude,
+                lon: tracking.livreur.longitude
+              }}
+              zoom={12}
+              drawRoute
+              markers={[
+                ...(tracking.merchantLatitude != null && tracking.merchantLongitude != null ? [{
+                  id: "merchant",
+                  label: "Point marchand",
+                  lat: tracking.merchantLatitude,
+                  lon: tracking.merchantLongitude,
+                  markerType: "merchant" as const,
+                }] : []),
+                {
+                  id: "livreur",
+                  label: `Livreur: ${tracking.livreur.nom}`,
+                  lat: tracking.livreur.latitude,
+                  lon: tracking.livreur.longitude,
+                  markerType: "live" as const,
+                },
+                ...(tracking.clientLatitude != null && tracking.clientLongitude != null ? [{
+                  id: "client",
+                  label: "Point livraison client",
+                  lat: tracking.clientLatitude,
+                  lon: tracking.clientLongitude,
+                  markerType: "client" as const,
+                }] : []),
+              ]}
+            />
+            <p className="text-xs text-gray-500 mt-3">
+              Position actuelle: {tracking.livreur.latitude.toFixed(6)}, {tracking.livreur.longitude.toFixed(6)}
+            </p>
+            {tracking.positionUpdatedAt && (
+              <p className="text-xs text-gray-500">
+                Dernière mise à jour: {new Date(tracking.positionUpdatedAt).toLocaleString()}
               </p>
-              <div className="text-xs text-gray-500">
-                Lat: {tracking.livreur.latitude.toFixed(6)}<br />
-                Lng: {tracking.livreur.longitude.toFixed(6)}
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       )}

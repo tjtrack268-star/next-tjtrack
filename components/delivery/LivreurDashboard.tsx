@@ -29,6 +29,8 @@ import { Spinner } from "@/components/ui/spinner"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { apiClient } from "@/lib/api"
+import DeliveryMap from "@/components/maps/DeliveryMap"
+import { getCityCoordinates } from "@/lib/geo"
 
 interface DeliveryOrder {
   id: number
@@ -65,6 +67,9 @@ interface DeliveryOrder {
   }>
   fraisLivraison: number
   commentaire?: string
+  latitude?: number
+  longitude?: number
+  positionUpdatedAt?: string
   livreurPickup?: {
     nom: string
     telephone: string
@@ -138,6 +143,7 @@ export default function LivreurDashboard() {
       }
     },
     enabled: !!user?.userId,
+    refetchInterval: 10000,
     retry: 1,
     retryDelay: 1000,
   })
@@ -530,6 +536,50 @@ export default function LivreurDashboard() {
                           </div>
                         </div>
                       </div>
+
+                      <DeliveryMap
+                        center={
+                          getCityCoordinates(order.adresseLivraison?.ville) ||
+                          getCityCoordinates(order.merchant?.ville) || { lat: 3.848, lon: 11.5021 }
+                        }
+                        zoom={10}
+                        drawRoute
+                        markers={[
+                          ...(getCityCoordinates(order.merchant?.ville)
+                            ? [
+                                {
+                                  id: `merchant-${order.id}`,
+                                  label: `Marchand (${order.merchant.ville})`,
+                                  lat: getCityCoordinates(order.merchant?.ville)!.lat,
+                                  lon: getCityCoordinates(order.merchant?.ville)!.lon,
+                                  markerType: "merchant" as const,
+                                },
+                              ]
+                            : []),
+                          ...(getCityCoordinates(order.adresseLivraison?.ville)
+                            ? [
+                                {
+                                  id: `client-${order.id}`,
+                                  label: `Client (${order.adresseLivraison.ville})`,
+                                  lat: getCityCoordinates(order.adresseLivraison?.ville)!.lat,
+                                  lon: getCityCoordinates(order.adresseLivraison?.ville)!.lon,
+                                  markerType: "client" as const,
+                                },
+                              ]
+                            : []),
+                          ...(order.latitude != null && order.longitude != null
+                            ? [
+                                {
+                                  id: `livreur-live-${order.id}`,
+                                  label: "Position livreur en temps réel",
+                                  lat: Number(order.latitude),
+                                  lon: Number(order.longitude),
+                                  markerType: "live" as const,
+                                },
+                              ]
+                            : []),
+                        ]}
+                      />
 
                       <div className="space-y-3">
                         <h4 className="font-medium">Articles à livrer</h4>
