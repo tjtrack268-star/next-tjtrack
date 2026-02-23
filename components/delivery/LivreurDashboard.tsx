@@ -109,6 +109,7 @@ export default function LivreurDashboard() {
   const [customReason, setCustomReason] = useState("")
   const [showAssignDialog, setShowAssignDialog] = useState(false)
   const [selectedLivreurFinal, setSelectedLivreurFinal] = useState("")
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tjtracks.com/api/v1.0"
 
   const { data: orders, isLoading, error, refetch } = useQuery({
     queryKey: ["deliveryOrders", user?.userId],
@@ -317,6 +318,43 @@ export default function LivreurDashboard() {
     window.open(`tel:${phone}`)
   }
 
+  const downloadFacture = async (orderId: number) => {
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("tj-track-token") : null
+      const response = await fetch(`${API_BASE_URL}/commandes/${orderId}/facture`, {
+        method: "GET",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+
+      if (!response.ok) {
+        let message = `Erreur ${response.status}`
+        try {
+          const errorData = await response.json()
+          message = errorData?.message || message
+        } catch {
+          // Ignore parse error and keep default message
+        }
+        throw new Error(message)
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `facture-${orderId}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (error: any) {
+      toast({
+        title: "Téléchargement impossible",
+        description: error?.message || "Impossible de télécharger la facture",
+        variant: "destructive",
+      })
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -343,17 +381,17 @@ export default function LivreurDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Dashboard Livreur</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2">Dashboard Livreur</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Gérez vos livraisons et communiquez avec les marchands et clients
           </p>
         </div>
 
         <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="nouvelles" className="relative">
+          <TabsList className="flex w-full overflow-x-auto whitespace-nowrap gap-2 p-1">
+            <TabsTrigger value="nouvelles" className="relative flex-none min-w-[130px]">
               Nouvelles
               {orders?.filter((o: DeliveryOrder) => ["ASSIGNEE", "ASSIGNEE_PICKUP", "ASSIGNEE_FINAL", "EN_TRANSIT_VERS_FINAL"].includes(o.statut)).length > 0 && (
                 <Badge className="ml-2 bg-red-500 text-white text-xs">
@@ -361,13 +399,13 @@ export default function LivreurDashboard() {
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="acceptees">
+            <TabsTrigger value="acceptees" className="flex-none min-w-[130px]">
               Acceptées ({orders?.filter((o: DeliveryOrder) => ["ACCEPTEE", "ACCEPTEE_FINAL"].includes(o.statut)).length || 0})
             </TabsTrigger>
-            <TabsTrigger value="en-cours">
+            <TabsTrigger value="en-cours" className="flex-none min-w-[130px]">
               En cours ({orders?.filter((o: DeliveryOrder) => ["EN_COURS", "EN_COURS_PICKUP"].includes(o.statut)).length || 0})
             </TabsTrigger>
-            <TabsTrigger value="terminees">
+            <TabsTrigger value="terminees" className="flex-none min-w-[130px]">
               Terminées ({filteredOrders.filter((o: DeliveryOrder) => ["LIVREE", "REFUSEE"].includes(o.statut)).length})
             </TabsTrigger>
           </TabsList>
@@ -406,7 +444,7 @@ export default function LivreurDashboard() {
                 return (
                   <Card key={`${order.id}-${order.statut}-${index}`} className="overflow-hidden">
                     <CardHeader className="pb-4">
-                      <div className="flex items-start justify-between">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           <CardTitle className="text-lg flex items-center gap-2">
                             <StatusIcon className="h-5 w-5" />
@@ -416,11 +454,11 @@ export default function LivreurDashboard() {
                             Assignée le {formatDate(order.dateCommande)}
                           </p>
                         </div>
-                        <div className="flex flex-col items-end gap-2">
+                        <div className="flex flex-col items-start sm:items-end gap-2">
                           <Badge className={`${statusColor} text-white`}>
                             {statusLabel}
                           </Badge>
-                          <div className="text-right">
+                          <div className="text-left sm:text-right">
                             <p className="font-bold text-lg">{formatPrice(order.montantTotal)}</p>
                             <p className="text-sm text-muted-foreground">
                               Frais: {formatPrice(order.fraisLivraison)}
@@ -469,24 +507,24 @@ export default function LivreurDashboard() {
                             <p className="text-sm text-muted-foreground">
                               {order.adresseLivraison.ville} {order.adresseLivraison.codePostal}
                             </p>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => callPhone(order.adresseLivraison.telephone)}
-                                className="flex-1"
-                              >
-                                <Phone className="h-4 w-4 mr-2" />
-                                Appeler
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openMaps(`${order.adresseLivraison.adresse}, ${order.adresseLivraison.ville}`)}
-                                className="flex-1"
-                              >
-                                <Navigation className="h-4 w-4 mr-2" />
-                                GPS
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => callPhone(order.adresseLivraison.telephone)}
+                              className="w-full sm:flex-1"
+                            >
+                              <Phone className="h-4 w-4 mr-2" />
+                              Appeler
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openMaps(`${order.adresseLivraison.adresse}, ${order.adresseLivraison.ville}`)}
+                              className="w-full sm:flex-1"
+                            >
+                              <Navigation className="h-4 w-4 mr-2" />
+                              GPS
                               </Button>
                             </div>
                           </div>
@@ -575,14 +613,14 @@ export default function LivreurDashboard() {
                         </div>
                       )}
 
-                      <div className="flex gap-3 pt-4 border-t">
+                      <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
                         {/* Bouton facture disponible pour tous les statuts */}
                         {order.statut !== "REFUSEE" && (
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL}/commandes/${order.id}/facture`, '_blank')}
-                            className="mb-2"
+                            onClick={() => downloadFacture(order.id)}
+                            className="w-full sm:w-auto mb-2 sm:mb-0"
                           >
                             <Package className="h-4 w-4 mr-2" />
                             Télécharger la facture
@@ -590,13 +628,13 @@ export default function LivreurDashboard() {
                         )}
                       </div>
 
-                      <div className="flex gap-3 border-t pt-4">
+                      <div className="flex flex-col sm:flex-row gap-3 border-t pt-4">
                         {(order.statut === "ASSIGNEE" || order.statut === "ASSIGNEE_PICKUP" || order.statut === "ASSIGNEE_FINAL" || order.statut === "EN_TRANSIT_VERS_FINAL") && (
                           <>
                             <Button
                               onClick={() => handleAcceptOrder(order.id)}
                               disabled={acceptOrderMutation.isPending}
-                              className="flex-1"
+                              className="w-full sm:flex-1"
                             >
                               <CheckCircle className="h-4 w-4 mr-2" />
                               {acceptOrderMutation.isPending ? "Acceptation..." : "Accepter"}
@@ -607,7 +645,7 @@ export default function LivreurDashboard() {
                                   variant="destructive"
                                   onClick={() => setSelectedOrder(order)}
                                   disabled={refuseOrderMutation.isPending}
-                                  className="flex-1"
+                                  className="w-full sm:flex-1"
                                 >
                                   <XCircle className="h-4 w-4 mr-2" />
                                   Refuser
@@ -646,7 +684,7 @@ export default function LivreurDashboard() {
                                     </div>
                                   )}
                                   
-                                  <div className="flex gap-3">
+                                  <div className="flex flex-col sm:flex-row gap-3">
                                     <Button
                                       variant="outline"
                                       onClick={() => {
@@ -654,7 +692,7 @@ export default function LivreurDashboard() {
                                         setRefusalReason("")
                                         setCustomReason("")
                                       }}
-                                      className="flex-1"
+                                      className="w-full sm:flex-1"
                                     >
                                       Annuler
                                     </Button>
@@ -662,7 +700,7 @@ export default function LivreurDashboard() {
                                       variant="destructive"
                                       onClick={handleRefuseOrder}
                                       disabled={refuseOrderMutation.isPending}
-                                      className="flex-1"
+                                      className="w-full sm:flex-1"
                                     >
                                       {refuseOrderMutation.isPending ? "Refus..." : "Confirmer le refus"}
                                     </Button>
@@ -762,7 +800,7 @@ export default function LivreurDashboard() {
                                 <Button
                                   variant="outline"
                                   onClick={() => setSelectedOrder(order)}
-                                  className="flex-1"
+                                  className="w-full sm:flex-1"
                                 >
                                   <UserPlus className="h-4 w-4 mr-2" />
                                   Assigner livreur final
@@ -791,7 +829,7 @@ export default function LivreurDashboard() {
                                       </SelectContent>
                                     </Select>
                                   </div>
-                                  <div className="flex gap-3">
+                                  <div className="flex flex-col sm:flex-row gap-3">
                                     <Button
                                       variant="outline"
                                       onClick={() => {
@@ -799,14 +837,14 @@ export default function LivreurDashboard() {
                                         setSelectedLivreurFinal("")
                                         setSelectedOrder(null)
                                       }}
-                                      className="flex-1"
+                                      className="w-full sm:flex-1"
                                     >
                                       Annuler
                                     </Button>
                                     <Button
                                       onClick={handleAssignLivreurFinal}
                                       disabled={!selectedLivreurFinal || assignLivreurFinalMutation.isPending}
-                                      className="flex-1"
+                                      className="w-full sm:flex-1"
                                     >
                                       {assignLivreurFinalMutation.isPending ? "Assignation..." : "Assigner"}
                                     </Button>
@@ -835,7 +873,7 @@ export default function LivreurDashboard() {
                             </div>
                             <Button
                               variant="outline"
-                              onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL}/commandes/${order.id}/facture`, '_blank')}
+                              onClick={() => downloadFacture(order.id)}
                               className="w-full"
                             >
                               <Package className="h-4 w-4 mr-2" />
