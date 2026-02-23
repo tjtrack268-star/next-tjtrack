@@ -40,7 +40,7 @@ export default function ConnexionPage() {
       await login({ email, password })
       toast({
         title: "Connexion réussie",
-        description: "Bienvenue sur TJ-Track !",
+        description: "Bienvenue sur TJTrack !",
       })
       router.push("/")
     } catch (err) {
@@ -66,7 +66,7 @@ export default function ConnexionPage() {
         <Card className="w-full max-w-md border-border bg-card/50 backdrop-blur-sm">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Connexion</CardTitle>
-            <CardDescription>Connectez-vous à votre compte TJ-Track</CardDescription>
+            <CardDescription>Connectez-vous à votre compte TJTrack</CardDescription>
           </CardHeader>
 
           <form onSubmit={handleSubmit}>

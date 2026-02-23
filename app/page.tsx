@@ -612,9 +612,17 @@ export default function HomePage() {
               <h3 className="font-semibold mb-4">Mentions légales</h3>
               <ul className="space-y-2 text-sm text-white/70">
                 <li className="hover:text-white cursor-pointer transition-colors">Politique de retour</li>
-                <li className="hover:text-white cursor-pointer transition-colors">Conditions d'utilisation</li>
+                <li>
+                  <Link href="/conditions-utilisation" className="hover:text-white cursor-pointer transition-colors">
+                    Conditions d'utilisation
+                  </Link>
+                </li>
                 <li className="hover:text-white cursor-pointer transition-colors">Sécurité</li>
-                <li className="hover:text-white cursor-pointer transition-colors">Politique de confidentialité</li>
+                <li>
+                  <Link href="/politique-confidentialite" className="hover:text-white cursor-pointer transition-colors">
+                    Politique de confidentialité
+                  </Link>
+                </li>
               </ul>
             </div>
           </div>

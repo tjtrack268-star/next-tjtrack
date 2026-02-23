@@ -120,7 +120,7 @@ export default function ParametresPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Nom de l'entreprise</Label>
-                  <Input defaultValue="TJ-Track SARL" />
+                  <Input defaultValue="TJTrack SARL" />
                 </div>
                 <div className="space-y-2">
                   <Label>SIRET</Label>
