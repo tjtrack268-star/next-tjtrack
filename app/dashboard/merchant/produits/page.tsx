@@ -21,6 +21,7 @@ import { apiClient } from "@/lib/api"
 import { ProductVariants } from "@/components/product-variants"
 
 export default function MerchantProductsPage() {
+  const MAX_IMAGES = 5
   const [searchQuery, setSearchQuery] = useState("")
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -86,6 +87,10 @@ export default function MerchantProductsPage() {
           p.categorieName?.toLowerCase().includes(searchQuery.toLowerCase()),
       )
     : []
+
+  const appendImagesWithLimit = (current: File[], incoming: File[]) => {
+    return [...current, ...incoming].slice(0, MAX_IMAGES)
+  }
 
   const toggleVisibility = async (id: number, currentVisibility: boolean) => {
     try {
@@ -356,11 +361,28 @@ export default function MerchantProductsPage() {
                       multiple
                       onChange={(e) => {
                         const files = Array.from(e.target.files || [])
-                        setSelectedImages(files)
+                        setSelectedImages((prev) => appendImagesWithLimit(prev, files))
+                        e.currentTarget.value = ""
                       }}
                     />
                     {selectedImages.length > 0 && (
-                      <p className="text-sm text-muted-foreground">{selectedImages.length} image(s) sélectionnée(s)</p>
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">{selectedImages.length}/{MAX_IMAGES} image(s) sélectionnée(s)</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedImages.map((file, index) => (
+                            <div key={`${file.name}-${index}`} className="flex items-center gap-2 rounded-md border px-2 py-1 text-xs">
+                              <span className="max-w-[180px] truncate">{file.name}</span>
+                              <button
+                                type="button"
+                                className="text-destructive"
+                                onClick={() => setSelectedImages((prev) => prev.filter((_, i) => i !== index))}
+                              >
+                                Retirer
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
 
@@ -459,11 +481,28 @@ export default function MerchantProductsPage() {
                       multiple
                       onChange={(e) => {
                         const files = Array.from(e.target.files || [])
-                        setSelectedImages(files)
+                        setSelectedImages((prev) => appendImagesWithLimit(prev, files))
+                        e.currentTarget.value = ""
                       }}
                     />
                     {selectedImages.length > 0 && (
-                      <p className="text-sm text-muted-foreground">{selectedImages.length} image(s) sélectionnée(s)</p>
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">{selectedImages.length}/{MAX_IMAGES} image(s) sélectionnée(s)</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedImages.map((file, index) => (
+                            <div key={`${file.name}-${index}`} className="flex items-center gap-2 rounded-md border px-2 py-1 text-xs">
+                              <span className="max-w-[180px] truncate">{file.name}</span>
+                              <button
+                                type="button"
+                                className="text-destructive"
+                                onClick={() => setSelectedImages((prev) => prev.filter((_, i) => i !== index))}
+                              >
+                                Retirer
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
 
@@ -548,10 +587,30 @@ export default function MerchantProductsPage() {
                     type="file"
                     accept="image/*"
                     multiple
-                    onChange={(e) => setEditImages(Array.from(e.target.files || []))}
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || [])
+                      setEditImages((prev) => appendImagesWithLimit(prev, files))
+                      e.currentTarget.value = ""
+                    }}
                   />
                   {editImages.length > 0 && (
-                    <p className="text-sm text-muted-foreground">{editImages.length} image(s) sélectionnée(s)</p>
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">{editImages.length}/{MAX_IMAGES} image(s) sélectionnée(s)</p>
+                      <div className="flex flex-wrap gap-2">
+                        {editImages.map((file, index) => (
+                          <div key={`${file.name}-${index}`} className="flex items-center gap-2 rounded-md border px-2 py-1 text-xs">
+                            <span className="max-w-[180px] truncate">{file.name}</span>
+                            <button
+                              type="button"
+                              className="text-destructive"
+                              onClick={() => setEditImages((prev) => prev.filter((_, i) => i !== index))}
+                            >
+                              Retirer
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
 

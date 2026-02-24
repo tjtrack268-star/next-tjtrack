@@ -124,7 +124,7 @@ export default function CalculateurLivraisonPage() {
                 type="number" 
                 value={formData.montantCommande} 
                 onChange={(e) => setFormData({...formData, montantCommande: Number(e.target.value)})} 
-                placeholder="Pour vérifier l'éligibilité à la livraison gratuite"
+                placeholder="Utilisé pour calculer la taxe assurance"
               />
             </div>
 
@@ -197,30 +197,21 @@ export default function CalculateurLivraisonPage() {
               <div className="border-t pt-4 mt-4">
                 <div className="flex items-center justify-between">
                   <span className="text-lg font-semibold">Coût total</span>
-                  {quote.gratuit ? (
-                    <span className="text-2xl font-bold text-green-600">GRATUIT</span>
-                  ) : (
-                    <span className="text-2xl font-bold text-primary">
-                      {quote.coutLivraison.toLocaleString()} FCFA
-                    </span>
-                  )}
+                  <span className="text-2xl font-bold text-primary">
+                    {quote.coutLivraison.toLocaleString()} FCFA
+                  </span>
                 </div>
-                {quote.gratuit && (
-                  <p className="text-xs text-green-600 mt-2">
-                    ✓ Seuil de livraison gratuite atteint
-                  </p>
-                )}
               </div>
 
               <div className="text-xs text-muted-foreground text-center pt-2 border-t">
                 {quote.villeDepart && quote.villeArrivee && (
                   <div>
                     <p>{quote.villeDepart} → {quote.villeArrivee}</p>
-                    <p className="mt-1">Formule : 2500 XAF + ({quote.distanceKm} km × 100 XAF/km)</p>
+                    <p className="mt-1">Inclut distance, suppléments éventuels et taxe assurance.</p>
                   </div>
                 )}
                 {quote.ville && (
-                  <p>Tarif fixe urbain : 500 XAF</p>
+                  <p>Tarif urbain selon configuration active.</p>
                 )}
               </div>
             </CardContent>
@@ -257,8 +248,8 @@ export default function CalculateurLivraisonPage() {
           <div className="flex gap-3">
             <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">4</div>
             <div>
-              <p className="font-medium">Livraison gratuite automatique</p>
-              <p className="text-muted-foreground">Urbain : &gt; 30 000 XAF | Interurbain : &gt; 50 000 XAF</p>
+              <p className="font-medium">Taxe assurance proportionnelle</p>
+              <p className="text-muted-foreground">Une taxe d'assurance est appliquée selon la valeur de la commande.</p>
             </div>
           </div>
         </CardContent>

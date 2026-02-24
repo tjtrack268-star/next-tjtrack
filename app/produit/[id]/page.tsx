@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
+import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -65,6 +66,7 @@ export default function ProductPage() {
   const { data: relatedProducts } = useRelatedProducts(product?.categorieId || 0, parseInt(productId))
   
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
+  const [carouselApi, setCarouselApi] = useState<CarouselApi | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [isFavorite, setIsFavorite] = useState(false)
   const [showReviewForm, setShowReviewForm] = useState(false)
@@ -99,7 +101,7 @@ export default function ProductPage() {
       await addItem(articleId, quantity, {
         name: product.nom,
         price: computedUnitPrice,
-        image: buildImageUrl(product.images[0]) || "/placeholder.svg",
+        image: images[0] || "/placeholder.svg",
       })
       toast({
         title: "Ajouté au panier",
@@ -200,6 +202,16 @@ export default function ProductPage() {
   }, [images.length, selectedImageIndex])
 
   useEffect(() => {
+    if (!carouselApi) return
+    const onSelect = () => setSelectedImageIndex(carouselApi.selectedScrollSnap())
+    onSelect()
+    carouselApi.on("select", onSelect)
+    return () => {
+      carouselApi.off("select", onSelect)
+    }
+  }, [carouselApi])
+
+  useEffect(() => {
     if (!product) return
     if (selectedVariant !== null || !product.variants || product.variants.length === 0) return
     const firstAvailable = product.variants.find((v) => v.quantite > 0)?.id
@@ -253,12 +265,22 @@ export default function ProductPage() {
         <div className="grid lg:grid-cols-2 gap-8 mb-12">
           {/* Images */}
           <div className="space-y-4">
-            <div className="relative aspect-square bg-muted rounded-lg overflow-hidden">
-              <img
-                src={images[selectedImageIndex]}
-                alt={product.nom}
-                className="w-full h-full object-cover"
-              />
+            <div className="relative">
+              <Carousel setApi={setCarouselApi} opts={{ loop: images.length > 1 }} className="w-full">
+                <CarouselContent className="ml-0">
+                  {images.map((image, index) => (
+                    <CarouselItem key={`${image}-${index}`} className="pl-0">
+                      <div className="aspect-square bg-muted rounded-lg overflow-hidden">
+                        <img
+                          src={image}
+                          alt={`${product.nom} ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+              </Carousel>
               {images.length > 1 && (
                 <>
                   <Button
@@ -266,7 +288,7 @@ export default function ProductPage() {
                     variant="secondary"
                     size="icon"
                     className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8"
-                    onClick={() => setSelectedImageIndex((prev) => (prev - 1 + images.length) % images.length)}
+                    onClick={() => carouselApi?.scrollPrev()}
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
@@ -275,7 +297,7 @@ export default function ProductPage() {
                     variant="secondary"
                     size="icon"
                     className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
-                    onClick={() => setSelectedImageIndex((prev) => (prev + 1) % images.length)}
+                    onClick={() => carouselApi?.scrollNext()}
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>
@@ -283,11 +305,23 @@ export default function ProductPage() {
               )}
             </div>
             {images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto">
+              <div className="space-y-3">
+                <div className="flex items-center justify-center gap-2">
+                  {images.map((_, index) => (
+                    <button
+                      key={`dot-${index}`}
+                      type="button"
+                      onClick={() => carouselApi?.scrollTo(index)}
+                      className={`h-2 rounded-full transition-all ${selectedImageIndex === index ? "w-6 bg-primary" : "w-2 bg-muted-foreground/40"}`}
+                      aria-label={`Aller à l'image ${index + 1}`}
+                    />
+                  ))}
+                </div>
+                <div className="flex gap-2 overflow-x-auto">
                 {images.map((image, index) => (
                   <button
                     key={index}
-                    onClick={() => setSelectedImageIndex(index)}
+                    onClick={() => carouselApi?.scrollTo(index)}
                     className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
                       selectedImageIndex === index ? "border-primary" : "border-transparent"
                     }`}
@@ -295,6 +329,7 @@ export default function ProductPage() {
                     <img src={image} alt={`${product.nom} ${index + 1}`} className="w-full h-full object-cover" />
                   </button>
                 ))}
+                </div>
               </div>
             )}
           </div>

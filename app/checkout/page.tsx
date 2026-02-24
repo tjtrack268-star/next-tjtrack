@@ -105,7 +105,7 @@ export default function CheckoutPage() {
     if (!formData.city) return
 
     let isCancelled = false
-    const fallbackShipping = totalAmount > 50000 ? 0 : 2500
+    const fallbackShipping = 2500
 
     const runQuote = async () => {
       setIsShippingLoading(true)
@@ -622,14 +622,12 @@ export default function CheckoutPage() {
                     )}
                   </div>
 
-                  {shippingCost > 0 && (
-                    <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 p-3 rounded-lg mb-6">
-                      <p className="text-xs text-foreground/80 flex items-center gap-2">
-                        <span className="text-primary">💡</span>
-                        Livraison gratuite dès 50 000 FCFA
-                      </p>
-                    </div>
-                  )}
+                  <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 p-3 rounded-lg mb-6">
+                    <p className="text-xs text-foreground/80 flex items-center gap-2">
+                      <span className="text-primary">💡</span>
+                      Les frais incluent une taxe d'assurance calculée sur la valeur de la commande.
+                    </p>
+                  </div>
 
                   <Separator className="my-6" />
 
