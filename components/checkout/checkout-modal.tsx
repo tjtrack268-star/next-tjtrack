@@ -97,7 +97,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
     if (!formData.city) return
 
     let isCancelled = false
-    const fallbackShipping = totalAmount > 50000 ? 0 : 2500
+    const fallbackShipping = 2500
 
     const runQuote = async () => {
       setIsShippingLoading(true)
@@ -426,11 +426,9 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                 </div>
               </div>
 
-              {shippingCost > 0 && (
-                <p className="text-xs text-muted-foreground bg-secondary/30 p-2 rounded mb-4">
-                  Livraison gratuite à partir de 50 000 FCFA
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground bg-secondary/30 p-2 rounded mb-4">
+                Les frais incluent une taxe d'assurance calculée sur la valeur de la commande.
+              </p>
 
               <div className="border-t border-border pt-2">
                 <div className="flex justify-between text-lg font-bold">

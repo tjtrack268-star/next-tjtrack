@@ -409,7 +409,7 @@ export default function HomePage() {
       {showBanner && (
         <div className="bg-primary text-primary-foreground py-1 overflow-hidden animate-fade-in relative z-[110]">
           <div className="animate-marquee whitespace-nowrap">
-            <span className="mx-4">Livraison gratuite à partir de 50 000 XAF</span>
+            <span className="mx-4">Livraison avec assurance incluse</span>
             <span className="mx-4">•</span>
             <span className="mx-4">Nouveaux produits chaque semaine</span>
             <span className="mx-4">•</span>
@@ -417,7 +417,7 @@ export default function HomePage() {
             <span className="mx-4">•</span>
             <span className="mx-4">Service client 24/7</span>
             <span className="mx-4">•</span>
-            <span className="mx-4">Livraison gratuite à partir de 50 000 XAF</span>
+            <span className="mx-4">Livraison avec assurance incluse</span>
             <span className="mx-4">•</span>
             <span className="mx-4">Nouveaux produits chaque semaine</span>
           </div>
