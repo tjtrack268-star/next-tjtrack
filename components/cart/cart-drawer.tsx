@@ -8,6 +8,7 @@ import { X, Plus, Minus, ShoppingBag, Trash2, ArrowRight, Loader2 } from "lucide
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { SheetDescription } from "@/components/ui/sheet"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { useCart } from "@/contexts/cart-context"
@@ -21,6 +22,7 @@ interface CartDrawerProps {
 
 export function CartDrawer({ onCheckout }: CartDrawerProps) {
   const router = useRouter()
+  const [brokenImages, setBrokenImages] = useState<Record<number, boolean>>({})
   const { items, isOpen, isLoading, closeCart, totalItems, totalAmount, updateQuantity, removeItem, clearCart } =
     useCart()
   const { isAuthenticated } = useAuth()
@@ -29,7 +31,7 @@ export function CartDrawer({ onCheckout }: CartDrawerProps) {
 
   return (
     <Sheet open={isOpen} onOpenChange={closeCart}>
-      <SheetContent className="w-full sm:max-w-lg glass-card p-0 flex flex-col z-[150]">
+      <SheetContent className="w-full sm:max-w-lg glass-card p-0 flex flex-col gap-0 z-[150]">
         <SheetHeader className="p-6 border-b border-border">
           <div className="flex items-center justify-between">
             <SheetTitle className="flex items-center gap-2 text-xl">
@@ -51,6 +53,9 @@ export function CartDrawer({ onCheckout }: CartDrawerProps) {
               </Button>
             )}
           </div>
+          <SheetDescription className="sr-only">
+            Résumé de votre panier, modification des quantités et accès à la commande.
+          </SheetDescription>
         </SheetHeader>
 
         {items.length === 0 ? (
@@ -69,7 +74,7 @@ export function CartDrawer({ onCheckout }: CartDrawerProps) {
           </div>
         ) : (
           <>
-            <ScrollArea className="flex-1 p-6">
+            <ScrollArea className="flex-1 min-h-0 p-6">
               <div className="space-y-4">
                 {items.map((item, index) => (
                   <div
@@ -78,12 +83,25 @@ export function CartDrawer({ onCheckout }: CartDrawerProps) {
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <div className="relative h-20 w-20 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
+                      {(() => {
+                        const itemId = Number(item.articleId || 0)
+                        const imgSrc = brokenImages[itemId]
+                          ? "/placeholder.svg?height=80&width=80&query=product"
+                          : (buildImageUrl(item.articlePhoto) || item.articlePhoto || "/placeholder.svg?height=80&width=80&query=product")
+                        return (
                       <Image
-                        src={buildImageUrl(item.articlePhoto) || item.articlePhoto || "/placeholder.svg?height=80&width=80&query=product"}
+                        src={imgSrc}
                         alt={item.articleNom || "Produit"}
                         fill
                         className="object-cover"
+                        onError={() => {
+                          if (itemId > 0 && !brokenImages[itemId]) {
+                            setBrokenImages((prev) => ({ ...prev, [itemId]: true }))
+                          }
+                        }}
                       />
+                        )
+                      })()}
                     </div>
 
                     <div className="flex-1 min-w-0">

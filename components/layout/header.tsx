@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { useCart } from "@/contexts/cart-context"
 import { useAuth } from "@/contexts/auth-context"
 import { useSearch } from "@/contexts/search-context"
@@ -236,6 +236,10 @@ export function Header() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-80 glass-sidebar p-0">
+                <SheetHeader className="sr-only">
+                  <SheetTitle>Menu principal</SheetTitle>
+                  <SheetDescription>Navigation mobile de la boutique.</SheetDescription>
+                </SheetHeader>
                 <div className="flex flex-col h-full">
                   <div className="p-6 border-b border-sidebar-border">
                     <div className="flex items-center gap-2">
@@ -330,6 +334,10 @@ export function Header() {
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="w-80 glass-sidebar p-0">
+                  <SheetHeader className="sr-only">
+                    <SheetTitle>Menu principal</SheetTitle>
+                    <SheetDescription>Navigation mobile de la boutique.</SheetDescription>
+                  </SheetHeader>
                   <div className="flex flex-col h-full">
                     <div className="p-6 border-b border-sidebar-border">
                       <div className="flex items-center gap-2">
