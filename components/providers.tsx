@@ -2,6 +2,7 @@
 
 import { QueryClientProvider } from "@tanstack/react-query"
 import { ThemeProvider } from "next-themes"
+import { usePathname } from "next/navigation"
 
 import { type ReactNode } from "react"
 import { AuthProvider } from "@/contexts/auth-context"
@@ -14,6 +15,17 @@ import { CartDrawer } from "@/components/cart/cart-drawer"
 import { queryClient } from "@/lib/query-client"
 
 export function Providers({ children }: { children: ReactNode }) {
+  const pathname = usePathname()
+  const pagesWithLocalCartDrawer = new Set([
+    "/",
+    "/catalogue",
+    "/categories",
+    "/promotions",
+    "/nouveautes",
+    "/profile",
+  ])
+  const shouldRenderGlobalCartDrawer = !pagesWithLocalCartDrawer.has(pathname || "")
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
@@ -22,7 +34,7 @@ export function Providers({ children }: { children: ReactNode }) {
             <CartProvider>
               <SearchProvider>
                 {children}
-                <CartDrawer />
+                {shouldRenderGlobalCartDrawer ? <CartDrawer /> : null}
                 <Toaster />
                 <SonnerToaster position="top-right" richColors />
               </SearchProvider>
