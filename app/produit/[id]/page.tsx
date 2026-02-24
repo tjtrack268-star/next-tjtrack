@@ -75,6 +75,20 @@ export default function ProductPage() {
   const uniqueBy = (arr: string[]) => Array.from(new Set(arr.filter(Boolean)))
   const selectedVariantObj = product?.variants?.find((v) => v.id === selectedVariant)
   const computedUnitPrice = Number(product?.prix || 0) + Number(selectedVariantObj?.prixSupplement || 0)
+  const descriptionText = typeof product?.descriptionLongue === "string" && product.descriptionLongue.trim()
+    ? product.descriptionLongue
+    : (typeof product?.description === "string" ? product.description : "")
+  const keywords = typeof product?.motsCles === "string"
+    ? product.motsCles.split(",").map((keyword) => keyword.trim()).filter(Boolean)
+    : []
+  const images = useMemo(() => {
+    if (!product) return ["/placeholder.svg"]
+    const collected = uniqueBy([
+      buildImageUrl(product.imageprincipale || "") || "",
+      ...(product.images?.map((img) => buildImageUrl(img) || "") || []),
+    ])
+    return collected.length > 0 ? collected : ["/placeholder.svg"]
+  }, [product])
 
   const handleAddToCart = async () => {
     if (!product) return
@@ -179,6 +193,21 @@ export default function ProductPage() {
     }
   }
 
+  useEffect(() => {
+    if (selectedImageIndex >= images.length) {
+      setSelectedImageIndex(0)
+    }
+  }, [images.length, selectedImageIndex])
+
+  useEffect(() => {
+    if (!product) return
+    if (selectedVariant !== null || !product.variants || product.variants.length === 0) return
+    const firstAvailable = product.variants.find((v) => v.quantite > 0)?.id
+    if (firstAvailable) {
+      setSelectedVariant(firstAvailable)
+    }
+  }, [product, selectedVariant])
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -201,27 +230,6 @@ export default function ProductPage() {
     )
   }
 
-  const images = useMemo(() => {
-    const collected = uniqueBy([
-      buildImageUrl(product.imageprincipale || "") || "",
-      ...(product.images?.map((img) => buildImageUrl(img) || "") || []),
-    ])
-    return collected.length > 0 ? collected : ["/placeholder.svg"]
-  }, [product.imageprincipale, product.images])
-
-  useEffect(() => {
-    if (selectedImageIndex >= images.length) {
-      setSelectedImageIndex(0)
-    }
-  }, [images.length, selectedImageIndex])
-
-  useEffect(() => {
-    if (selectedVariant !== null || !product.variants || product.variants.length === 0) return
-    const firstAvailable = product.variants.find((v) => v.quantite > 0)?.id
-    if (firstAvailable) {
-      setSelectedVariant(firstAvailable)
-    }
-  }, [product.variants, selectedVariant])
   const relatedProductsFiltered = relatedProducts?.filter(p => p.id !== product.id).slice(0, 4) || []
 
   return (
@@ -552,14 +560,14 @@ export default function ProductPage() {
             <Card>
               <CardContent className="p-6">
                 <div className="prose max-w-none">
-                  <p>{product.descriptionLongue || product.description}</p>
-                  {product.motsCles && (
+                  <p>{descriptionText || "Aucune description disponible."}</p>
+                  {keywords.length > 0 && (
                     <div className="mt-4">
                       <h4 className="font-semibold mb-2">Mots-clés:</h4>
                       <div className="flex flex-wrap gap-2">
-                        {product.motsCles.split(",").map((keyword, index) => (
+                        {keywords.map((keyword, index) => (
                           <Badge key={index} variant="secondary">
-                            {keyword.trim()}
+                            {keyword}
                           </Badge>
                         ))}
                       </div>
@@ -734,3 +742,7 @@ export default function ProductPage() {
     </div>
   )
 }
+
+
+
+

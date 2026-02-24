@@ -49,6 +49,9 @@ interface Commande {
   montantTotal: number
   fraisLivraison: number
   articles: number
+  livreurId?: number
+  livreurPickupId?: number
+  livreurDeliveryId?: number
   livreurNom?: string
   livreurTelephone?: string
   merchantNom?: string
@@ -80,6 +83,9 @@ const paiementStyles = {
   ECHEC: { label: "Échec", className: "bg-red-500/10 text-red-500" },
   REMBOURSE: { label: "Remboursé", className: "bg-blue-500/10 text-blue-500" },
 }
+
+const hasAssignedDriver = (commande: Commande) =>
+  !!(commande.livreurId || commande.livreurPickupId || commande.livreurDeliveryId)
 
 export default function CommandesPage() {
   const [search, setSearch] = useState("")
@@ -141,6 +147,11 @@ export default function CommandesPage() {
       montantTotal: Number(c.montantTotal || c.totalTtc) || 0,
       fraisLivraison: Number(c.fraisLivraison) || 0,
       articles: (c.items as any[])?.length || 0,
+      livreurId: c.livreurId ? Number(c.livreurId) : undefined,
+      livreurPickupId: c.livreurPickupId ? Number(c.livreurPickupId) : undefined,
+      livreurDeliveryId: c.livreurDeliveryId ? Number(c.livreurDeliveryId) : undefined,
+      livreurNom: c.livreurNom ? String(c.livreurNom) : undefined,
+      livreurTelephone: c.livreurTelephone ? String(c.livreurTelephone) : undefined,
       items: (c.items as any[]) || [],
     }
   })
@@ -590,13 +601,31 @@ export default function CommandesPage() {
                                   Préparer
                                 </DropdownMenuItem>
                               )}
-                              {commande.statut === "EN_PREPARATION" && (
+                              {commande.statut === "EN_PREPARATION" && !hasAssignedDriver(commande) && (
+                                <DropdownMenuItem onClick={() => (window.location.href = "/dashboard/merchant/livraisons")}>
+                                  <Truck className="h-4 w-4 mr-2" />
+                                  Assigner livreur avant expédition
+                                </DropdownMenuItem>
+                              )}
+                              {commande.statut === "EN_PREPARATION" && hasAssignedDriver(commande) && (
                                 <DropdownMenuItem onClick={() => handleUpdateStatus(commande.id, "EXPEDIEE")}>
                                   <Truck className="h-4 w-4 mr-2" />
                                   Expédier
                                 </DropdownMenuItem>
                               )}
-                              {commande.statut === "EXPEDIEE" && (
+                              {commande.statut === "EXPEDIEE" && !hasAssignedDriver(commande) && (
+                                <>
+                                  <DropdownMenuItem onClick={() => handleUpdateStatus(commande.id, "EN_PREPARATION")}>
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Corriger: remettre en préparation
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => (window.location.href = "/dashboard/merchant/livraisons")}>
+                                    <Truck className="h-4 w-4 mr-2" />
+                                    Assigner un livreur
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              {commande.statut === "EXPEDIEE" && hasAssignedDriver(commande) && (
                                 <DropdownMenuItem onClick={() => handleUpdateStatus(commande.id, "LIVREE")}>
                                   <CheckCircle className="h-4 w-4 mr-2" />
                                   Marquer livrée
@@ -833,3 +862,4 @@ export default function CommandesPage() {
     </div>
   )
 }
+
