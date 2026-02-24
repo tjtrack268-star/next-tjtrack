@@ -1146,8 +1146,8 @@ export function useAjouterProduitMerchant() {
         formData.append("articleId", produitDto.articleId.toString())
       }
       
-      // Ajouter quantiteEnLigne si fourni
-      if (produitDto.quantiteEnLigne) {
+      // Ajouter quantiteEnLigne si fourni (meme 0)
+      if (produitDto.quantiteEnLigne !== undefined && produitDto.quantiteEnLigne !== null) {
         formData.append("quantiteEnLigne", produitDto.quantiteEnLigne.toString())
       }
       

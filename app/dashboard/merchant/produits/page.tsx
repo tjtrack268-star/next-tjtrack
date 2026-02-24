@@ -115,6 +115,10 @@ export default function MerchantProductsPage() {
 
   const handleAddProduct = async () => {
     try {
+      if (selectedImages.length === 0) {
+        toast({ title: "Erreur", description: "Au moins une image est obligatoire pour créer un produit", variant: "destructive" })
+        return
+      }
       if (mode === "existing") {
         // Ajouter un article existant
         if (!selectedArticle) {
@@ -526,7 +530,8 @@ export default function MerchantProductsPage() {
                 onClick={handleAddProduct}
                 disabled={
                   addProductMutation.isPending ||
-                  (mode === "existing" ? (!selectedArticle || !newProduct.quantiteEnLigne || Number(newProduct.quantiteEnLigne) <= 0) : !newProduct.nom || !newProduct.prix)
+                  (mode === "existing" ? (!selectedArticle || !newProduct.quantiteEnLigne || Number(newProduct.quantiteEnLigne) <= 0) : !newProduct.nom || !newProduct.prix) ||
+                  selectedImages.length === 0
                 }
               >
                 {addProductMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

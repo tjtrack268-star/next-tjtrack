@@ -27,6 +27,10 @@ interface TarifLivraison {
   poidsInclusKg?: number
   surcoutParKg?: number
   pourcentageMontantCommande?: number
+  tarifKmPickupLocal?: number
+  tarifKmFinalLocal?: number
+  volumeInclusM3?: number
+  surcoutParM3?: number
   actif: boolean
 }
 
@@ -46,6 +50,10 @@ export default function TarifsLivraisonPage() {
     poidsInclusKg: 5,
     surcoutParKg: 200,
     pourcentageMontantCommande: 0,
+    tarifKmPickupLocal: 100,
+    tarifKmFinalLocal: 100,
+    volumeInclusM3: 0.05,
+    surcoutParM3: 5000,
     actif: true
   })
 
@@ -93,6 +101,10 @@ export default function TarifsLivraisonPage() {
       poidsInclusKg: 5,
       surcoutParKg: 200,
       pourcentageMontantCommande: 0,
+      tarifKmPickupLocal: 100,
+      tarifKmFinalLocal: 100,
+      volumeInclusM3: 0.05,
+      surcoutParM3: 5000,
       actif: true
     })
     setEditingTarif(null)
@@ -145,7 +157,9 @@ export default function TarifsLivraisonPage() {
                   <TableHead>Tarif</TableHead>
                   <TableHead>Délai</TableHead>
                   <TableHead>Poids</TableHead>
-                  <TableHead>% Article</TableHead>
+                  <TableHead>Assurance %</TableHead>
+                  <TableHead>KM pickup/final</TableHead>
+                  <TableHead>Volume</TableHead>
                   <TableHead>Seuil gratuit</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -175,6 +189,12 @@ export default function TarifsLivraisonPage() {
                       {(tarif.poidsInclusKg ?? 5)} kg + {(tarif.surcoutParKg ?? 200).toLocaleString()} FCFA/kg
                     </TableCell>
                     <TableCell>{(tarif.pourcentageMontantCommande ?? 0)}%</TableCell>
+                    <TableCell>
+                      {(tarif.tarifKmPickupLocal ?? 100).toLocaleString()} / {(tarif.tarifKmFinalLocal ?? 100).toLocaleString()} FCFA
+                    </TableCell>
+                    <TableCell>
+                      {(tarif.volumeInclusM3 ?? 0.05).toLocaleString()} m3 + {(tarif.surcoutParM3 ?? 5000).toLocaleString()} FCFA/m3
+                    </TableCell>
                     <TableCell>{tarif.seuilGratuite ? `${tarif.seuilGratuite.toLocaleString()} FCFA` : '-'}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded text-xs ${tarif.actif ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
@@ -283,12 +303,53 @@ export default function TarifsLivraisonPage() {
                   />
                 </div>
                 <div>
-                  <Label>Pourcentage sur article (%)</Label>
+                  <Label>Taxe assurance (%)</Label>
                   <Input
                     type="number"
                     value={formData.pourcentageMontantCommande ?? ''}
                     onChange={(e) => setFormData({...formData, pourcentageMontantCommande: e.target.value ? Number(e.target.value) : undefined})}
                     placeholder="Ex: 2.5"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>Tarif km pickup local (FCFA)</Label>
+                  <Input
+                    type="number"
+                    value={formData.tarifKmPickupLocal ?? ''}
+                    onChange={(e) => setFormData({...formData, tarifKmPickupLocal: e.target.value ? Number(e.target.value) : undefined})}
+                    placeholder="Ex: 100"
+                  />
+                </div>
+                <div>
+                  <Label>Tarif km final local (FCFA)</Label>
+                  <Input
+                    type="number"
+                    value={formData.tarifKmFinalLocal ?? ''}
+                    onChange={(e) => setFormData({...formData, tarifKmFinalLocal: e.target.value ? Number(e.target.value) : undefined})}
+                    placeholder="Ex: 100"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>Volume inclus (m3)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.volumeInclusM3 ?? ''}
+                    onChange={(e) => setFormData({...formData, volumeInclusM3: e.target.value ? Number(e.target.value) : undefined})}
+                    placeholder="Ex: 0.05"
+                  />
+                </div>
+                <div>
+                  <Label>Surcoût volume (FCFA / m3)</Label>
+                  <Input
+                    type="number"
+                    value={formData.surcoutParM3 ?? ''}
+                    onChange={(e) => setFormData({...formData, surcoutParM3: e.target.value ? Number(e.target.value) : undefined})}
+                    placeholder="Ex: 5000"
                   />
                 </div>
               </div>

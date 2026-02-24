@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import { Search, SlidersHorizontal, Grid3X3, List, X, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, SlidersHorizontal, Grid3X3, List, X, ChevronLeft, ChevronRight, Images } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -97,6 +97,9 @@ export default function CataloguePage() {
       prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId],
     )
   }
+
+  // correction Images
+  
 
   const clearFilters = () => {
     setSearchQuery("")
