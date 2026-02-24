@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator"
 import { useCart } from "@/contexts/cart-context"
 import { useAuth } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
+import { buildImageUrl } from "@/lib/image-utils"
 
 interface CartDrawerProps {
   onCheckout?: () => void
@@ -78,7 +79,7 @@ export function CartDrawer({ onCheckout }: CartDrawerProps) {
                   >
                     <div className="relative h-20 w-20 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
                       <Image
-                        src={item.articlePhoto || "/placeholder.svg?height=80&width=80&query=product"}
+                        src={buildImageUrl(item.articlePhoto) || item.articlePhoto || "/placeholder.svg?height=80&width=80&query=product"}
                         alt={item.articleNom || "Produit"}
                         fill
                         className="object-cover"
