@@ -35,6 +35,21 @@ interface DualDeliveryAssignmentProps {
   onAssigned: (result: any) => void
 }
 
+interface DeliveryQuoteDetail {
+  coutLivraison?: number
+  distanceKm?: number
+  distancePickupKm?: number
+  distanceLinehaulKm?: number
+  distanceFinalKm?: number
+  coutPickupLocal?: number
+  coutLinehaulInterville?: number
+  coutFinalLocal?: number
+  coutAssurance?: number
+  coutSupplementPoids?: number
+  coutSupplementVolume?: number
+  coutSupplements?: number
+}
+
 export default function DualDeliveryAssignment({ 
   commandeId, merchantEmail, merchantLat, merchantLon, clientVille, merchantVille, onAssigned 
 }: DualDeliveryAssignmentProps) {
@@ -46,6 +61,13 @@ export default function DualDeliveryAssignment({
   const [selectedDelivery, setSelectedDelivery] = useState<number | null>(null)
   const [assigning, setAssigning] = useState(false)
   const [infoLivraison, setInfoLivraison] = useState<any>(null)
+  const [quoteLoading, setQuoteLoading] = useState(false)
+  const [quote, setQuote] = useState<DeliveryQuoteDetail | null>(null)
+  const [agenceDepartQuartier, setAgenceDepartQuartier] = useState("")
+  const [agenceArriveeQuartier, setAgenceArriveeQuartier] = useState("")
+  const [livreurFinalQuartier, setLivreurFinalQuartier] = useState("")
+  const [poidsKg, setPoidsKg] = useState("1")
+  const [volumeM3, setVolumeM3] = useState("")
 
   const isDifferentCity = infoLivraison ? !infoLivraison.memeVille : 
     (clientVille?.toLowerCase() !== merchantVille?.toLowerCase())
@@ -70,6 +92,57 @@ export default function DualDeliveryAssignment({
       console.log('Info livraison:', data)
     } catch (error) {
       console.error('Erreur chargement info livraison:', error)
+    }
+  }
+
+  const calculerDevisInterville = async () => {
+    if (isDifferentCity && !selectedDelivery) {
+      toast({
+        title: "Livreur final requis",
+        description: "Sélectionnez d'abord le livreur final pour calculer le segment livreur final -> client.",
+        variant: "destructive"
+      })
+      return
+    }
+    setQuoteLoading(true)
+    try {
+      const villeDepartResolved = infoLivraison?.merchantVille || merchantVille
+      const villeArriveeResolved = infoLivraison?.clientVille || clientVille
+      const itemIds: number[] = Array.isArray(infoLivraison?.items)
+        ? infoLivraison.items
+            .map((it: any) => Number(it?.articleId || it?.article?.id || it?.id || 0))
+            .filter((id: number) => Number.isFinite(id) && id > 0)
+        : []
+      const montantCommande = Number(infoLivraison?.montantTotal || 0)
+
+        const response = await apiClient.post<DeliveryQuoteDetail>("/delivery/tarifs/quote", {
+        villeDepart: villeDepartResolved,
+        villeArrivee: villeArriveeResolved,
+        quartierDepart: infoLivraison?.merchantAddress || undefined,
+        quartierArrivee: infoLivraison?.clientAddress || undefined,
+        villeAgenceDepart: villeDepartResolved,
+        quartierAgenceDepart: agenceDepartQuartier || undefined,
+        villeAgenceArrivee: villeArriveeResolved,
+        quartierAgenceArrivee: agenceArriveeQuartier || undefined,
+        villeLivreurFinal: villeArriveeResolved,
+        quartierLivreurFinal: livreurFinalQuartier || undefined,
+        livreurFinalId: selectedDelivery || undefined,
+        articleIds: itemIds,
+        typeLivraison: "STANDARD",
+        poidsKg: Number(poidsKg) > 0 ? Number(poidsKg) : 1,
+        montantCommande: montantCommande > 0 ? montantCommande : undefined,
+        volumeM3: Number(volumeM3) > 0 ? Number(volumeM3) : undefined
+      })
+      setQuote(response)
+    } catch (error) {
+      console.error("Erreur devis interville:", error)
+      toast({
+        title: "Erreur devis",
+        description: "Impossible de calculer le devis interville pour le moment",
+        variant: "destructive"
+      })
+    } finally {
+      setQuoteLoading(false)
     }
   }
 
@@ -213,7 +286,14 @@ export default function DualDeliveryAssignment({
         commandeId,
         merchantEmail,
         selectedPickup,
-        selectedDelivery
+        selectedDelivery,
+        {
+          quartierAgenceDepart: agenceDepartQuartier || undefined,
+          quartierAgenceArrivee: agenceArriveeQuartier || undefined,
+          quartierLivreurFinal: livreurFinalQuartier || undefined,
+          poidsKg: Number(poidsKg) > 0 ? Number(poidsKg) : undefined,
+          volumeM3: Number(volumeM3) > 0 ? Number(volumeM3) : undefined
+        }
       ) as any
       
       const data = response.data || response
@@ -470,6 +550,79 @@ export default function DualDeliveryAssignment({
           </div>
         ) : (
           <Tabs defaultValue="pickup" className="w-full">
+            <div className="bg-muted/40 border rounded-lg p-4 mb-4 space-y-3">
+              <h4 className="font-medium">Paramètres interville (agences)</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm text-muted-foreground">Quartier agence départ ({villeMarchandAffichage})</label>
+                  <input
+                    className="w-full mt-1 rounded border px-3 py-2 text-sm bg-background"
+                    value={agenceDepartQuartier}
+                    onChange={(e) => setAgenceDepartQuartier(e.target.value)}
+                    placeholder="Ex: Akwa"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Quartier agence arrivée ({villeClientAffichage})</label>
+                  <input
+                    className="w-full mt-1 rounded border px-3 py-2 text-sm bg-background"
+                    value={agenceArriveeQuartier}
+                    onChange={(e) => setAgenceArriveeQuartier(e.target.value)}
+                    placeholder="Ex: Centre ville"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Quartier de départ livreur final</label>
+                  <input
+                    className="w-full mt-1 rounded border px-3 py-2 text-sm bg-background"
+                    value={livreurFinalQuartier}
+                    onChange={(e) => setLivreurFinalQuartier(e.target.value)}
+                    placeholder="Ex: Mvog-Ada"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Poids estimé (kg)</label>
+                  <input
+                    className="w-full mt-1 rounded border px-3 py-2 text-sm bg-background"
+                    value={poidsKg}
+                    onChange={(e) => setPoidsKg(e.target.value)}
+                    placeholder="Ex: 2"
+                    type="number"
+                    min={1}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Volume estimé (m3)</label>
+                  <input
+                    className="w-full mt-1 rounded border px-3 py-2 text-sm bg-background"
+                    value={volumeM3}
+                    onChange={(e) => setVolumeM3(e.target.value)}
+                    placeholder="Ex: 0.08"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                  />
+                </div>
+              </div>
+              <Button variant="outline" onClick={calculerDevisInterville} disabled={quoteLoading}>
+                {quoteLoading ? "Calcul devis..." : "Calculer devis détaillé"}
+              </Button>
+              {isDifferentCity && !selectedDelivery ? (
+                <p className="text-xs text-amber-700">
+                  Sélection du livreur final obligatoire pour un devis interville précis.
+                </p>
+              ) : null}
+              {quote ? (
+                <div className="text-sm bg-blue-50 border border-blue-100 rounded p-3 space-y-1">
+                  <p><strong>Total:</strong> {Number(quote.coutLivraison || 0).toLocaleString()} FCFA</p>
+                  <p>Pickup local: {Number(quote.coutPickupLocal || 0).toLocaleString()} FCFA ({Number(quote.distancePickupKm || 0).toLocaleString()} km)</p>
+                  <p>Interville: {Number(quote.coutLinehaulInterville || 0).toLocaleString()} FCFA ({Number(quote.distanceLinehaulKm || 0).toLocaleString()} km)</p>
+                  <p>Final local: {Number(quote.coutFinalLocal || 0).toLocaleString()} FCFA ({Number(quote.distanceFinalKm || 0).toLocaleString()} km)</p>
+                  <p>Assurance: {Number(quote.coutAssurance || 0).toLocaleString()} FCFA</p>
+                  <p>Suppléments: {Number(quote.coutSupplements || 0).toLocaleString()} FCFA</p>
+                </div>
+              ) : null}
+            </div>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="pickup" className="flex items-center gap-2">
                 <Package className="h-4 w-4" />

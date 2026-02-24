@@ -22,6 +22,7 @@ interface ProductCardProps {
 
 export function ProductCard({ product, variant = "default" }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false)
+  const [imageError, setImageError] = useState(false)
   const { addItem, openCart } = useCart()
   const { isFavorite, toggleFavorite } = useFavorites()
 
@@ -34,6 +35,7 @@ export function ProductCard({ product, variant = "default" }: ProductCardProps) 
   const name = isArticle ? product.designation : product.nom
   const price = isArticle ? product.prixUnitaireTtc || product.prixUnitaireHt : product.prix
   const image = buildImageUrl(isArticle ? product.photo : product.images?.[0])
+  const displayImage = imageError ? "/placeholder.svg?height=300&width=300&query=product" : (image || "/placeholder.svg?height=300&width=300&query=product")
   const category = isArticle ? product.categorieDesignation : product.categorieName
   const inStock = isArticle ? (product.quantiteStock || 0) > 0 : (product.quantite || 0) > 0
   const stockCount = isArticle ? product.quantiteStock : product.quantite
@@ -81,11 +83,13 @@ export function ProductCard({ product, variant = "default" }: ProductCardProps) 
       <Card className="glass-card hover-lift overflow-hidden">
         <Link href={`/produit/${id}`} className="flex">
           <div className="relative w-32 h-32 flex-shrink-0">
-            <img
-              src={image || "/placeholder.svg?height=128&width=128&query=product"}
+            <Image
+              src={displayImage}
               alt={name}
-              crossOrigin="anonymous"
-              className="w-full h-full object-cover"
+              fill
+              sizes="128px"
+              className="object-cover"
+              onError={() => setImageError(true)}
             />
           </div>
           <CardContent className="flex-1 p-4">
@@ -126,11 +130,13 @@ export function ProductCard({ product, variant = "default" }: ProductCardProps) 
       <Link href={`/produit/${id}`}>
         {/* Image Container */}
         <div className="relative aspect-square overflow-hidden bg-secondary/30">
-          <img
-            src={image || "/placeholder.svg?height=300&width=300&query=product"}
+          <Image
+            src={displayImage}
             alt={name}
-            crossOrigin="anonymous"
-            className={cn("w-full h-full object-cover transition-transform duration-500", isHovered && "scale-110")}
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 33vw, 25vw"
+            className={cn("object-cover transition-transform duration-500", isHovered && "scale-110")}
+            onError={() => setImageError(true)}
           />
 
           {/* Badges */}

@@ -36,14 +36,27 @@ export const deliveryApi = {
     commandeId: number,
     merchantEmail: string,
     livreurPickupId: number,
-    livreurDeliveryId: number
+    livreurDeliveryId: number,
+    options?: {
+      quartierAgenceDepart?: string
+      quartierAgenceArrivee?: string
+      quartierLivreurFinal?: string
+      poidsKg?: number
+      volumeM3?: number
+    }
   ) {
     try {
+      const params = new URLSearchParams()
+      params.set("merchantEmail", merchantEmail)
+      params.set("livreurPickupId", String(livreurPickupId))
+      params.set("livreurDeliveryId", String(livreurDeliveryId))
+      if (options?.quartierAgenceDepart) params.set("quartierAgenceDepart", options.quartierAgenceDepart)
+      if (options?.quartierAgenceArrivee) params.set("quartierAgenceArrivee", options.quartierAgenceArrivee)
+      if (options?.quartierLivreurFinal) params.set("quartierLivreurFinal", options.quartierLivreurFinal)
+      if (options?.poidsKg && options.poidsKg > 0) params.set("poidsKg", String(options.poidsKg))
+      if (options?.volumeM3 && options.volumeM3 > 0) params.set("volumeM3", String(options.volumeM3))
       const response = await apiClient.post(
-        `/commandes/${commandeId}/assigner-deux-livreurs?` +
-        `merchantEmail=${merchantEmail}&` +
-        `livreurPickupId=${livreurPickupId}&` +
-        `livreurDeliveryId=${livreurDeliveryId}`
+        `/commandes/${commandeId}/assigner-deux-livreurs?${params.toString()}`
       )
       return response
     } catch (error) {

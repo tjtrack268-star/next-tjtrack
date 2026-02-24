@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Package, Search, AlertTriangle, TrendingUp, TrendingDown, ArrowUpDown, Loader2, Plus, BarChart3, ShoppingCart, Store, Upload, X, Edit, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { useMerchantArticles, useAjusterStockMerchant, useAjouterArticleMerchant, useAllCategories, useAjouterProduitMerchant } from "@/hooks/use-api"
+import { useMerchantArticles, useAjusterStockMerchant, useAjouterArticleMerchantAvecImage, useAllCategories, useAjouterProduitMerchant } from "@/hooks/use-api"
 import { useAuth } from "@/contexts/auth-context"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { StockAnalytics } from "@/components/stock/stock-analytics"
@@ -46,6 +47,7 @@ export default function MerchantStockPage() {
   })
   const [articleImages, setArticleImages] = useState<File[]>([])
   const [productImages, setProductImages] = useState<File[]>([])
+  const [brokenArticleImages, setBrokenArticleImages] = useState<Record<number, boolean>>({})
   const [editDialog, setEditDialog] = useState<{
     open: boolean
     article: Record<string, unknown> | null
@@ -77,7 +79,7 @@ export default function MerchantStockPage() {
   const { data: stockResponse, isLoading, error, refetch } = useMerchantArticles(user?.email || "")
   const { data: categoriesResponse } = useAllCategories()
   const adjustStockMutation = useAjusterStockMerchant()
-  const addArticleMutation = useAjouterArticleMerchant()
+  const addArticleMutation = useAjouterArticleMerchantAvecImage()
   const addProductMutation = useAjouterProduitMerchant()
   
   const categories = categoriesResponse || []
@@ -136,29 +138,37 @@ export default function MerchantStockPage() {
       })
       return
     }
+    if (articleImages.length === 0) {
+      toast({
+        title: "Erreur",
+        description: "Au moins une image est obligatoire pour ajouter un article",
+        variant: "destructive"
+      })
+      return
+    }
 
     try {
       // 1. Créer l'article d'abord
       const articleResponse = await addArticleMutation.mutateAsync({
         userId: user?.email || "",
-        data: {
-          codeArticle: `ART-${Date.now()}`,
+        articleData: {
           designation: newArticle.designation,
           description: newArticle.description,
-          prixUnitaireHt: parseFloat(newArticle.prixUnitaireHt),
-          prixUnitaireTtc: parseFloat(newArticle.prixUnitaireHt) * 1.2,
-          quantiteStock: parseInt(newArticle.quantiteStock),
-          seuilAlerte: parseInt(newArticle.seuilAlerte),
-          categorieId: newArticle.categorieId ? parseInt(newArticle.categorieId) : undefined
-        }
+          prixUnitaireHt: newArticle.prixUnitaireHt,
+          prixUnitaireTtc: (parseFloat(newArticle.prixUnitaireHt) * 1.2).toString(),
+          quantiteStock: newArticle.quantiteStock,
+          seuilAlerte: newArticle.seuilAlerte,
+          categorieId: newArticle.categorieId || "1"
+        },
+        image: articleImages[0]
       })
 
-      // 2. Si des images existent, les uploader une par une
-      if (articleImages.length > 0 && articleResponse?.data?.id) {
+      // 2. Upload des images restantes
+      if (articleImages.length > 1 && articleResponse?.data?.id) {
         const articleId = articleResponse.data.id as number
-        console.log("🖼️ Uploading", articleImages.length, "images for article", articleId)
+        console.log("🖼️ Uploading", articleImages.length - 1, "additional images for article", articleId)
         
-        for (const image of articleImages) {
+        for (const image of articleImages.slice(1)) {
           try {
             const compressedImage = await compressImage(image)
             const formData = new FormData()
@@ -198,9 +208,7 @@ export default function MerchantStockPage() {
 
       toast({
         title: "Article ajouté",
-        description: articleImages.length > 0 
-          ? `Article créé avec ${articleImages.length} image(s)`
-          : "L'article a été ajouté avec succès"
+        description: `Article créé avec ${articleImages.length} image(s)`
       })
 
       setAddDialog(false)
@@ -238,6 +246,14 @@ export default function MerchantStockPage() {
       })
       return
     }
+    if (productImages.length === 0) {
+      toast({
+        title: "Erreur",
+        description: "Au moins une image est obligatoire pour ajouter un produit",
+        variant: "destructive"
+      })
+      return
+    }
 
     try {
       const article = productDialog.article
@@ -245,13 +261,6 @@ export default function MerchantStockPage() {
       console.log("Creating product from article:", article)
       console.log("Article photo:", article.photo)
       console.log("Product images:", productImages)
-      
-      // Si l'article a une photo et qu'aucune image n'a été ajoutée, utiliser la photo de l'article
-      let imagesToUpload = productImages
-      if (productImages.length === 0 && article.photo) {
-        console.log("⚠️ Article has photo but no product images selected. Photo will be linked automatically.")
-        // Le backend utilisera automatiquement la photo de l'article
-      }
       
       await addProductMutation.mutateAsync({
         produitDto: {
@@ -266,7 +275,7 @@ export default function MerchantStockPage() {
           visibleEnLigne: productData.visibleEnLigne,
           migrateImages: true // Créer le point de stockage article_produit
         },
-        images: imagesToUpload,
+        images: productImages,
         merchantUserId: user?.email || ""
       })
 
@@ -578,33 +587,31 @@ export default function MerchantStockPage() {
             <TableBody>
               {filteredStock.map((item) => {
                 const article = item as unknown as Record<string, unknown>
+                const articleId = Number(article.id || 0)
                 const status = getStockStatus(article)
                 const qty = (article.quantiteStock as number) || 0
                 const threshold = (article.seuilAlerte as number) || 5
                 const max = (article.stockMax as number) || 100
                 const price = (article.prixUnitaireHt as number) || 0
+                const articleImage = article.photo ? (buildImageUrl(article.photo as string) || "/placeholder.svg") : "/placeholder.svg"
+                const articleImageSrc = brokenArticleImages[articleId] ? "/placeholder.svg" : articleImage
                 return (
-                  <TableRow key={article.id as number}>
+                  <TableRow key={articleId}>
                     <TableCell>
                       <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-muted/30 flex-shrink-0 border border-border">
                         {article.photo ? (
-                          <>
-                            {typeof document !== 'undefined' && console.log('Merchant Stock Image:', {
-                              articleId: article.id,
-                              rawPhoto: article.photo,
-                              builtUrl: buildImageUrl(article.photo as string),
-                              article
-                            })}
-                            <img
-                              src={buildImageUrl(article.photo as string) || "/placeholder.svg"}
-                              alt={article.designation as string}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                console.error('Image load error for article', article.id, ':', buildImageUrl(article.photo as string))
-                                e.currentTarget.src = "/placeholder.svg"
-                              }}
-                            />
-                          </>
+                          <Image
+                            src={articleImageSrc}
+                            alt={article.designation as string}
+                            fill
+                            sizes="48px"
+                            className="object-cover"
+                            onError={() => {
+                              if (!brokenArticleImages[articleId]) {
+                                setBrokenArticleImages((prev) => ({ ...prev, [articleId]: true }))
+                              }
+                            }}
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-muted/50">
                             <Package className="h-5 w-5 text-muted-foreground" />
@@ -1009,7 +1016,7 @@ export default function MerchantStockPage() {
             <Button variant="outline" onClick={() => setAddDialog(false)}>
               Annuler
             </Button>
-            <Button onClick={handleAddArticle} disabled={addArticleMutation.isPending}>
+            <Button onClick={handleAddArticle} disabled={addArticleMutation.isPending || articleImages.length === 0}>
               {addArticleMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               <Plus className="h-4 w-4 mr-2" />
               Ajouter Article
@@ -1070,7 +1077,7 @@ export default function MerchantStockPage() {
             
             {/* Images Section */}
             <div className="space-y-2">
-              <Label>Images supplémentaires (optionnelles)</Label>
+              <Label>Images du produit *</Label>
               <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-muted/50 transition">
                 <input
                   type="file"
@@ -1082,7 +1089,7 @@ export default function MerchantStockPage() {
                 />
                 <label htmlFor="product-images-input" className="cursor-pointer block">
                   <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm font-medium">Cliquez pour ajouter des images</p>
+                  <p className="text-sm font-medium">Cliquez pour ajouter des images (obligatoire)</p>
                   <p className="text-xs text-muted-foreground">Accepte JPG, PNG (Max 5 images)</p>
                 </label>
               </div>
@@ -1129,7 +1136,7 @@ export default function MerchantStockPage() {
             <Button variant="outline" onClick={() => setProductDialog({ open: false, article: null })}>
               Annuler
             </Button>
-            <Button onClick={handleCreateProduct} disabled={addProductMutation.isPending}>
+            <Button onClick={handleCreateProduct} disabled={addProductMutation.isPending || productImages.length === 0}>
               {addProductMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               <Store className="h-4 w-4 mr-2" />
               Ajouter en Ligne
