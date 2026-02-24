@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { MapPin, Navigation, Clock, Phone } from 'lucide-react'
 import DeliveryMap from '@/components/maps/DeliveryMap'
 import { apiClient } from '@/lib/api'
+import { useDeliveryWebSocket } from '@/hooks/use-delivery-websocket'
 
 interface LiveTrackingProps {
   commandeId: number
@@ -29,6 +30,22 @@ interface TrackingData {
 export default function LiveTracking({ commandeId, livreurInfo }: LiveTrackingProps) {
   const [trackingData, setTrackingData] = useState<TrackingData | null>(null)
   const [connected, setConnected] = useState(false)
+  const onSocketMessage = useCallback((payload: any) => {
+    if (payload?.latitude == null || payload?.longitude == null) return
+    setTrackingData((prev) => ({
+      latitude: Number(payload.latitude),
+      longitude: Number(payload.longitude),
+      timestamp: payload?.timestamp ? Number(payload.timestamp) : Date.now(),
+      status: String(payload?.status || prev?.status || "EN_COURS"),
+      merchantLatitude: prev?.merchantLatitude,
+      merchantLongitude: prev?.merchantLongitude,
+      clientLatitude: prev?.clientLatitude,
+      clientLongitude: prev?.clientLongitude,
+    }))
+    setConnected(true)
+  }, [])
+
+  useDeliveryWebSocket({ commandeId, enabled: true, onMessage: onSocketMessage })
 
   useEffect(() => {
     const loadLive = async () => {

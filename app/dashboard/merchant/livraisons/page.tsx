@@ -289,6 +289,8 @@ interface Commande {
   montantTotal: number
   dateCommande: string
   livreurId?: number
+  livreurPickupId?: number
+  livreurDeliveryId?: number
   livreurNom?: string
 }
 
@@ -312,6 +314,8 @@ export default function LivraisonsPage() {
       montantTotal: Number(c.montantTotal || c.totalTtc) || 0,
       dateCommande: String(c.dateCommande || new Date().toISOString()),
       livreurId: c.livreurId ? Number(c.livreurId) : undefined,
+      livreurPickupId: c.livreurPickupId ? Number(c.livreurPickupId) : undefined,
+      livreurDeliveryId: c.livreurDeliveryId ? Number(c.livreurDeliveryId) : undefined,
       livreurNom: c.livreurNom ? String(c.livreurNom) : undefined
     }
   }).filter((c) => ['CONFIRMEE', 'EN_PREPARATION', 'EXPEDIEE'].includes(c.statut))
@@ -325,6 +329,8 @@ export default function LivraisonsPage() {
       default: return 'bg-gray-500'
     }
   }
+
+  const hasAssignedDriver = (commande: Commande) => !!(commande.livreurId || commande.livreurPickupId || commande.livreurDeliveryId)
 
   const handleAssignDelivery = (commande: Commande) => {
     setSelectedCommande(commande)
@@ -420,17 +426,17 @@ export default function LivraisonsPage() {
                         )}
                       </div>
                       <div className="ml-6">
-                        {(commande.statut === 'CONFIRMEE' || commande.statut === 'EN_PREPARATION') && !commande.livreurId ? (
+                        {((commande.statut === 'CONFIRMEE' || commande.statut === 'EN_PREPARATION') && !hasAssignedDriver(commande)) || (commande.statut === 'EXPEDIEE' && !hasAssignedDriver(commande)) ? (
                           <Button onClick={() => handleAssignDelivery(commande)}>
                             <Truck className="h-4 w-4 mr-2" />
                             Assigner Livreur
                           </Button>
-                        ) : commande.statut === 'EN_PREPARATION' && commande.livreurId ? (
+                        ) : commande.statut === 'EN_PREPARATION' && hasAssignedDriver(commande) ? (
                           <Badge variant="outline" className="text-yellow-600">
                             <Clock className="h-4 w-4 mr-1" />
                             En préparation
                           </Badge>
-                        ) : commande.statut === 'EXPEDIEE' ? (
+                        ) : commande.statut === 'EXPEDIEE' && hasAssignedDriver(commande) ? (
                           <Badge variant="outline" className="text-orange-600">
                             <Truck className="h-4 w-4 mr-1" />
                             En cours de livraison
@@ -528,3 +534,4 @@ export default function LivraisonsPage() {
     </div>
   )
 }
+

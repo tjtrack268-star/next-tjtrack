@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { MapPin, Phone, Clock, Truck, Package, CheckCircle } from 'lucide-react'
 import DeliveryMap from '@/components/maps/DeliveryMap'
 import { apiClient } from '@/lib/api'
+import { useDeliveryWebSocket } from '@/hooks/use-delivery-websocket'
 
 interface ClientTrackingProps {
   commandeId: number
@@ -37,6 +38,27 @@ interface TrackingInfo {
 export default function ClientTracking({ commandeId, numeroCommande }: ClientTrackingProps) {
   const [tracking, setTracking] = useState<TrackingInfo | null>(null)
   const [loading, setLoading] = useState(true)
+  const onSocketMessage = useCallback((payload: any) => {
+    if (payload?.latitude == null || payload?.longitude == null) return
+    setTracking((prev) => {
+      if (!prev) return prev
+      const updatedLivreur = {
+        nom: prev.livreur?.nom || "Livreur assigné",
+        telephone: prev.livreur?.telephone || "-",
+        latitude: Number(payload.latitude),
+        longitude: Number(payload.longitude),
+      }
+      return {
+        ...prev,
+        livreur: updatedLivreur,
+        positionUpdatedAt: payload?.timestamp
+          ? new Date(Number(payload.timestamp)).toISOString()
+          : prev.positionUpdatedAt,
+      }
+    })
+  }, [])
+
+  useDeliveryWebSocket({ commandeId, enabled: true, onMessage: onSocketMessage })
 
   useEffect(() => {
     loadTrackingInfo()
