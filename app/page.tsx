@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import {
@@ -66,6 +66,12 @@ function normalizeApiList<T>(response: T[] | ApiResponse<T[]> | null | undefined
   return []
 }
 
+type FlashSaleProduct = ProduitEcommerceDto & {
+  prixFlash?: number
+  discountPct?: number
+  dateFin?: string
+}
+
 const categories = ["Tous", "Électronique", "Mode", "Maison", "Sport", "Auto", "Beauté"]
 const cities = ["Toutes", "Douala", "Yaoundé", "Bafoussam", "Garoua", "Bamenda"]
 
@@ -84,16 +90,16 @@ export default function HomePage() {
     queryKey: ["homeMainCarouselAds"],
     queryFn: () => apiClient.get<ApiResponse<ProduitEcommerceDto[]> | ProduitEcommerceDto[]>("/catalogue/carrousel-accueil"),
   })
-  const { data: featuredResponse } = useQuery({
-    queryKey: ["homeMainFeaturedAds"],
-    queryFn: () => apiClient.get<ApiResponse<ProduitEcommerceDto[]> | ProduitEcommerceDto[]>("/catalogue/produits-en-avant"),
+  const { data: flashResponse } = useQuery({
+    queryKey: ["homeFlashSales"],
+    queryFn: () => apiClient.get<ApiResponse<FlashSaleProduct[]> | FlashSaleProduct[]>("/catalogue/ventes-flash", { limit: 10 }),
   })
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
   
   const products = apiProducts || []
   const bannerAds = normalizeApiList(bannerResponse)
   const carouselAds = normalizeApiList(carouselResponse)
-  const featuredAds = normalizeApiList(featuredResponse)
+  const flashSales = normalizeApiList(flashResponse)
   const adSlides = carouselAds.length > 0 ? carouselAds : bannerAds
   const mainBannerAd = bannerAds[0] || adSlides[0] || null
 
@@ -105,6 +111,7 @@ export default function HomePage() {
   const [visibleProducts, setVisibleProducts] = useState(12)
   const [carouselSlide, setCarouselSlide] = useState(0)
   const [showBanner, setShowBanner] = useState(true)
+  const seenAdProductIdsRef = useRef<Set<number>>(new Set())
 
   const formatPrice = (price: number) => new Intl.NumberFormat("fr-FR").format(price) + " XAF"
 
@@ -225,6 +232,33 @@ export default function HomePage() {
 
   const queryClient = useQueryClient()
 
+  const trackAdImpressions = useCallback((productIds: number[]) => {
+    const deduped = productIds
+      .filter((id) => Number.isFinite(id) && id > 0)
+      .filter((id) => {
+        if (seenAdProductIdsRef.current.has(id)) return false
+        seenAdProductIdsRef.current.add(id)
+        return true
+      })
+
+    if (deduped.length === 0) return
+    apiClient.post("/api/publicite/produits/vues", { produitIds: deduped }).catch(() => undefined)
+  }, [])
+
+  const trackAdClick = useCallback((productId?: number) => {
+    if (!productId || productId <= 0) return
+    apiClient.post(`/api/publicite/produit/${productId}/clic`).catch(() => undefined)
+  }, [])
+
+  useEffect(() => {
+    const visibleAdIds = [
+      mainBannerAd?.id,
+      ...carouselProducts.map((p) => p.id),
+    ].filter((id): id is number => typeof id === "number")
+
+    trackAdImpressions(visibleAdIds)
+  }, [mainBannerAd?.id, carouselProducts, trackAdImpressions])
+
   const handleLike = async (e: React.MouseEvent, product: ProduitEcommerceDto) => {
     e.preventDefault()
     e.stopPropagation()
@@ -245,7 +279,10 @@ export default function HomePage() {
     }
   }
 
-  const handleProductClick = (product: ProduitEcommerceDto) => {
+  const handleProductClick = (product: ProduitEcommerceDto, opts?: { fromAd?: boolean }) => {
+    if (opts?.fromAd) {
+      trackAdClick(product.id)
+    }
     router.push(`/produit/${product.id}`)
   }
 
@@ -463,7 +500,7 @@ export default function HomePage() {
                 <div 
                   key={index} 
                   className="w-full flex-shrink-0 relative bg-gradient-to-r from-primary to-primary/80 cursor-pointer"
-                  onClick={() => handleProductClick(product)}
+                  onClick={() => handleProductClick(product, { fromAd: true })}
                 >
                   <Image
                     src={buildImageUrl(product.images?.[0]) || "/placeholder.svg"}
@@ -525,7 +562,7 @@ export default function HomePage() {
           <section className="mb-6">
             <Card
               className="glass-card overflow-hidden cursor-pointer"
-              onClick={() => handleProductClick(mainBannerAd)}
+              onClick={() => handleProductClick(mainBannerAd, { fromAd: true })}
             >
               <div className="relative h-48 sm:h-56 lg:h-64 bg-gradient-to-r from-primary to-primary/70">
                 <Image
@@ -552,16 +589,16 @@ export default function HomePage() {
           </section>
         )}
 
-        {featuredAds.length > 0 && (
+        {flashSales.length > 0 && (
           <section className="mb-6">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold text-lg">Produits sponsorisés</h2>
-              <Badge variant="secondary">Publicité</Badge>
+              <h2 className="font-semibold text-lg">Ventes Flash</h2>
+              <Badge variant="destructive">Offres limitées</Badge>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
-              {featuredAds.slice(0, 5).map((item) => (
+              {flashSales.slice(0, 5).map((item) => (
                 <Card
-                  key={`featured-ad-${item.id}`}
+                  key={`flash-${item.id}`}
                   className="overflow-hidden hover:border-primary/40 transition-colors cursor-pointer"
                   onClick={() => handleProductClick(item)}
                 >
@@ -576,7 +613,15 @@ export default function HomePage() {
                   <CardContent className="p-3">
                     <p className="text-xs text-muted-foreground line-clamp-1">{item.nomEntreprise || item.nomCommercant}</p>
                     <p className="font-medium text-sm line-clamp-2">{item.nom}</p>
-                    <p className="font-bold text-primary text-sm mt-1">{formatPrice(Number(item.prix || 0))}</p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <p className="font-bold text-primary text-sm">{formatPrice(Number(item.prixFlash ?? (item.prix || 0)))}</p>
+                      {item.prixFlash && Number(item.prixFlash) < Number(item.prix || 0) && (
+                        <p className="text-xs text-muted-foreground line-through">{formatPrice(Number(item.prix || 0))}</p>
+                      )}
+                    </div>
+                    {typeof item.discountPct === "number" && item.discountPct > 0 && (
+                      <Badge variant="outline" className="mt-2 text-xs">-{Math.round(item.discountPct)}%</Badge>
+                    )}
                   </CardContent>
                 </Card>
               ))}
