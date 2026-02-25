@@ -1,16 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { ChevronLeft, ChevronRight, Sparkles, Eye } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useQuery } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api"
 import { buildImageUrl } from "@/lib/image-utils"
-import type { ProduitEcommerceDto } from "@/types/api"
+import type { ApiResponse, ProduitEcommerceDto } from "@/types/api"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
+import { useRouter } from "next/navigation"
 
 // Hook pour récupérer les produits e-commerce (même que la page d'accueil)
 function useEcommerceProducts() {
@@ -20,13 +21,40 @@ function useEcommerceProducts() {
   })
 }
 
+function normalizeApiList<T>(response: T[] | ApiResponse<T[]> | null | undefined): T[] {
+  if (Array.isArray(response)) return response
+  if (response && typeof response === "object" && "data" in response && Array.isArray(response.data)) {
+    return response.data
+  }
+  return []
+}
+
 export function ProductSidebar() {
   const { data: products, isLoading } = useEcommerceProducts()
+  const { data: bannerResponse } = useQuery({
+    queryKey: ["sidebarBannerAds"],
+    queryFn: () => apiClient.get<ApiResponse<ProduitEcommerceDto[]> | ProduitEcommerceDto[]>("/catalogue/banniere-principale"),
+  })
+  const { data: carouselResponse } = useQuery({
+    queryKey: ["sidebarCarouselAds"],
+    queryFn: () => apiClient.get<ApiResponse<ProduitEcommerceDto[]> | ProduitEcommerceDto[]>("/catalogue/carrousel-accueil"),
+  })
+  const { data: featuredResponse } = useQuery({
+    queryKey: ["sidebarFeaturedAds"],
+    queryFn: () => apiClient.get<ApiResponse<ProduitEcommerceDto[]> | ProduitEcommerceDto[]>("/catalogue/produits-en-avant"),
+  })
   const { isAuthenticated } = useAuth()
+  const router = useRouter()
   const [currentSlide, setCurrentSlide] = useState(0)
+  const seenAdProductIdsRef = useRef<Set<number>>(new Set())
 
-  const displayProducts = products?.slice(0, 4) || []
-  const carouselItems = products?.slice(0, 3) || []
+  const fallbackProducts = products || []
+  const bannerAds = normalizeApiList(bannerResponse)
+  const carouselAds = normalizeApiList(carouselResponse)
+  const featuredAds = normalizeApiList(featuredResponse)
+
+  const displayProducts = (featuredAds.length > 0 ? featuredAds : fallbackProducts).slice(0, 4)
+  const carouselItems = (carouselAds.length > 0 ? carouselAds : bannerAds).slice(0, 3)
 
   useEffect(() => {
     if (carouselItems.length > 0) {
@@ -38,6 +66,41 @@ export function ProductSidebar() {
   }, [carouselItems.length])
 
   const formatPrice = (price: number) => new Intl.NumberFormat("fr-FR").format(price) + " XAF"
+
+  const trackAdImpressions = useCallback((productIds: number[]) => {
+    const deduped = productIds
+      .filter((id) => Number.isFinite(id) && id > 0)
+      .filter((id) => {
+        if (seenAdProductIdsRef.current.has(id)) return false
+        seenAdProductIdsRef.current.add(id)
+        return true
+      })
+
+    if (deduped.length === 0) return
+    apiClient.post("/api/publicite/produits/vues", { produitIds: deduped }).catch(() => undefined)
+  }, [])
+
+  const trackAdClick = useCallback((productId?: number) => {
+    if (!productId || productId <= 0) return
+    apiClient.post(`/api/publicite/produit/${productId}/clic`).catch(() => undefined)
+  }, [])
+
+  useEffect(() => {
+    const visibleAdIds = [
+      ...carouselItems.map((item) => item.id),
+      ...displayProducts.map((item) => item.id),
+    ].filter((id): id is number => typeof id === "number")
+    trackAdImpressions(visibleAdIds)
+  }, [carouselItems, displayProducts, trackAdImpressions])
+
+  const handleAdClick = useCallback(
+    (product: ProduitEcommerceDto) => {
+      if (!product.id) return
+      trackAdClick(product.id)
+      router.push(`/produit/${product.id}`)
+    },
+    [router, trackAdClick]
+  )
 
   return (
     <div className="hidden xl:block w-72 flex-shrink-0">
@@ -55,16 +118,19 @@ export function ProductSidebar() {
               style={{ transform: `translateX(-${currentSlide * 100}%)` }}
             >
               {carouselItems.map((item, index) => (
-                <div key={index} className="w-full flex-shrink-0 relative bg-gradient-to-r from-primary to-primary/80 p-4 text-white">
+                <div
+                  key={index}
+                  className="w-full flex-shrink-0 relative bg-gradient-to-r from-primary to-primary/80 p-4 text-white cursor-pointer"
+                  onClick={() => handleAdClick(item)}
+                >
                   <img
                     src={buildImageUrl(item.images?.[0]) || "/placeholder.svg"}
                     alt={item.nom || "Produit"}
                     className="absolute inset-0 w-full h-full object-cover opacity-20"
                   />
                   <div className="relative z-10">
-                    <Badge className="bg-white/20 mb-2">Promo</Badge>
+                    <Badge className="bg-white/20 mb-2">Publicité</Badge>
                     <p className="font-bold">{item.nom}</p>
-                    <p className="text-2xl font-bold">-50%</p>
                     <p className="text-xs opacity-80">{formatPrice(Number(item.prix || 0))}</p>
                   </div>
                 </div>
@@ -111,6 +177,7 @@ export function ProductSidebar() {
               <div
                 key={product.id}
                 className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                onClick={() => handleAdClick(product)}
               >
                 <span className="text-lg font-bold text-muted-foreground w-5">{idx + 1}</span>
                 <img
@@ -119,7 +186,7 @@ export function ProductSidebar() {
                   className="h-14 w-14 rounded-lg object-cover"
                 />
                 <div className="flex-1 min-w-0">
-                  <Badge className="bg-primary text-white text-xs mb-1">Populaire</Badge>
+                  <Badge className="bg-primary text-white text-xs mb-1">Sponsorisé</Badge>
                   <p className="text-sm font-medium truncate">{product.nom}</p>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-primary">{formatPrice(Number(product.prix || 0))}</span>
