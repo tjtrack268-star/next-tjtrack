@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { ArrowLeft, CheckCircle, XCircle, Trash2, FileText, AlertCircle, Mail, Phone, MapPin, Building, User, Calendar } from "lucide-react"
@@ -23,6 +23,7 @@ export default function UserDetailsPage() {
   const [showRejectDialog, setShowRejectDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null)
+  const [brokenDocImages, setBrokenDocImages] = useState<Record<string, boolean>>({})
   const { toast } = useToast()
   const { user } = useAuth()
 
@@ -217,13 +218,26 @@ export default function UserDetailsPage() {
                   {documents.map((doc) => (
                     <Card key={doc.id} className="overflow-hidden border-2">
                       <div className="relative aspect-video bg-muted">
+                        {(() => {
+                          const key = String(doc.objectName || doc.id)
+                          const imageSrc = brokenDocImages[key]
+                            ? "/placeholder.svg"
+                            : (buildImageUrl(doc.objectName) || "/placeholder.svg")
+                          return (
                         <Image
-                          src={buildImageUrl(doc.objectName)}
+                          src={imageSrc}
                           alt={doc.documentType}
                           fill
                           className="object-contain cursor-pointer hover:opacity-80 transition-opacity"
                           onClick={() => setEnlargedImage(buildImageUrl(doc.objectName))}
+                          onError={() => {
+                            if (!brokenDocImages[key]) {
+                              setBrokenDocImages((prev) => ({ ...prev, [key]: true }))
+                            }
+                          }}
                         />
+                          )
+                        })()}
                       </div>
                       <CardContent className="p-3">
                         <div className="flex items-center justify-between">
@@ -287,6 +301,9 @@ export default function UserDetailsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rejeter la demande</DialogTitle>
+            <DialogDescription>
+              Saisissez un motif de rejet qui sera envoyé à l&apos;utilisateur.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="p-3 rounded-lg bg-muted">
@@ -320,6 +337,9 @@ export default function UserDetailsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Supprimer définitivement</DialogTitle>
+            <DialogDescription>
+              Cette action supprimera le compte et les données associées de manière irréversible.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
@@ -347,6 +367,10 @@ export default function UserDetailsPage() {
 
       <Dialog open={!!enlargedImage} onOpenChange={() => setEnlargedImage(null)}>
         <DialogContent className="max-w-4xl">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Aperçu du document</DialogTitle>
+            <DialogDescription>Image du document utilisateur en taille agrandie.</DialogDescription>
+          </DialogHeader>
           <div className="relative aspect-video bg-muted">
             {enlargedImage && (
               <Image
