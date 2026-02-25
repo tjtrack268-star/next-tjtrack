@@ -18,6 +18,8 @@ import {
   LayoutDashboard,
   ChevronRight,
   ChevronLeft,
+  Flame,
+  Timer,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme/theme-toggle"
@@ -70,6 +72,17 @@ type FlashSaleProduct = ProduitEcommerceDto & {
   prixFlash?: number
   discountPct?: number
   dateFin?: string
+  prixPromo?: number
+  prixUnitaire?: number
+  prixUnitaireTtc?: number
+}
+
+type PriceLike = {
+  prix?: number | string | null
+  prixFlash?: number | string | null
+  prixPromo?: number | string | null
+  prixUnitaire?: number | string | null
+  prixUnitaireTtc?: number | string | null
 }
 
 const categories = ["Tous", "Électronique", "Mode", "Maison", "Sport", "Auto", "Beauté"]
@@ -110,10 +123,42 @@ export default function HomePage() {
   const [sortBy, setSortBy] = useState("pertinence")
   const [visibleProducts, setVisibleProducts] = useState(12)
   const [carouselSlide, setCarouselSlide] = useState(0)
+  const [flashSlide, setFlashSlide] = useState(0)
   const [showBanner, setShowBanner] = useState(true)
+  const [nowTs, setNowTs] = useState(Date.now())
   const seenAdProductIdsRef = useRef<Set<number>>(new Set())
 
   const formatPrice = (price: number) => new Intl.NumberFormat("fr-FR").format(price) + " XAF"
+  const parseNumeric = (value: unknown): number | null => {
+    const numeric = Number(value)
+    return Number.isFinite(numeric) ? numeric : null
+  }
+
+  const getDisplayPrice = (product: PriceLike): number => {
+    const candidates = [
+      product.prixFlash,
+      product.prixPromo,
+      product.prix,
+      product.prixUnitaire,
+      product.prixUnitaireTtc,
+    ]
+    for (const value of candidates) {
+      const parsed = parseNumeric(value)
+      if (parsed !== null && parsed > 0) return parsed
+    }
+    return 0
+  }
+
+  const formatFlashRemaining = (dateFin?: string): string => {
+    if (!dateFin) return "Temps limité"
+    const end = new Date(dateFin).getTime()
+    if (!Number.isFinite(end) || end <= nowTs) return "Terminé"
+    const totalSec = Math.floor((end - nowTs) / 1000)
+    const h = Math.floor(totalSec / 3600)
+    const m = Math.floor((totalSec % 3600) / 60)
+    const s = totalSec % 60
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+  }
 
   // Auto-hide banner after 5 seconds, then reappear after 1 minute
   useEffect(() => {
@@ -130,18 +175,29 @@ export default function HomePage() {
     }
   }, [showBanner])
 
-  // Carousel auto-play pour mobile (désactivé par défaut pour performance)
+  // Auto-play carousel publicité
   const carouselProducts = adSlides.slice(0, 5)
   useEffect(() => {
-    // Auto-play désactivé pour améliorer les performances
-    // Décommenter pour réactiver:
-    // if (carouselProducts.length > 0) {
-    //   const timer = setInterval(() => {
-    //     setCarouselSlide((prev) => (prev + 1) % carouselProducts.length)
-    //   }, 4000)
-    //   return () => clearInterval(timer)
-    // }
+    if (carouselProducts.length <= 1) return
+    const timer = setInterval(() => {
+      setCarouselSlide((prev) => (prev + 1) % carouselProducts.length)
+    }, 4500)
+    return () => clearInterval(timer)
   }, [carouselProducts.length])
+
+  const flashCarouselItems = flashSales.slice(0, 10)
+  useEffect(() => {
+    if (flashCarouselItems.length <= 1) return
+    const timer = setInterval(() => {
+      setFlashSlide((prev) => (prev + 1) % flashCarouselItems.length)
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [flashCarouselItems.length])
+
+  useEffect(() => {
+    const timer = setInterval(() => setNowTs(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch =
@@ -513,7 +569,7 @@ export default function HomePage() {
                   <div className="relative z-10 p-6 h-full flex flex-col justify-center">
                     <Badge className="bg-white/20 text-white mb-2 w-fit">Produit en avant</Badge>
                     <h3 className="font-bold text-white text-lg sm:text-xl mb-2 line-clamp-2">{product.nom}</h3>
-                    <p className="text-white/90 text-2xl sm:text-3xl font-bold mb-1">{formatPrice(Number(product.prix || 0))}</p>
+                    <p className="text-white/90 text-2xl sm:text-3xl font-bold mb-1">{formatPrice(getDisplayPrice(product))}</p>
                     <p className="text-white/70 text-sm">{product.nomEntreprise || product.nomCommercant}</p>
                   </div>
                 </div>
@@ -558,73 +614,189 @@ export default function HomePage() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 sm:px-6 py-6">
-        {mainBannerAd && (
+        {adSlides.length > 0 && (
           <section className="mb-6">
-            <Card
-              className="glass-card overflow-hidden cursor-pointer"
-              onClick={() => handleProductClick(mainBannerAd, { fromAd: true })}
-            >
-              <div className="relative h-48 sm:h-56 lg:h-64 bg-gradient-to-r from-primary to-primary/70">
-                <Image
-                  src={buildImageUrl(mainBannerAd.images?.[0]) || "/placeholder.svg"}
-                  alt={mainBannerAd.nom || "Bannière publicitaire"}
-                  fill
-                  className="object-cover opacity-35"
-                  priority
-                />
-                <div className="relative z-10 h-full p-5 sm:p-7 flex flex-col justify-center">
-                  <Badge className="w-fit bg-white/20 text-white border-white/30">Publicité sponsorisée</Badge>
-                  <h2 className="mt-3 text-white text-xl sm:text-2xl lg:text-3xl font-extrabold line-clamp-2">
-                    {mainBannerAd.nom}
-                  </h2>
-                  <p className="mt-1 text-white/90 text-base sm:text-lg font-semibold">
-                    {formatPrice(Number(mainBannerAd.prix || 0))}
-                  </p>
-                  <p className="text-white/80 text-sm line-clamp-1">
-                    {mainBannerAd.nomEntreprise || mainBannerAd.nomCommercant}
-                  </p>
+            <Card className="glass-card overflow-hidden">
+              <div className="relative h-52 sm:h-60 lg:h-72 bg-gradient-to-r from-primary to-primary/70">
+                <div
+                  className="flex transition-transform duration-500 ease-in-out h-full"
+                  style={{ transform: `translateX(-${carouselSlide * 100}%)` }}
+                >
+                  {adSlides.slice(0, 5).map((ad, index) => (
+                    <div
+                      key={`main-ad-${ad.id}-${index}`}
+                      className="w-full flex-shrink-0 relative cursor-pointer"
+                      onClick={() => handleProductClick(ad, { fromAd: true })}
+                    >
+                      <Image
+                        src={buildImageUrl(ad.images?.[0]) || "/placeholder.svg"}
+                        alt={ad.nom || "Bannière publicitaire"}
+                        fill
+                        className="object-cover opacity-40"
+                        priority={index === 0}
+                      />
+                      <div className="relative z-10 h-full p-5 sm:p-7 flex flex-col justify-center bg-gradient-to-r from-black/55 to-black/20">
+                        <Badge className="w-fit bg-red-500/90 text-white border-red-300/50">Publicité sponsorisée</Badge>
+                        <h2 className="mt-3 text-white text-xl sm:text-2xl lg:text-3xl font-extrabold line-clamp-2">
+                          {ad.nom}
+                        </h2>
+                        <p className="mt-1 text-white text-base sm:text-lg font-semibold">
+                          {formatPrice(getDisplayPrice(ad))}
+                        </p>
+                        <p className="text-white/80 text-sm line-clamp-1">
+                          {ad.nomEntreprise || ad.nomCommercant}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {adSlides.length > 1 && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 h-9 w-9 bg-black/30 hover:bg-black/50 text-white"
+                      onClick={() => setCarouselSlide((prev) => (prev - 1 + carouselProducts.length) % carouselProducts.length)}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 h-9 w-9 bg-black/30 hover:bg-black/50 text-white"
+                      onClick={() => setCarouselSlide((prev) => (prev + 1) % carouselProducts.length)}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
+
+                <div className="absolute bottom-0 left-0 right-0 bg-black/45 py-2 overflow-hidden">
+                  <div className="animate-marquee whitespace-nowrap text-white/90 text-xs sm:text-sm">
+                    <span className="mx-4">Publicité produits: meilleures offres du moment</span>
+                    <span className="mx-4">•</span>
+                    <span className="mx-4">Prix mis à jour en temps réel</span>
+                    <span className="mx-4">•</span>
+                    <span className="mx-4">Cliquez pour voir les détails et commander</span>
+                    <span className="mx-4">•</span>
+                    <span className="mx-4">Publicité produits: meilleures offres du moment</span>
+                  </div>
                 </div>
               </div>
             </Card>
           </section>
         )}
 
-        {flashSales.length > 0 && (
+        {flashCarouselItems.length > 0 && (
           <section className="mb-6">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold text-lg">Ventes Flash</h2>
+              <h2 className="font-semibold text-lg flex items-center gap-2">
+                <Flame className="h-5 w-5 text-red-500" />
+                Ventes Flash
+              </h2>
               <Badge variant="destructive">Offres limitées</Badge>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
-              {flashSales.slice(0, 5).map((item) => (
-                <Card
-                  key={`flash-${item.id}`}
-                  className="overflow-hidden hover:border-primary/40 transition-colors cursor-pointer"
-                  onClick={() => handleProductClick(item)}
+            <div className="relative">
+              <div className="overflow-hidden">
+                <div
+                  className="flex transition-transform duration-500 ease-in-out"
+                  style={{ transform: `translateX(-${flashSlide * 100}%)` }}
                 >
-                  <div className="relative aspect-square bg-muted/20">
-                    <Image
-                      src={buildImageUrl(item.images?.[0]) || "/placeholder.svg"}
-                      alt={item.nom || "Produit sponsorisé"}
-                      fill
-                      className="object-cover"
-                    />
+                  {flashCarouselItems.map((item, index) => {
+                    const currentPrice = getDisplayPrice(item)
+                    const originalPrice = parseNumeric(item.prix) || currentPrice
+                    const hasDiscount = currentPrice > 0 && originalPrice > currentPrice
+                    return (
+                      <div key={`flash-${item.id}-${index}`} className="w-full flex-shrink-0">
+                        <Card
+                          className="overflow-hidden border-red-200/50 hover:border-red-400 transition-colors cursor-pointer"
+                          onClick={() => handleProductClick(item)}
+                        >
+                          <div className="grid md:grid-cols-[1.1fr_1fr] gap-0">
+                            <div className="relative min-h-56 md:min-h-72 bg-muted/20">
+                              <Image
+                                src={buildImageUrl(item.images?.[0]) || "/placeholder.svg"}
+                                alt={item.nom || "Produit flash"}
+                                fill
+                                className="object-cover"
+                              />
+                              <div className="absolute top-3 left-3 z-20">
+                                <Badge className="bg-red-600 text-white border-red-300/40">
+                                  <Flame className="h-3.5 w-3.5 mr-1" />
+                                  FLASH
+                                </Badge>
+                              </div>
+                            </div>
+                            <CardContent className="p-5 sm:p-6 flex flex-col justify-between">
+                              <div>
+                                <p className="text-xs text-muted-foreground">{item.nomEntreprise || item.nomCommercant}</p>
+                                <h3 className="mt-2 text-lg sm:text-xl font-bold line-clamp-2">{item.nom}</h3>
+                                <div className="mt-3 flex items-end gap-3">
+                                  <p className="text-2xl sm:text-3xl font-extrabold text-primary">
+                                    {formatPrice(currentPrice)}
+                                  </p>
+                                  {hasDiscount && (
+                                    <p className="text-sm text-muted-foreground line-through">
+                                      {formatPrice(originalPrice)}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="mt-3 flex items-center gap-2">
+                                  <Badge variant="destructive">
+                                    -{Math.max(1, Math.round((item.discountPct ?? ((1 - currentPrice / (originalPrice || 1)) * 100))))}%
+                                  </Badge>
+                                  <span className="text-sm text-muted-foreground flex items-center gap-1">
+                                    <Timer className="h-4 w-4" />
+                                    Fin dans {formatFlashRemaining(item.dateFin)}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="mt-5">
+                                <Button className="w-full gradient-primary text-white">
+                                  Voir l'offre flash
+                                  <ChevronRight className="h-4 w-4 ml-1" />
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </div>
+                        </Card>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {flashCarouselItems.length > 1 && (
+                <>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8"
+                    onClick={() => setFlashSlide((prev) => (prev - 1 + flashCarouselItems.length) % flashCarouselItems.length)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
+                    onClick={() => setFlashSlide((prev) => (prev + 1) % flashCarouselItems.length)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <div className="mt-3 flex justify-center gap-1.5">
+                    {flashCarouselItems.map((item, index) => (
+                      <button
+                        key={`flash-dot-${item.id}-${index}`}
+                        className={`h-2.5 rounded-full transition-all ${index === flashSlide ? "w-6 bg-primary" : "w-2.5 bg-muted-foreground/40"}`}
+                        onClick={() => setFlashSlide(index)}
+                        aria-label={`Aller à la slide flash ${index + 1}`}
+                      />
+                    ))}
                   </div>
-                  <CardContent className="p-3">
-                    <p className="text-xs text-muted-foreground line-clamp-1">{item.nomEntreprise || item.nomCommercant}</p>
-                    <p className="font-medium text-sm line-clamp-2">{item.nom}</p>
-                    <div className="mt-1 flex items-center gap-2">
-                      <p className="font-bold text-primary text-sm">{formatPrice(Number(item.prixFlash ?? (item.prix || 0)))}</p>
-                      {item.prixFlash && Number(item.prixFlash) < Number(item.prix || 0) && (
-                        <p className="text-xs text-muted-foreground line-through">{formatPrice(Number(item.prix || 0))}</p>
-                      )}
-                    </div>
-                    {typeof item.discountPct === "number" && item.discountPct > 0 && (
-                      <Badge variant="outline" className="mt-2 text-xs">-{Math.round(item.discountPct)}%</Badge>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+                </>
+              )}
             </div>
           </section>
         )}
