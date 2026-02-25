@@ -31,7 +31,8 @@ export function CartDrawer({ onCheckout }: CartDrawerProps) {
 
   return (
     <Sheet open={isOpen} onOpenChange={closeCart}>
-      <SheetContent className="w-full sm:max-w-lg glass-card p-0 flex flex-col gap-0 z-[150]">
+       {/* <SheetContent className="w-full sm:max-w-lg glass-card p-0 flex flex-col gap-0 z-[150]">*/}
+      <SheetContent className="w-full sm:max-w-lg glass-card p-0 flex flex-col min-h-0 z-[150]">
         <SheetHeader className="p-6 border-b border-border">
           <div className="flex items-center justify-between">
             <SheetTitle className="flex items-center gap-2 text-xl">
