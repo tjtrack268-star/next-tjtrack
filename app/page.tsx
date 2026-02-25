@@ -42,7 +42,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api"
 import { buildImageUrl } from "@/lib/image-utils"
-import type { ProduitEcommerceDto } from "@/types/api"
+import type { ApiResponse, ProduitEcommerceDto } from "@/types/api"
 import { CheckoutModal } from "@/components/checkout/checkout-modal"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Header } from "@/components/layout/header"
@@ -58,6 +58,14 @@ function useEcommerceProducts() {
   })
 }
 
+function normalizeApiList<T>(response: T[] | ApiResponse<T[]> | null | undefined): T[] {
+  if (Array.isArray(response)) return response
+  if (response && typeof response === "object" && "data" in response && Array.isArray(response.data)) {
+    return response.data
+  }
+  return []
+}
+
 const categories = ["Tous", "Électronique", "Mode", "Maison", "Sport", "Auto", "Beauté"]
 const cities = ["Toutes", "Douala", "Yaoundé", "Bafoussam", "Garoua", "Bamenda"]
 
@@ -68,9 +76,26 @@ export default function HomePage() {
   const { toast } = useToast()
   const router = useRouter()
   const { data: apiProducts, isLoading, error } = useEcommerceProducts()
+  const { data: bannerResponse } = useQuery({
+    queryKey: ["homeMainBannerAds"],
+    queryFn: () => apiClient.get<ApiResponse<ProduitEcommerceDto[]> | ProduitEcommerceDto[]>("/catalogue/banniere-principale"),
+  })
+  const { data: carouselResponse } = useQuery({
+    queryKey: ["homeMainCarouselAds"],
+    queryFn: () => apiClient.get<ApiResponse<ProduitEcommerceDto[]> | ProduitEcommerceDto[]>("/catalogue/carrousel-accueil"),
+  })
+  const { data: featuredResponse } = useQuery({
+    queryKey: ["homeMainFeaturedAds"],
+    queryFn: () => apiClient.get<ApiResponse<ProduitEcommerceDto[]> | ProduitEcommerceDto[]>("/catalogue/produits-en-avant"),
+  })
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
   
   const products = apiProducts || []
+  const bannerAds = normalizeApiList(bannerResponse)
+  const carouselAds = normalizeApiList(carouselResponse)
+  const featuredAds = normalizeApiList(featuredResponse)
+  const adSlides = carouselAds.length > 0 ? carouselAds : bannerAds
+  const mainBannerAd = bannerAds[0] || adSlides[0] || null
 
   const [selectedCategory, setSelectedCategory] = useState("Tous")
   const [priceMin, setPriceMin] = useState("")
@@ -99,7 +124,7 @@ export default function HomePage() {
   }, [showBanner])
 
   // Carousel auto-play pour mobile (désactivé par défaut pour performance)
-  const carouselProducts = products.slice(0, 5)
+  const carouselProducts = adSlides.slice(0, 5)
   useEffect(() => {
     // Auto-play désactivé pour améliorer les performances
     // Décommenter pour réactiver:
@@ -496,6 +521,69 @@ export default function HomePage() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 sm:px-6 py-6">
+        {mainBannerAd && (
+          <section className="mb-6">
+            <Card
+              className="glass-card overflow-hidden cursor-pointer"
+              onClick={() => handleProductClick(mainBannerAd)}
+            >
+              <div className="relative h-48 sm:h-56 lg:h-64 bg-gradient-to-r from-primary to-primary/70">
+                <Image
+                  src={buildImageUrl(mainBannerAd.images?.[0]) || "/placeholder.svg"}
+                  alt={mainBannerAd.nom || "Bannière publicitaire"}
+                  fill
+                  className="object-cover opacity-35"
+                  priority
+                />
+                <div className="relative z-10 h-full p-5 sm:p-7 flex flex-col justify-center">
+                  <Badge className="w-fit bg-white/20 text-white border-white/30">Publicité sponsorisée</Badge>
+                  <h2 className="mt-3 text-white text-xl sm:text-2xl lg:text-3xl font-extrabold line-clamp-2">
+                    {mainBannerAd.nom}
+                  </h2>
+                  <p className="mt-1 text-white/90 text-base sm:text-lg font-semibold">
+                    {formatPrice(Number(mainBannerAd.prix || 0))}
+                  </p>
+                  <p className="text-white/80 text-sm line-clamp-1">
+                    {mainBannerAd.nomEntreprise || mainBannerAd.nomCommercant}
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </section>
+        )}
+
+        {featuredAds.length > 0 && (
+          <section className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-lg">Produits sponsorisés</h2>
+              <Badge variant="secondary">Publicité</Badge>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
+              {featuredAds.slice(0, 5).map((item) => (
+                <Card
+                  key={`featured-ad-${item.id}`}
+                  className="overflow-hidden hover:border-primary/40 transition-colors cursor-pointer"
+                  onClick={() => handleProductClick(item)}
+                >
+                  <div className="relative aspect-square bg-muted/20">
+                    <Image
+                      src={buildImageUrl(item.images?.[0]) || "/placeholder.svg"}
+                      alt={item.nom || "Produit sponsorisé"}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  <CardContent className="p-3">
+                    <p className="text-xs text-muted-foreground line-clamp-1">{item.nomEntreprise || item.nomCommercant}</p>
+                    <p className="font-medium text-sm line-clamp-2">{item.nom}</p>
+                    <p className="font-bold text-primary text-sm mt-1">{formatPrice(Number(item.prix || 0))}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
+
         <div className="flex gap-6">
           {/* Left Sidebar - Filters */}
           <aside className="hidden lg:block w-64 shrink-0">
