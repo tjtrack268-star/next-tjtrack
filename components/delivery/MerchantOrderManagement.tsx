@@ -454,7 +454,7 @@ export default function MerchantOrderManagement() {
                         </Dialog>
                       )}
 
-                      {(order.statut === "ASSIGNEE" && order.refusMotif) && (
+                      {order.livreur && order.statut !== "LIVREE" && (
                         <Button
                           onClick={() => handleReassign(order.id)}
                           disabled={reassignMutation.isPending}
