@@ -105,7 +105,9 @@ export default function MerchantOrderManagement() {
 
   const reassignMutation = useMutation({
     mutationFn: async (orderId: number) => {
-      return await apiClient.put(`/commandes/${orderId}/reassigner`)
+      return await apiClient.put(`/commandes/${orderId}/reassigner`, {
+        motif: "Réassignation demandée par le marchand"
+      })
     },
     onSuccess: () => {
       toast({
