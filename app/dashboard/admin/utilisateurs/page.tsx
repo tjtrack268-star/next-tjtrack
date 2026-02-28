@@ -11,7 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Users, Search, MoreVertical, UserCheck, UserX, Mail, Store, Truck, ShieldCheck, Loader2, ChevronLeft, ChevronRight, Clock, Trash2, AlertCircle } from "lucide-react"
-import { useAllUsers, useApproveUser, useUserAnalytics, useRejectUser, useDeleteUser } from "@/hooks/use-api"
+import { useAllUsers, useApproveUser, useUserAnalytics, useRejectUser, useHardDeleteUser, useBlockUser } from "@/hooks/use-api"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { AdminGuard } from "@/components/admin-guard"
@@ -34,6 +34,9 @@ export default function AdminUsersPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [userToDelete, setUserToDelete] = useState<{ userId: string; name: string } | null>(null)
   const [deleteReason, setDeleteReason] = useState("")
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false)
+  const [userToBlock, setUserToBlock] = useState<{ userId: string; name: string } | null>(null)
+  const [blockReason, setBlockReason] = useState("")
   const { toast } = useToast()
   const { user } = useAuth()
   const queryClient = useQueryClient()
@@ -54,7 +57,8 @@ export default function AdminUsersPage() {
   const totalPages = Math.ceil((data?.total || 0) / 20)
   const approveUserMutation = useApproveUser()
   const rejectUserMutation = useRejectUser()
-  const deleteUserMutation = useDeleteUser()
+  const deleteUserMutation = useHardDeleteUser()
+  const blockUserMutation = useBlockUser()
 
   const handleApprove = async (userId: string) => {
     try {
@@ -97,6 +101,12 @@ export default function AdminUsersPage() {
     setDeleteDialogOpen(true)
   }
 
+  const handleBlock = async (userId: string, userName: string) => {
+    setUserToBlock({ userId, name: userName })
+    setBlockReason("")
+    setBlockDialogOpen(true)
+  }
+
   const confirmDelete = async () => {
     if (!userToDelete) return
     if (!deleteReason.trim()) {
@@ -125,6 +135,39 @@ export default function AdminUsersPage() {
       toast({
         title: "Erreur",
         description: "Impossible de supprimer le compte",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const confirmBlock = async () => {
+    if (!userToBlock) return
+    if (!blockReason.trim()) {
+      toast({
+        title: "Motif requis",
+        description: "Veuillez saisir le motif de blocage du compte",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      await blockUserMutation.mutateAsync({
+        userId: userToBlock.userId,
+        reason: blockReason.trim(),
+      })
+      toast({
+        title: "Compte bloqué",
+        description: "Le compte a été bloqué avec succès",
+      })
+      setBlockDialogOpen(false)
+      setUserToBlock(null)
+      setBlockReason("")
+      refetch()
+    } catch (err) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de bloquer le compte",
         variant: "destructive",
       })
     }
@@ -381,6 +424,14 @@ export default function AdminUsersPage() {
                               Contacter
                             </DropdownMenuItem>
                             <DropdownMenuItem
+                              className="text-orange-600 focus:text-orange-700"
+                              onSelect={() => handleBlock(String(userItem.userId || userItem.email), userItem.name || userItem.email)}
+                              disabled={blockUserMutation.isPending || userItem.isApproved === false}
+                            >
+                              <AlertCircle className="h-4 w-4 mr-2" />
+                              Bloquer le compte
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
                               onSelect={() => handleDelete(String(userItem.userId || userItem.email), userItem.name || userItem.email)}
                               disabled={deleteUserMutation.isPending}
@@ -414,7 +465,7 @@ export default function AdminUsersPage() {
               <div>
                 <p className="font-medium text-destructive">Attention</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Le compte sera désactivé et les données personnelles seront anonymisées.
+                  Le compte et ses profils liés seront supprimés définitivement si aucune dépendance métier ne bloque l'opération.
                 </p>
               </div>
             </div>
@@ -437,6 +488,48 @@ export default function AdminUsersPage() {
             </Button>
             <Button variant="destructive" onClick={confirmDelete} disabled={deleteUserMutation.isPending || !deleteReason.trim()}>
               {deleteUserMutation.isPending ? "Suppression..." : "Supprimer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bloquer le compte</DialogTitle>
+            <DialogDescription>
+              Le compte de <strong>{userToBlock?.name}</strong> sera désactivé (soft delete logique métier).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/20">
+            <div className="flex gap-3">
+              <AlertCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-orange-700">Blocage administratif</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  L'utilisateur ne pourra plus utiliser le compte tant qu'il n'est pas débloqué.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Motif de blocage</label>
+            <Textarea
+              placeholder="Exemple: activité suspecte, non-conformité des documents, abus..."
+              value={blockReason}
+              onChange={(e) => setBlockReason(e.target.value)}
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              Ce motif est obligatoire et sera journalisé côté serveur.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBlockDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={confirmBlock} disabled={blockUserMutation.isPending || !blockReason.trim()}>
+              {blockUserMutation.isPending ? "Blocage..." : "Bloquer"}
             </Button>
           </DialogFooter>
         </DialogContent>
