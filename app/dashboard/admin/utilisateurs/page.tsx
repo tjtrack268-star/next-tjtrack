@@ -483,8 +483,8 @@ export default function AdminUsersPage() {
                 <p className="text-xs text-green-700 mt-1">Aucune dépendance bloquante détectée.</p>
               ) : (
                 <div className="mt-2 space-y-1">
-                  <p className="text-xs text-destructive">
-                    Suppression impossible actuellement ({deleteImpact?.blockingCount || 0} dépendance(s)).
+                  <p className="text-xs text-amber-700">
+                    Dépendances détectées ({deleteImpact?.blockingCount || 0}) - elles seront purgées en mode suppression définitive.
                   </p>
                   {deleteImpact?.blockingReferences?.slice(0, 6).map((ref) => (
                     <p key={ref} className="text-xs text-muted-foreground">- {ref}</p>
@@ -512,7 +512,7 @@ export default function AdminUsersPage() {
             <Button
               variant="destructive"
               onClick={confirmDelete}
-              disabled={deleteUserMutation.isPending || !deleteReason.trim() || isDeleteImpactLoading || deleteImpact?.canHardDelete === false}
+              disabled={deleteUserMutation.isPending || !deleteReason.trim() || isDeleteImpactLoading}
             >
               {deleteUserMutation.isPending ? "Suppression..." : "Supprimer"}
             </Button>
