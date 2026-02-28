@@ -1011,7 +1011,9 @@ export function useRejectUser() {
 export function useDeleteUser() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (userId: string) => {
+    mutationFn: async (payload: string | { userId: string; reason: string }) => {
+      const userId = typeof payload === "string" ? payload : payload.userId
+      const reason = typeof payload === "string" ? "" : payload.reason
       console.log('=== DELETE USER DEBUG ===');
       console.log('userId:', userId);
       
@@ -1023,7 +1025,7 @@ export function useDeleteUser() {
       console.log('Calling API endpoint:', `/admin/users/${userId}`);
       
       try {
-        const response = await apiClient.delete<void>(`/admin/users/${userId}`);
+        const response = await apiClient.delete<void>(`/admin/users/${userId}`, { reason });
         console.log('✅ API response:', response);
         return response;
       } catch (error: any) {

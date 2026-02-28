@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -32,6 +33,7 @@ export default function AdminUsersPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [userToDelete, setUserToDelete] = useState<{ userId: string; name: string } | null>(null)
+  const [deleteReason, setDeleteReason] = useState("")
   const { toast } = useToast()
   const { user } = useAuth()
   const queryClient = useQueryClient()
@@ -91,20 +93,33 @@ export default function AdminUsersPage() {
 
   const handleDelete = async (userId: string, userName: string) => {
     setUserToDelete({ userId, name: userName })
+    setDeleteReason("")
     setDeleteDialogOpen(true)
   }
 
   const confirmDelete = async () => {
     if (!userToDelete) return
+    if (!deleteReason.trim()) {
+      toast({
+        title: "Motif requis",
+        description: "Veuillez saisir le motif de suppression du compte",
+        variant: "destructive",
+      })
+      return
+    }
 
     try {
-      await deleteUserMutation.mutateAsync(userToDelete.userId)
+      await deleteUserMutation.mutateAsync({
+        userId: userToDelete.userId,
+        reason: deleteReason.trim(),
+      })
       toast({
         title: "Compte supprimé",
         description: "Le compte a été supprimé avec succès",
       })
       setDeleteDialogOpen(false)
       setUserToDelete(null)
+      setDeleteReason("")
       refetch()
     } catch (err) {
       toast({
@@ -404,11 +419,23 @@ export default function AdminUsersPage() {
               </div>
             </div>
           </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Motif de suppression</label>
+            <Textarea
+              placeholder="Exemple: Documents non conformes, fraude détectée, doublon..."
+              value={deleteReason}
+              onChange={(e) => setDeleteReason(e.target.value)}
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              Ce motif est obligatoire et sera journalisé côté serveur.
+            </p>
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
               Annuler
             </Button>
-            <Button variant="destructive" onClick={confirmDelete} disabled={deleteUserMutation.isPending}>
+            <Button variant="destructive" onClick={confirmDelete} disabled={deleteUserMutation.isPending || !deleteReason.trim()}>
               {deleteUserMutation.isPending ? "Suppression..." : "Supprimer"}
             </Button>
           </DialogFooter>
