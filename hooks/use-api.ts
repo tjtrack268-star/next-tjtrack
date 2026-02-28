@@ -1419,6 +1419,90 @@ export function useIncrementerClics() {
   })
 }
 
+export function useHardDeleteUser() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: string | { userId: string; reason: string }) => {
+      const userId = typeof payload === "string" ? payload : payload.userId
+      const reason = typeof payload === "string" ? "" : payload.reason
+      console.log('=== HARD DELETE USER DEBUG ===')
+      console.log('userId:', userId)
+
+      if (!userId || userId === 'undefined' || userId === 'null') {
+        console.error('❌ Invalid userId:', userId)
+        throw new Error('ID utilisateur invalide')
+      }
+
+      if (!reason || !reason.trim()) {
+        throw new Error('Le motif est obligatoire')
+      }
+
+      console.log('Calling API endpoint:', `/admin/users/${userId}/hard-delete`)
+
+      try {
+        const response = await apiClient.delete<void>(`/admin/users/${userId}/hard-delete`, { reason: reason.trim() })
+        console.log('✅ API response:', response)
+        return response
+      } catch (error: any) {
+        console.error('❌ API error:', error)
+        console.error('Error message:', error.message)
+        throw error
+      }
+    },
+    onSuccess: async () => {
+      console.log('✅ Hard deletion successful, refetching queries')
+      await queryClient.invalidateQueries({ queryKey: queryKeys.pendingUsers })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.allUsers })
+      await queryClient.invalidateQueries({ queryKey: ["userAnalytics"] })
+    },
+    onError: (error: any) => {
+      console.error('❌ Mutation error:', error)
+    },
+  })
+}
+
+export function useBlockUser() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: string | { userId: string; reason: string }) => {
+      const userId = typeof payload === "string" ? payload : payload.userId
+      const reason = typeof payload === "string" ? "" : payload.reason
+      console.log('=== BLOCK USER DEBUG ===')
+      console.log('userId:', userId)
+
+      if (!userId || userId === 'undefined' || userId === 'null') {
+        console.error('❌ Invalid userId:', userId)
+        throw new Error('ID utilisateur invalide')
+      }
+
+      if (!reason || !reason.trim()) {
+        throw new Error('Le motif est obligatoire')
+      }
+
+      console.log('Calling API endpoint:', `/admin/block-user/${userId}`)
+
+      try {
+        const response = await apiClient.post<Record<string, unknown>>(`/admin/block-user/${userId}`, { reason: reason.trim() })
+        console.log('✅ API response:', response)
+        return response
+      } catch (error: any) {
+        console.error('❌ API error:', error)
+        console.error('Error message:', error.message)
+        throw error
+      }
+    },
+    onSuccess: async () => {
+      console.log('✅ Block successful, refetching queries')
+      await queryClient.invalidateQueries({ queryKey: queryKeys.pendingUsers })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.allUsers })
+      await queryClient.invalidateQueries({ queryKey: ["userAnalytics"] })
+    },
+    onError: (error: any) => {
+      console.error('❌ Mutation error:', error)
+    },
+  })
+}
+
 export function useAdminCampagnes(statut?: "EN_ATTENTE" | "ACTIVE" | "EXPIREE" | "SUSPENDUE" | "ANNULEE") {
   return useQuery({
     queryKey: ["adminCampagnes", statut || "ALL"],
