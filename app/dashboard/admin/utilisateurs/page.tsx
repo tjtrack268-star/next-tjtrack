@@ -11,7 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Users, Search, MoreVertical, UserCheck, UserX, Mail, Store, Truck, ShieldCheck, Loader2, ChevronLeft, ChevronRight, Clock, Trash2, AlertCircle } from "lucide-react"
-import { useAllUsers, useApproveUser, useUserAnalytics, useRejectUser, useHardDeleteUser, useBlockUser } from "@/hooks/use-api"
+import { useAllUsers, useApproveUser, useUserAnalytics, useRejectUser, useHardDeleteUser, useBlockUser, useUserDeleteImpact } from "@/hooks/use-api"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { AdminGuard } from "@/components/admin-guard"
@@ -59,6 +59,10 @@ export default function AdminUsersPage() {
   const rejectUserMutation = useRejectUser()
   const deleteUserMutation = useHardDeleteUser()
   const blockUserMutation = useBlockUser()
+  const { data: deleteImpact, isLoading: isDeleteImpactLoading } = useUserDeleteImpact(
+    userToDelete?.userId,
+    deleteDialogOpen && !!userToDelete?.userId,
+  )
 
   const handleApprove = async (userId: string) => {
     try {
@@ -464,12 +468,31 @@ export default function AdminUsersPage() {
               <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-medium text-destructive">Attention</p>
-                <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
                   Le compte et ses profils liés seront supprimés définitivement si aucune dépendance métier ne bloque l'opération.
                 </p>
               </div>
             </div>
           </div>
+          {deleteDialogOpen && (
+            <div className="p-3 rounded-lg bg-muted/40 border">
+              <p className="text-sm font-medium">Impact suppression définitive</p>
+              {isDeleteImpactLoading ? (
+                <p className="text-xs text-muted-foreground mt-1">Analyse des dépendances...</p>
+              ) : deleteImpact?.canHardDelete ? (
+                <p className="text-xs text-green-700 mt-1">Aucune dépendance bloquante détectée.</p>
+              ) : (
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs text-destructive">
+                    Suppression impossible actuellement ({deleteImpact?.blockingCount || 0} dépendance(s)).
+                  </p>
+                  {deleteImpact?.blockingReferences?.slice(0, 6).map((ref) => (
+                    <p key={ref} className="text-xs text-muted-foreground">- {ref}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <div className="space-y-2">
             <label className="text-sm font-medium">Motif de suppression</label>
             <Textarea
@@ -486,7 +509,11 @@ export default function AdminUsersPage() {
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
               Annuler
             </Button>
-            <Button variant="destructive" onClick={confirmDelete} disabled={deleteUserMutation.isPending || !deleteReason.trim()}>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={deleteUserMutation.isPending || !deleteReason.trim() || isDeleteImpactLoading || deleteImpact?.canHardDelete === false}
+            >
               {deleteUserMutation.isPending ? "Suppression..." : "Supprimer"}
             </Button>
           </DialogFooter>

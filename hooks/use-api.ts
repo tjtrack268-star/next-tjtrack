@@ -1461,6 +1461,20 @@ export function useHardDeleteUser() {
   })
 }
 
+export function useUserDeleteImpact(userId?: string, enabled: boolean = true) {
+  return useQuery({
+    queryKey: ["userDeleteImpact", userId],
+    queryFn: () => apiClient.get<{
+      userId: string
+      email: string
+      canHardDelete: boolean
+      blockingReferences: string[]
+      blockingCount: number
+    }>(`/admin/users/${encodeURIComponent(userId || "")}/delete-impact`),
+    enabled: !!userId && enabled,
+  })
+}
+
 export function useBlockUser() {
   const queryClient = useQueryClient()
   return useMutation({
