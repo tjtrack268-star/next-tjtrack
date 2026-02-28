@@ -5,6 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog'
 import { Package, Truck, Clock, CheckCircle, MapPin } from 'lucide-react'
 import { useCommandesMerchant } from '@/hooks/use-api'
 import { useAuth } from '@/contexts/auth-context'
@@ -299,6 +309,7 @@ export default function LivraisonsPage() {
   const [showAssignment, setShowAssignment] = useState(false)
   const [assignedDelivery, setAssignedDelivery] = useState<any>(null)
   const [isReassigningId, setIsReassigningId] = useState<number | null>(null)
+  const [pendingReassignCommande, setPendingReassignCommande] = useState<Commande | null>(null)
 
   const { user } = useAuth()
   const { data: commandesResponse, isLoading, error, refetch } = useCommandesMerchant(user?.userId || user?.email || "")
@@ -344,13 +355,8 @@ export default function LivraisonsPage() {
     refetch()
   }
 
-  const handleReassignDelivery = async (commande: Commande) => {
+  const executeReassignDelivery = async (commande: Commande) => {
     if (!user?.userId || isReassigningId !== null) return
-    const confirmed = window.confirm(
-      `Réassigner le livreur pour la commande ${commande.numeroCommande} ?`
-    )
-    if (!confirmed) return
-
     setIsReassigningId(commande.id)
     try {
       const token = localStorage.getItem('tj-track-token')
@@ -375,6 +381,7 @@ export default function LivraisonsPage() {
       alert(error?.message || "Impossible de réassigner cette commande")
     } finally {
       setIsReassigningId(null)
+      setPendingReassignCommande(null)
     }
   }
 
@@ -471,7 +478,7 @@ export default function LivraisonsPage() {
                             <>
                               <Button
                                 variant="outline"
-                                onClick={() => handleReassignDelivery(commande)}
+                                onClick={() => setPendingReassignCommande(commande)}
                                 disabled={isReassigningId === commande.id}
                               >
                                 <Truck className="h-4 w-4 mr-2" />
@@ -535,6 +542,38 @@ export default function LivraisonsPage() {
               </div>
             </div>
           )}
+
+          <AlertDialog
+            open={!!pendingReassignCommande}
+            onOpenChange={(open) => {
+              if (!open) setPendingReassignCommande(null)
+            }}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Réassigner la livraison</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {pendingReassignCommande
+                    ? `Vous allez retirer le livreur actuel de la commande ${pendingReassignCommande.numeroCommande} pour en sélectionner un nouveau.`
+                    : "Vous allez retirer le livreur actuel pour en sélectionner un nouveau."}
+                  {" "}
+                  Utilisez cette action si le livreur est indisponible, n’a pas accepté la mission, ou ne suit pas le processus de livraison.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    if (pendingReassignCommande) {
+                      executeReassignDelivery(pendingReassignCommande)
+                    }
+                  }}
+                >
+                  Confirmer la réassignation
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </TabsContent>
 
         <TabsContent value="suivi">
