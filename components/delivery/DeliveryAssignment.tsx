@@ -45,7 +45,7 @@ export default function DeliveryAssignment({
   useEffect(() => {
     const interval = setInterval(() => {
       loadLivreurs()
-    }, 10000)
+    }, 30000)
     return () => clearInterval(interval)
   }, [merchantLat, merchantLon])
 

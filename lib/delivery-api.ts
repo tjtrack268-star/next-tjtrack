@@ -3,19 +3,10 @@ import { apiClient } from './api'
 export const deliveryApi = {
   // Get available delivery personnel near a location
   async getLivreursDisponibles(lat: number, lon: number, radius: number = 10) {
-    try {
-      // Use default coordinates if null/undefined
-      const safeLat = lat || 0
-      const safeLon = lon || 0
-      const response = await apiClient.get(`/commandes/livreur/disponibles?lat=${safeLat}&lon=${safeLon}`)
-      return response
-    } catch (error) {
-      console.error('Error fetching available delivery personnel:', error)
-      // Fallback with safe coordinates
-      const safeLat = lat || 0
-      const safeLon = lon || 0
-      return apiClient.get(`/commandes/livreur/disponibles?lat=${safeLat}&lon=${safeLon}`)
-    }
+    // Single request path only: apiClient already handles retries.
+    const safeLat = Number.isFinite(lat) ? lat : 0
+    const safeLon = Number.isFinite(lon) ? lon : 0
+    return apiClient.get(`/commandes/livreur/disponibles?lat=${safeLat}&lon=${safeLon}`)
   },
 
   // Assign a delivery person to an order

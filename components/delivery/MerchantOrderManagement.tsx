@@ -438,7 +438,7 @@ export default function MerchantOrderManagement() {
                                 merchantLat={0} // TODO: Get from merchant profile
                                 merchantLon={0} // TODO: Get from merchant profile
                                 clientVille={selectedOrder.adresseLivraison.ville}
-                                merchantVille="Yaoundé" // TODO: Get from merchant profile
+                                merchantVille=""
                                 onAssigned={(result) => {
                                   toast({
                                     title: "Livreur(s) assigné(s)",
