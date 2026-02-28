@@ -25,6 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { apiClient } from "@/lib/api"
+import type { ApiResponse } from "@/types/api"
 import DeliveryAssignment from "./DeliveryAssignment"
 import DualDeliveryAssignment from "./DualDeliveryAssignment"
 
@@ -84,7 +85,7 @@ export default function MerchantOrderManagement() {
   const { data: orders, isLoading, error, refetch } = useQuery({
     queryKey: ["merchantOrders", user?.userId],
     queryFn: async () => {
-      const response = await apiClient.get(`/commandes/merchant/${user?.userId}`)
+      const response = await apiClient.get<MerchantOrder[] | ApiResponse<MerchantOrder[]>>(`/commandes/merchant/${user?.userId}`)
       return Array.isArray(response) ? response : (response.data || [])
     },
     enabled: !!user?.userId,
