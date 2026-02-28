@@ -69,8 +69,17 @@ export default function DualDeliveryAssignment({
   const [poidsKg, setPoidsKg] = useState("1")
   const [volumeM3, setVolumeM3] = useState("")
 
-  const isDifferentCity = infoLivraison ? !infoLivraison.memeVille : 
-    (clientVille?.toLowerCase() !== merchantVille?.toLowerCase())
+  const isDifferentCity = infoLivraison
+    ? !infoLivraison.memeVille
+    : Boolean(clientVille && merchantVille && clientVille.toLowerCase() !== merchantVille.toLowerCase())
+
+  const resolvedLat =
+    (infoLivraison?.merchantLatitude != null ? Number(infoLivraison.merchantLatitude) : null) ??
+    (Number.isFinite(merchantLat) ? merchantLat : 0)
+  const resolvedLon =
+    (infoLivraison?.merchantLongitude != null ? Number(infoLivraison.merchantLongitude) : null) ??
+    (Number.isFinite(merchantLon) ? merchantLon : 0)
+  const canQueryLivreurs = resolvedLat !== 0 || resolvedLon !== 0
 
   useEffect(() => {
     loadInfoLivraison()
@@ -78,11 +87,12 @@ export default function DualDeliveryAssignment({
   }, [merchantLat, merchantLon, commandeId])
 
   useEffect(() => {
+    if (!canQueryLivreurs) return
     const interval = setInterval(() => {
       loadLivreurs()
-    }, 10000)
+    }, 30000)
     return () => clearInterval(interval)
-  }, [merchantLat, merchantLon, commandeId, infoLivraison?.memeVille, clientVille, merchantVille])
+  }, [canQueryLivreurs, commandeId, infoLivraison?.memeVille, clientVille, merchantVille])
 
   const loadInfoLivraison = async () => {
     try {
@@ -147,10 +157,11 @@ export default function DualDeliveryAssignment({
   }
 
   const loadLivreurs = async () => {
+    if (!canQueryLivreurs) return
     setLoading(true)
     try {
-      const safeLat = merchantLat || 0
-      const safeLon = merchantLon || 0
+      const safeLat = resolvedLat
+      const safeLon = resolvedLon
       
       const response = await deliveryApi.getLivreursDisponibles(safeLat, safeLon) as any
       const livreurs = Array.isArray(response) ? response : (response.data || [])
