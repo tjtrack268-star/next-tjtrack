@@ -298,6 +298,7 @@ export default function LivraisonsPage() {
   const [selectedCommande, setSelectedCommande] = useState<Commande | null>(null)
   const [showAssignment, setShowAssignment] = useState(false)
   const [assignedDelivery, setAssignedDelivery] = useState<any>(null)
+  const [isReassigningId, setIsReassigningId] = useState<number | null>(null)
 
   const { user } = useAuth()
   const { data: commandesResponse, isLoading, error, refetch } = useCommandesMerchant(user?.userId || user?.email || "")
@@ -341,6 +342,40 @@ export default function LivraisonsPage() {
     setAssignedDelivery(result)
     setShowAssignment(false)
     refetch()
+  }
+
+  const handleReassignDelivery = async (commande: Commande) => {
+    if (!user?.userId || isReassigningId !== null) return
+    const confirmed = window.confirm(
+      `Réassigner le livreur pour la commande ${commande.numeroCommande} ?`
+    )
+    if (!confirmed) return
+
+    setIsReassigningId(commande.id)
+    try {
+      const token = localStorage.getItem('tj-track-token')
+      const response = await fetch(`${API_BASE_URL}/commandes/${commande.id}/reassigner`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          motif: "Réassignation demandée par le commerçant: livreur indisponible / non acceptation / non-respect du processus"
+        })
+      })
+      const payload = await response.json()
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.message || `Erreur HTTP ${response.status}`)
+      }
+      await refetch()
+      setSelectedCommande(commande)
+      setShowAssignment(true)
+    } catch (error: any) {
+      alert(error?.message || "Impossible de réassigner cette commande")
+    } finally {
+      setIsReassigningId(null)
+    }
   }
 
   if (isLoading) {
@@ -426,27 +461,41 @@ export default function LivraisonsPage() {
                         )}
                       </div>
                       <div className="ml-6">
-                        {((commande.statut === 'CONFIRMEE' || commande.statut === 'EN_PREPARATION') && !hasAssignedDriver(commande)) || (commande.statut === 'EXPEDIEE' && !hasAssignedDriver(commande)) ? (
-                          <Button onClick={() => handleAssignDelivery(commande)}>
-                            <Truck className="h-4 w-4 mr-2" />
-                            Assigner Livreur
-                          </Button>
-                        ) : commande.statut === 'EN_PREPARATION' && hasAssignedDriver(commande) ? (
-                          <Badge variant="outline" className="text-yellow-600">
-                            <Clock className="h-4 w-4 mr-1" />
-                            En préparation
-                          </Badge>
-                        ) : commande.statut === 'EXPEDIEE' && hasAssignedDriver(commande) ? (
-                          <Badge variant="outline" className="text-orange-600">
-                            <Truck className="h-4 w-4 mr-1" />
-                            En cours de livraison
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-emerald-600">
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Livrée
-                          </Badge>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {!hasAssignedDriver(commande) ? (
+                            <Button onClick={() => handleAssignDelivery(commande)}>
+                              <Truck className="h-4 w-4 mr-2" />
+                              Assigner Livreur
+                            </Button>
+                          ) : (
+                            <>
+                              <Button
+                                variant="outline"
+                                onClick={() => handleReassignDelivery(commande)}
+                                disabled={isReassigningId === commande.id}
+                              >
+                                <Truck className="h-4 w-4 mr-2" />
+                                {isReassigningId === commande.id ? "Réassignation..." : "Réassigner"}
+                              </Button>
+                              {commande.statut === 'EN_PREPARATION' ? (
+                                <Badge variant="outline" className="text-yellow-600">
+                                  <Clock className="h-4 w-4 mr-1" />
+                                  En préparation
+                                </Badge>
+                              ) : commande.statut === 'EXPEDIEE' ? (
+                                <Badge variant="outline" className="text-orange-600">
+                                  <Truck className="h-4 w-4 mr-1" />
+                                  En cours de livraison
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-emerald-600">
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Livrée
+                                </Badge>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </CardContent>
