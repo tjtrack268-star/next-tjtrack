@@ -19,6 +19,7 @@ import { Package, Truck, Clock, CheckCircle, MapPin } from 'lucide-react'
 import { useCommandesMerchant } from '@/hooks/use-api'
 import { useAuth } from '@/contexts/auth-context'
 import DualDeliveryAssignment from '@/components/delivery/DualDeliveryAssignment'
+import LiveTracking from '@/components/delivery/LiveTracking'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tjtracks.com/api/v1.0"
 
@@ -302,6 +303,7 @@ interface Commande {
   livreurPickupId?: number
   livreurDeliveryId?: number
   livreurNom?: string
+  livreurTelephone?: string
 }
 
 export default function LivraisonsPage() {
@@ -310,6 +312,7 @@ export default function LivraisonsPage() {
   const [assignedDelivery, setAssignedDelivery] = useState<any>(null)
   const [isReassigningId, setIsReassigningId] = useState<number | null>(null)
   const [pendingReassignCommande, setPendingReassignCommande] = useState<Commande | null>(null)
+  const [trackingCommandeId, setTrackingCommandeId] = useState<number | null>(null)
 
   const { user } = useAuth()
   const { data: commandesResponse, isLoading, error, refetch } = useCommandesMerchant(user?.userId || user?.email || "")
@@ -328,9 +331,15 @@ export default function LivraisonsPage() {
       livreurId: c.livreurId ? Number(c.livreurId) : undefined,
       livreurPickupId: c.livreurPickupId ? Number(c.livreurPickupId) : undefined,
       livreurDeliveryId: c.livreurDeliveryId ? Number(c.livreurDeliveryId) : undefined,
-      livreurNom: c.livreurNom ? String(c.livreurNom) : undefined
+      livreurNom: c.livreurNom ? String(c.livreurNom) : undefined,
+      livreurTelephone: c.livreurTelephone ? String(c.livreurTelephone) : undefined
     }
-  }).filter((c) => ['CONFIRMEE', 'EN_PREPARATION', 'EXPEDIEE'].includes(c.statut))
+  }).filter((c) => ['CONFIRMEE', 'EN_PREPARATION', 'EXPEDIEE', 'ACCEPTEE', 'EN_COURS', 'EN_ATTENTE_CONFIRMATION'].includes(c.statut))
+
+  const trackedOrders = commandes.filter((c) => hasAssignedDriver(c) && !['LIVREE', 'ANNULEE'].includes(c.statut))
+  const selectedTrackedOrder =
+    trackedOrders.find((c) => c.id === trackingCommandeId) ||
+    (trackedOrders.length > 0 ? trackedOrders[0] : null)
 
   const getStatutColor = (statut: string) => {
     switch (statut) {
@@ -351,6 +360,9 @@ export default function LivraisonsPage() {
 
   const handleDeliveryAssigned = (result: any) => {
     setAssignedDelivery(result)
+    if (selectedCommande?.id) {
+      setTrackingCommandeId(selectedCommande.id)
+    }
     setShowAssignment(false)
     refetch()
   }
@@ -577,7 +589,7 @@ export default function LivraisonsPage() {
         </TabsContent>
 
         <TabsContent value="suivi">
-          {assignedDelivery ? (
+          {selectedTrackedOrder ? (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -586,25 +598,32 @@ export default function LivraisonsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <h4 className="font-medium mb-2">Livreur assigné</h4>
-                    <div className="flex items-center justify-between">
-                      <span>{assignedDelivery.livreurNom}</span>
-                      <span className="text-sm">{assignedDelivery.telephone}</span>
+                <div className="space-y-5">
+                  {trackedOrders.length > 1 && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">Choisir une commande à suivre</p>
+                      <div className="flex flex-wrap gap-2">
+                        {trackedOrders.map((order) => (
+                          <Button
+                            key={`track-${order.id}`}
+                            size="sm"
+                            variant={selectedTrackedOrder.id === order.id ? "default" : "outline"}
+                            onClick={() => setTrackingCommandeId(order.id)}
+                          >
+                            {order.numeroCommande}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <div className="bg-blue-50 rounded-lg p-6 text-center">
-                    <Truck className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-                    <p className="text-sm text-gray-600">
-                      Livreur en route<br />
-                      <span className="text-xs">Temps estimé: {assignedDelivery.tempsEstime}</span>
-                    </p>
-                  </div>
-                  <Badge className="w-full justify-center bg-green-500 text-white">
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    Livraison en cours
-                  </Badge>
+                  )}
+
+                  <LiveTracking
+                    commandeId={selectedTrackedOrder.id}
+                    livreurInfo={{
+                      nom: selectedTrackedOrder.livreurNom || "Livreur assigné",
+                      telephone: selectedTrackedOrder.livreurTelephone || "N/A",
+                    }}
+                  />
                 </div>
               </CardContent>
             </Card>
