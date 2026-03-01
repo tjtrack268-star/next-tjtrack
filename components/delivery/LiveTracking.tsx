@@ -21,6 +21,8 @@ interface TrackingData {
   longitude: number
   timestamp: number
   status: string
+  etaMinutes?: number
+  distanceRestanteKm?: number
   merchantLatitude?: number
   merchantLongitude?: number
   clientLatitude?: number
@@ -37,6 +39,8 @@ export default function LiveTracking({ commandeId, livreurInfo }: LiveTrackingPr
       longitude: Number(payload.longitude),
       timestamp: payload?.timestamp ? Number(payload.timestamp) : Date.now(),
       status: String(payload?.status || prev?.status || "EN_COURS"),
+      etaMinutes: payload?.etaMinutes != null ? Number(payload.etaMinutes) : prev?.etaMinutes,
+      distanceRestanteKm: payload?.distanceRestanteKm != null ? Number(payload.distanceRestanteKm) : prev?.distanceRestanteKm,
       merchantLatitude: prev?.merchantLatitude,
       merchantLongitude: prev?.merchantLongitude,
       clientLatitude: prev?.clientLatitude,
@@ -63,6 +67,8 @@ export default function LiveTracking({ commandeId, livreurInfo }: LiveTrackingPr
           longitude: Number(lon),
           timestamp: info?.positionUpdatedAt ? new Date(info.positionUpdatedAt).getTime() : Date.now(),
           status: String(info?.statut || 'EN_ROUTE'),
+          etaMinutes: info?.etaMinutes != null ? Number(info.etaMinutes) : undefined,
+          distanceRestanteKm: info?.distanceRestanteKm != null ? Number(info.distanceRestanteKm) : undefined,
           merchantLatitude: info?.merchantLatitude != null ? Number(info.merchantLatitude) : undefined,
           merchantLongitude: info?.merchantLongitude != null ? Number(info.merchantLongitude) : undefined,
           clientLatitude: info?.clientLatitude != null ? Number(info.clientLatitude) : undefined,
@@ -152,6 +158,21 @@ export default function LiveTracking({ commandeId, livreurInfo }: LiveTrackingPr
               <div className="text-sm text-gray-600">
                 <p>Lat: {trackingData.latitude.toFixed(6)}</p>
                 <p>Lng: {trackingData.longitude.toFixed(6)}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="bg-blue-50 rounded-lg p-3">
+                <p className="text-xs text-blue-700 mb-1">Distance restante</p>
+                <p className="font-semibold text-blue-900">
+                  {trackingData.distanceRestanteKm != null ? `${trackingData.distanceRestanteKm.toFixed(1)} km` : 'N/A'}
+                </p>
+              </div>
+              <div className="bg-amber-50 rounded-lg p-3">
+                <p className="text-xs text-amber-700 mb-1">ETA estimée</p>
+                <p className="font-semibold text-amber-900">
+                  {trackingData.etaMinutes != null ? `${trackingData.etaMinutes} min` : 'N/A'}
+                </p>
               </div>
             </div>
 
