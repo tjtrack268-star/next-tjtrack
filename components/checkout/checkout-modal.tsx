@@ -25,6 +25,19 @@ interface DeliveryQuoteResponse {
   coutLivraison?: number
 }
 
+const FALLBACK_MIN_DELIVERY = 2500
+const FALLBACK_INSURANCE_PERCENT = 1.5
+const FALLBACK_INSURANCE_MIN = 200
+const FALLBACK_INSURANCE_MAX = 15000
+
+function computeFallbackShipping(totalAmount: number) {
+  const safeAmount = Number.isFinite(totalAmount) ? Math.max(totalAmount, 0) : 0
+  const insuranceRaw = Math.round((safeAmount * FALLBACK_INSURANCE_PERCENT) / 100)
+  const insurance = Math.min(FALLBACK_INSURANCE_MAX, Math.max(FALLBACK_INSURANCE_MIN, insuranceRaw))
+  const estimated = 2000 + insurance
+  return Math.max(FALLBACK_MIN_DELIVERY, estimated)
+}
+
 export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
   const { items, totalAmount, clearCart } = useCart()
   const { user, isAuthenticated } = useAuth()
@@ -97,7 +110,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
     if (!formData.city) return
 
     let isCancelled = false
-    const fallbackShipping = 2500
+    const fallbackShipping = computeFallbackShipping(totalAmount)
 
     const runQuote = async () => {
       setIsShippingLoading(true)
@@ -419,9 +432,7 @@ export function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                   <span className={shippingCost === 0 ? "text-green-500 font-medium" : ""}>
                     {isShippingLoading
                       ? "Calcul..."
-                      : shippingCost === 0
-                        ? "Gratuite"
-                        : `${shippingCost.toLocaleString()} FCFA`}
+                      : `${shippingCost.toLocaleString()} FCFA`}
                   </span>
                 </div>
               </div>
