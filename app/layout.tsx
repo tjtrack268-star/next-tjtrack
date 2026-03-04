@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import "leaflet/dist/leaflet.css"
 import { Providers } from "@/components/providers"
+import { SiteFooter } from "@/components/layout/site-footer"
 
 export const metadata: Metadata = {
   title: "TJ-Track",
@@ -34,7 +35,12 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <body className="font-sans antialiased" suppressHydrationWarning>
-        <Providers>{children}</Providers>
+        <Providers>
+          <div className="min-h-screen flex flex-col">
+            <div className="flex-1">{children}</div>
+            <SiteFooter />
+          </div>
+        </Providers>
         <Analytics />
       </body>
     </html>
