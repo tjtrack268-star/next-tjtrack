@@ -704,7 +704,7 @@ export default function MerchantStockPage() {
 
       {/* Edit Article Dialog */}
       <Dialog open={editDialog.open} onOpenChange={(open) => setEditDialog({ ...editDialog, open })}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Modifier l'article</DialogTitle>
           </DialogHeader>
@@ -781,7 +781,7 @@ export default function MerchantStockPage() {
 
       {/* Adjust Dialog */}
       <Dialog open={adjustDialog.open} onOpenChange={(open) => setAdjustDialog({ ...adjustDialog, open })}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>{adjustDialog.type === "add" ? "Entrée de stock" : "Sortie de stock"}</DialogTitle>
           </DialogHeader>
@@ -826,7 +826,7 @@ export default function MerchantStockPage() {
 
       {/* Add Article Dialog */}
       <Dialog open={addDialog} onOpenChange={setAddDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Ajouter un Article</DialogTitle>
           </DialogHeader>
@@ -1027,7 +1027,7 @@ export default function MerchantStockPage() {
 
       {/* Create Product Dialog */}
       <Dialog open={productDialog.open} onOpenChange={(open) => setProductDialog({ ...productDialog, open })}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Ajouter l'Article en Ligne</DialogTitle>
           </DialogHeader>

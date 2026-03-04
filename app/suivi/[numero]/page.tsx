@@ -1,7 +1,6 @@
 "use client"
 
-import { useState } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { 
   Package, 
@@ -51,6 +50,7 @@ const statusConfig = {
 
 export default function OrderTrackingPage() {
   const params = useParams()
+  const router = useRouter()
   const orderNumber = params.numero as string
   const { data: order, isLoading, error } = useOrderTracking(orderNumber)
 
@@ -337,7 +337,7 @@ export default function OrderTrackingPage() {
                   Une question sur votre commande ? Notre équipe est là pour vous aider.
                 </p>
                 <div className="space-y-2">
-                  <Button variant="outline" className="w-full">
+                  <Button variant="outline" className="w-full" onClick={() => router.push("/contact")}>
                     <Phone className="h-4 w-4 mr-2" />
                     Nous contacter
                   </Button>

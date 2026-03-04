@@ -118,6 +118,25 @@ export default function MyOrdersPage() {
     }
   }
 
+  const handleCancelOrder = async (orderId: number) => {
+    const confirmed = window.confirm("Voulez-vous vraiment annuler cette commande ?")
+    if (!confirmed) return
+    try {
+      await apiClient.put(`/commandes/${orderId}/annuler`, { motif: "Annulation demandee par le client" })
+      toast({
+        title: "Commande annulee",
+        description: "Votre commande a ete annulee avec succes.",
+      })
+      refetch()
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: error instanceof Error ? error.message : "Impossible d'annuler la commande",
+        variant: "destructive",
+      })
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -339,11 +358,12 @@ export default function MyOrdersPage() {
                           </Button>
                         )}
                         
-                        {order.statut === "EN_ATTENTE" && (
+                        {["EN_ATTENTE", "CONFIRMEE", "EN_PREPARATION"].includes(order.statut) && (
                           <Button
                             variant="outline"
                             size="sm"
                             className="text-red-600 hover:text-red-700"
+                            onClick={() => handleCancelOrder(order.id)}
                           >
                             <XCircle className="h-4 w-4 mr-2" />
                             Annuler
