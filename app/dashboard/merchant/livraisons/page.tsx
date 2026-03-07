@@ -351,7 +351,9 @@ export default function LivraisonsPage() {
     }
   }
 
-  const hasAssignedDriver = (commande: Commande) => !!(commande.livreurId || commande.livreurPickupId || commande.livreurDeliveryId)
+  function hasAssignedDriver(commande: Commande) {
+    return !!(commande.livreurId || commande.livreurPickupId || commande.livreurDeliveryId)
+  }
 
   const handleAssignDelivery = (commande: Commande) => {
     setSelectedCommande(commande)
