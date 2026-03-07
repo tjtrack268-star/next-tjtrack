@@ -88,6 +88,11 @@ export default function MerchantProductsPage() {
       )
     : []
 
+  const existingOnlineProduct =
+    mode === "existing" && selectedArticle
+      ? filteredProducts.find((p: any) => Number(p.articleId) === Number(selectedArticle.id))
+      : null
+
   const appendImagesWithLimit = (current: File[], incoming: File[]) => {
     return [...current, ...incoming].slice(0, MAX_IMAGES)
   }
@@ -115,7 +120,8 @@ export default function MerchantProductsPage() {
 
   const handleAddProduct = async () => {
     try {
-      if (selectedImages.length === 0) {
+      const requiresImages = mode === "new" || (mode === "existing" && !existingOnlineProduct)
+      if (requiresImages && selectedImages.length === 0) {
         toast({ title: "Erreur", description: "Au moins une image est obligatoire pour créer un produit", variant: "destructive" })
         return
       }
@@ -127,22 +133,35 @@ export default function MerchantProductsPage() {
         }
         
         console.log("Article sélectionné:", selectedArticle)
-        
-        await addProductMutation.mutateAsync({
-          produitDto: {
-            articleId: selectedArticle.id,
-            nom: selectedArticle.designation,
-            description: selectedArticle.description || "",
-            descriptionLongue: newProduct.descriptionLongue || "",
-            prix: selectedArticle.prixUnitaireTtc || 0,
-            quantite: Number(newProduct.quantiteEnLigne),
-            quantiteEnLigne: Number(newProduct.quantiteEnLigne),
-            categorieId: selectedArticle.categorieId || 1,
-            visibleEnLigne: true,
-          } as any,
-          images: selectedImages,
-          merchantUserId: user?.email || "",
-        })
+
+        if (existingOnlineProduct?.id) {
+          const quantiteActuelle = Number(existingOnlineProduct.quantite || 0)
+          const quantiteAAjouter = Number(newProduct.quantiteEnLigne || 0)
+          if (quantiteAAjouter <= 0) {
+            toast({ title: "Erreur", description: "La quantité à ajouter doit être supérieure à 0", variant: "destructive" })
+            return
+          }
+
+          await apiClient.put(`/merchant/produits/${existingOnlineProduct.id}`, {
+            quantiteEnLigne: quantiteActuelle + quantiteAAjouter,
+          })
+        } else {
+          await addProductMutation.mutateAsync({
+            produitDto: {
+              articleId: selectedArticle.id,
+              nom: selectedArticle.designation,
+              description: selectedArticle.description || "",
+              descriptionLongue: newProduct.descriptionLongue || "",
+              prix: selectedArticle.prixUnitaireTtc || 0,
+              quantite: Number(newProduct.quantiteEnLigne),
+              quantiteEnLigne: Number(newProduct.quantiteEnLigne),
+              categorieId: selectedArticle.categorieId || 1,
+              visibleEnLigne: true,
+            } as any,
+            images: selectedImages,
+            merchantUserId: user?.email || "",
+          })
+        }
       } else {
         // Créer un nouveau produit
         await addProductMutation.mutateAsync({
@@ -311,6 +330,13 @@ export default function MerchantProductsPage() {
                   {/* Selected Article Info */}
                   {selectedArticle && (
                     <>
+                      {existingOnlineProduct?.id && (
+                        <div className="bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
+                          <p className="text-sm text-emerald-800 dark:text-emerald-200">
+                            Ce produit est déjà en ligne. Cette action va uniquement augmenter la quantité disponible en ligne.
+                          </p>
+                        </div>
+                      )}
                       <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                         <div className="flex items-start gap-2">
                           <Package className="h-5 w-5 text-blue-600 mt-0.5" />
@@ -358,7 +384,9 @@ export default function MerchantProductsPage() {
 
                   {/* Images */}
                   <div className="space-y-2">
-                    <Label>Images supplémentaires (optionnelles)</Label>
+                    <Label>
+                      Images supplémentaires {existingOnlineProduct?.id ? "(optionnelles)" : "(obligatoires pour 1ere mise en ligne)"}
+                    </Label>
                     <Input
                       type="file"
                       accept="image/*"
@@ -531,7 +559,7 @@ export default function MerchantProductsPage() {
                 disabled={
                   addProductMutation.isPending ||
                   (mode === "existing" ? (!selectedArticle || !newProduct.quantiteEnLigne || Number(newProduct.quantiteEnLigne) <= 0) : !newProduct.nom || !newProduct.prix) ||
-                  selectedImages.length === 0
+                  ((mode === "new" || (mode === "existing" && !existingOnlineProduct)) && selectedImages.length === 0)
                 }
               >
                 {addProductMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
