@@ -1,7 +1,8 @@
 "use client"
 
 import { FormEvent, useState } from "react"
-import { Mail, Phone, MessageSquare, Clock3, ShieldCheck, LifeBuoy } from "lucide-react"
+import { Mail, Phone, MessageSquare, Clock3, ShieldCheck, LifeBuoy, CheckCircle2, Sparkles } from "lucide-react"
+import Link from "next/link"
 import { apiClient } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -30,11 +31,42 @@ const DEFAULT_FORM: ContactPayload = {
   message: "",
 }
 
+const QUICK_TEMPLATES = [
+  {
+    label: "Livraison en retard",
+    role: "CLIENT",
+    subject: "Retard de livraison",
+    message: "Bonjour, ma commande est en retard. Numero de commande: ",
+  },
+  {
+    label: "Stock / mise en ligne",
+    role: "COMMERCANT",
+    subject: "Probleme stock produit en ligne",
+    message: "Bonjour, je rencontre un souci de stock/mise en ligne sur l'article: ",
+  },
+  {
+    label: "Probleme livreur",
+    role: "LIVREUR",
+    subject: "Probleme mission livraison",
+    message: "Bonjour, j'ai un souci sur la mission numero: ",
+  },
+]
+
 export default function ContactPage() {
   const [form, setForm] = useState<ContactPayload>(DEFAULT_FORM)
+  const [priority, setPriority] = useState<"NORMALE" | "URGENTE" | "CRITIQUE">("NORMALE")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+
+  const applyTemplate = (template: (typeof QUICK_TEMPLATES)[number]) => {
+    setForm((prev) => ({
+      ...prev,
+      role: template.role,
+      subject: template.subject,
+      message: template.message,
+    }))
+  }
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -43,9 +75,15 @@ export default function ContactPage() {
     setSuccess(null)
 
     try {
-      const response = await apiClient.post<ApiResponse<string>>("/support/contact", form)
+      const priorityPrefix = priority === "NORMALE" ? "" : `[${priority}] `
+      const payload: ContactPayload = {
+        ...form,
+        subject: `${priorityPrefix}${form.subject}`.trim(),
+      }
+      const response = await apiClient.post<ApiResponse<string>>("/support/contact", payload)
       setSuccess(response.message || "Votre message a ete envoye au service client.")
       setForm(DEFAULT_FORM)
+      setPriority("NORMALE")
     } catch (submitError) {
       const message = submitError instanceof Error ? submitError.message : "Echec d'envoi du message."
       setError(message)
@@ -58,15 +96,44 @@ export default function ContactPage() {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="container mx-auto px-4 py-8 md:py-10">
-        <section className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background p-6 md:p-8">
-          <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-primary/10 blur-3xl" />
-          <div className="absolute -left-20 -bottom-20 h-56 w-56 rounded-full bg-emerald-300/10 blur-3xl" />
+        <section
+          className="relative overflow-hidden rounded-3xl border border-primary/20 p-6 md:p-10"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 10% 20%, rgba(31,173,159,0.18), transparent 40%), radial-gradient(circle at 80% 0%, rgba(16,185,129,0.12), transparent 35%), linear-gradient(160deg, rgba(15,23,42,0.02), rgba(31,173,159,0.08))",
+          }}
+        >
+          <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-primary/10 blur-3xl animate-pulse" />
+          <div className="absolute -left-20 -bottom-20 h-56 w-56 rounded-full bg-emerald-300/10 blur-3xl animate-pulse" />
           <div className="relative z-10">
-            <Badge className="mb-3 bg-primary text-primary-foreground">Support TJ-Track</Badge>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Besoin d'aide ?</h1>
-            <p className="mt-3 max-w-2xl text-muted-foreground">
+            <Badge className="mb-3 bg-primary text-primary-foreground">
+              <Sparkles className="h-3.5 w-3.5 mr-1" />
+              Support TJ-Track
+            </Badge>
+            <h1 className="text-3xl md:text-5xl font-bold tracking-tight">Une equipe support qui suit vos demandes jusqu'a resolution</h1>
+            <p className="mt-4 max-w-2xl text-muted-foreground text-base md:text-lg">
               Notre equipe traite les demandes clients, commercants et livreurs. Envoyez votre message et nous revenons vers vous rapidement.
             </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Badge variant="secondary">Reponse humaine</Badge>
+              <Badge variant="secondary">Suivi de ticket</Badge>
+              <Badge variant="secondary">Priorisation des urgences</Badge>
+            </div>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <a
+                href="https://wa.me/237673311016?text=Bonjour%20TJ-Track%2C%20j%27ai%20besoin%20d%27assistance."
+                target="_blank"
+                rel="noreferrer"
+              >
+                <Button className="transition-transform hover:-translate-y-0.5">Contacter via WhatsApp</Button>
+              </a>
+              <a href="mailto:service.client@tjtracks.com">
+                <Button variant="outline" className="transition-transform hover:-translate-y-0.5">Envoyer un email</Button>
+              </a>
+              <Link href="#contact-form">
+                <Button variant="ghost">Remplir le formulaire</Button>
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -109,14 +176,28 @@ export default function ContactPage() {
                 Avant d'ecrire
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground">
-              <p>Ajoutez votre numero de commande si votre demande concerne une livraison.</p>
-              <p>Pour les soucis techniques, decrivez l'appareil, le navigateur et l'action effectuee.</p>
-              <p>Vous pouvez laisser un numero pour etre rappele par l'equipe support.</p>
+            <CardContent className="space-y-4 text-sm">
+              <div className="flex items-start gap-2 text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4 text-primary mt-0.5" />
+                <p>Ajoutez votre numero de commande si votre demande concerne une livraison.</p>
+              </div>
+              <div className="flex items-start gap-2 text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4 text-primary mt-0.5" />
+                <p>Pour les soucis techniques, decrivez l'appareil, le navigateur et l'action effectuee.</p>
+              </div>
+              <div className="flex items-start gap-2 text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4 text-primary mt-0.5" />
+                <p>Vous pouvez laisser un numero pour etre rappele par l'equipe support.</p>
+              </div>
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
+                <p className="text-xs text-muted-foreground">
+                  Plus votre message est precis, plus le delai de resolution diminue.
+                </p>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="border-primary/10">
+          <Card id="contact-form" className="border-primary/10 shadow-sm scroll-mt-24">
             <CardHeader>
               <CardTitle className="text-2xl flex items-center gap-2">
                 <MessageSquare className="h-6 w-6 text-primary" />
@@ -128,6 +209,24 @@ export default function ContactPage() {
             </CardHeader>
             <CardContent>
               <form className="space-y-4" onSubmit={onSubmit}>
+                <div className="space-y-2">
+                  <Label>Raccourcis de demande</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {QUICK_TEMPLATES.map((template) => (
+                      <Button
+                        key={template.label}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="transition-transform hover:-translate-y-0.5"
+                        onClick={() => applyTemplate(template)}
+                      >
+                        {template.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="name">Nom</Label>
@@ -186,6 +285,20 @@ export default function ContactPage() {
                     onChange={(e) => setForm((prev) => ({ ...prev, subject: e.target.value }))}
                     placeholder="Ex: Probleme de livraison"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="priority">Niveau de priorite</Label>
+                  <select
+                    id="priority"
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value as "NORMALE" | "URGENTE" | "CRITIQUE")}
+                  >
+                    <option value="NORMALE">Normale</option>
+                    <option value="URGENTE">Urgente</option>
+                    <option value="CRITIQUE">Critique</option>
+                  </select>
                 </div>
 
                 <div className="space-y-2">
