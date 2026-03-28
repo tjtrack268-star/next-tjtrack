@@ -26,16 +26,33 @@ interface DeliveryQuoteResponse {
 }
 
 const FALLBACK_MIN_DELIVERY = 2500
-const FALLBACK_INSURANCE_PERCENT = 1.5
+const FALLBACK_INSURANCE_PERCENT = 2
+const FALLBACK_INSURANCE_THRESHOLD = 50000
 const FALLBACK_INSURANCE_MIN = 200
 const FALLBACK_INSURANCE_MAX = 15000
 
 function computeFallbackShipping(totalAmount: number) {
   const safeAmount = Number.isFinite(totalAmount) ? Math.max(totalAmount, 0) : 0
+  if (safeAmount < FALLBACK_INSURANCE_THRESHOLD) {
+    return FALLBACK_MIN_DELIVERY
+  }
   const insuranceRaw = Math.round((safeAmount * FALLBACK_INSURANCE_PERCENT) / 100)
   const insurance = Math.min(FALLBACK_INSURANCE_MAX, Math.max(FALLBACK_INSURANCE_MIN, insuranceRaw))
   const estimated = 2000 + insurance
   return Math.max(FALLBACK_MIN_DELIVERY, estimated)
+}
+
+function deriveUserFields(user: any) {
+  const fullName = (user?.name || "").trim()
+  const [first, ...rest] = fullName.split(" ").filter(Boolean)
+  return {
+    firstName: first || "",
+    lastName: rest.join(" "),
+    email: user?.email || "",
+    phone: user?.phoneNumber || "",
+    city: user?.town || "Douala",
+    address: user?.address || "",
+  }
 }
 
 export default function CheckoutPage() {
@@ -79,6 +96,21 @@ export default function CheckoutPage() {
     paymentMethod: "cash",
     phoneNumberPayment: "",
   })
+
+  useEffect(() => {
+    if (!isAuthenticated || !user) return
+
+    const userFields = deriveUserFields(user)
+    setFormData((prev) => ({
+      ...prev,
+      firstName: prev.firstName || userFields.firstName,
+      lastName: prev.lastName || userFields.lastName,
+      email: prev.email || userFields.email,
+      phone: prev.phone || userFields.phone,
+      city: prev.city || userFields.city,
+      address: prev.address || userFields.address,
+    }))
+  }, [isAuthenticated, user])
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [shippingCost, setShippingCost] = useState(0)
