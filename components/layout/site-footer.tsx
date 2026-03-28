@@ -90,7 +90,7 @@ export function SiteFooter() {
         </div>
 
         <div className="pt-8 border-t border-white/20 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 bg-amber-50">
             <Image
               src="/logo-tjtracks.png"
               alt="TJ-Track Logo"
