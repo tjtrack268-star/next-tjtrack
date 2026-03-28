@@ -35,7 +35,11 @@ export function DashboardHeader() {
 
   useEffect(() => {
     loadNotifications()
-    const interval = setInterval(loadNotifications, 30000)
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        loadNotifications()
+      }
+    }, 60000)
     return () => clearInterval(interval)
   }, [])
 
@@ -56,7 +60,7 @@ export function DashboardHeader() {
       await apiClient.put(`/notifications/${id}/read`, {})
       loadNotifications()
     } catch (err) {
-      console.error(err)
+      // Silence non-critical error
     }
   }
 
@@ -65,7 +69,7 @@ export function DashboardHeader() {
       await apiClient.put("/notifications/read-all", {})
       loadNotifications()
     } catch (err) {
-      console.error(err)
+      // Silence non-critical error
     }
   }
 

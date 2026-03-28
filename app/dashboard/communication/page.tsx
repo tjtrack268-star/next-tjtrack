@@ -39,7 +39,11 @@ export default function CommunicationPage() {
   useEffect(() => {
     if (selectedConv) {
       loadMessages()
-      const interval = setInterval(loadMessages, 3000)
+      const interval = setInterval(() => {
+        if (document.visibilityState === "visible") {
+          loadMessages()
+        }
+      }, 10000)
       return () => clearInterval(interval)
     }
   }, [selectedConv])
@@ -50,7 +54,6 @@ export default function CommunicationPage() {
       setUsers(data)
       setFilteredUsers(data)
     } catch (err) {
-      console.error(err)
       toast({ title: "Erreur lors du chargement des utilisateurs", variant: "destructive" })
     }
   }
@@ -77,7 +80,6 @@ export default function CommunicationPage() {
       await loadMessages()
       toast({ title: "Conversation ouverte" })
     } catch (err) {
-      console.error(err)
       toast({ title: "Erreur lors de l'ouverture de la conversation", variant: "destructive" })
     }
   }
@@ -85,10 +87,9 @@ export default function CommunicationPage() {
   const loadConversations = async () => {
     try {
       const data = await apiClient.get<any[]>("/communication/conversations")
-      console.log('📋 Conversations chargées:', data)
       setConversations(data)
     } catch (err) {
-      console.error('❌ Erreur chargement conversations:', err)
+      // Silent fail to avoid noisy logs in production
     }
   }
 
@@ -98,7 +99,7 @@ export default function CommunicationPage() {
       const data = await apiClient.get<any[]>(`/communication/conversations/${selectedConv.id}/messages`)
       setMessages(data)
     } catch (err) {
-      console.error(err)
+      // Silent fail to avoid noisy logs in production
     }
   }
 
@@ -113,15 +114,12 @@ export default function CommunicationPage() {
         type: newConvType,
         participantIds: ""
       }
-      console.log('📤 Création conversation:', payload)
-      const result = await apiClient.post("/communication/conversations", payload)
-      console.log('✅ Conversation créée:', result)
+      await apiClient.post("/communication/conversations", payload)
       toast({ title: "Conversation créée" })
       setShowNewConv(false)
       setNewConvTitle("")
       await loadConversations()
     } catch (err) {
-      console.error('❌ Erreur création:', err)
       toast({ title: "Erreur", variant: "destructive" })
     }
   }
@@ -138,14 +136,6 @@ export default function CommunicationPage() {
       toast({ title: "Erreur", variant: "destructive" })
     }
   }
-
-  useEffect(() => {
-    console.log("Current user:", { email: user?.email, userId: user?.userId })
-    console.log("Messages senderIds:", messages.map(m => m.senderId))
-    if (messages.length > 0) {
-      console.log("First message senderId:", messages[0].senderId, "Type:", typeof messages[0].senderId)
-    }
-  }, [messages, user])
 
   return (
     <div className="space-y-6">

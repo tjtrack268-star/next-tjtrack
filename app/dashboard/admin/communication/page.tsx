@@ -33,7 +33,11 @@ export default function AdminCommunicationPage() {
   useEffect(() => {
     if (selectedConv) {
       loadMessages()
-      const interval = setInterval(loadMessages, 3000)
+      const interval = setInterval(() => {
+        if (document.visibilityState === "visible") {
+          loadMessages()
+        }
+      }, 10000)
       return () => clearInterval(interval)
     }
   }, [selectedConv])
@@ -43,7 +47,7 @@ export default function AdminCommunicationPage() {
       const data = await apiClient.get<any[]>("/communication/conversations")
       setConversations(data)
     } catch (err) {
-      console.error(err)
+      // Silent fail to avoid noisy logs in production
     }
   }
 
@@ -53,7 +57,7 @@ export default function AdminCommunicationPage() {
       const data = await apiClient.get<any[]>(`/communication/conversations/${selectedConv.id}/messages`)
       setMessages(data)
     } catch (err) {
-      console.error(err)
+      // Silent fail to avoid noisy logs in production
     }
   }
 

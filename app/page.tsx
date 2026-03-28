@@ -195,7 +195,7 @@ export default function HomePage() {
   }, [flashCarouselItems.length])
 
   useEffect(() => {
-    const timer = setInterval(() => setNowTs(Date.now()), 1000)
+    const timer = setInterval(() => setNowTs(Date.now()), 5000)
     return () => clearInterval(timer)
   }, [])
 

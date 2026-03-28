@@ -28,7 +28,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const token = localStorage.getItem("tj-track-token")
     const savedUser = localStorage.getItem("tj-track-user")
-    console.log('Auth init - token:', !!token, 'savedUser:', !!savedUser)
 
     if (token && savedUser) {
       try {
@@ -49,26 +48,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(cleanUser)
         document.cookie = `tj-track-token=${token}; path=/; max-age=${7 * 24 * 60 * 60}`
         document.cookie = `jwt=${token}; path=/; max-age=${7 * 24 * 60 * 60}`
-        console.log('Auth restored:', cleanUser.email)
       } catch {
         localStorage.removeItem("tj-track-token")
         localStorage.removeItem("tj-track-user")
         document.cookie = 'tj-track-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
         document.cookie = 'jwt=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
-        console.log('Auth restore failed')
       }
     }
     setIsLoading(false)
   }, [])
 
-  // Debug: Log user state changes
-  useEffect(() => {
-    console.log('Auth state changed - user:', user ? user.email : 'not logged in', 'isAuthenticated:', !!user)
-  }, [user])
-
   const login = useCallback(async (credentials: AuthRequest) => {
     setIsLoading(true)
-    console.log("Login attempt with:", credentials.email)
 
     try {
       const response = await apiClient.post<{ token: string; email: string; name: string; roles: any }>("/login", credentials)
@@ -86,7 +77,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isApproved: true,
           roles: normalizedRoles
         }
-        console.log('Setting token:', response.token.substring(0, 20) + '...')
         localStorage.setItem("tj-track-token", response.token)
         localStorage.setItem("tj-track-user", JSON.stringify(user))
         document.cookie = `tj-track-token=${response.token}; path=/; max-age=${7 * 24 * 60 * 60}`
@@ -104,7 +94,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(async (data: ProfileRequest) => {
     setIsLoading(true)
-    console.log("Register attempt:", data.email, data.role)
 
     try {
       await apiClient.post("/register", data)
@@ -118,7 +107,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const verifyOtp = useCallback(async (email: string, otp: string) => {
     setIsLoading(true)
-    console.log("Verify OTP for:", email)
 
     try {
       const response = await apiClient.post<{ token: string; email: string; name: string; roles: any }>("/verify-otp", { email, otp })
@@ -152,22 +140,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const resendOtp = useCallback(async (email: string) => {
-    console.log("Resend OTP to:", email)
     await apiClient.post("/resend-otp", { email })
   }, [])
 
   const sendResetOtp = useCallback(async (email: string) => {
-    console.log("Send reset OTP to:", email)
     await apiClient.post("/send-reset-otp", undefined, { email })
   }, [])
 
   const resetPassword = useCallback(async (email: string, otp: string, newPassword: string) => {
-    console.log("Reset password for:", email)
     await apiClient.post("/reset-password", { email, otp, newPassword })
   }, [])
 
   const logout = useCallback(() => {
-    console.log("Logout")
     localStorage.removeItem("tj-track-token")
     localStorage.removeItem("tj-track-user")
     document.cookie = 'tj-track-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
