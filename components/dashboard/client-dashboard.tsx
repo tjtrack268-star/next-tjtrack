@@ -157,7 +157,7 @@ export function ClientDashboard() {
               </CardTitle>
             </div>
             <Button variant="outline" size="sm" asChild>
-              <a href="/mes-commandes">
+              <a href="/dashboard/mes-commandes">
                 Voir tout
                 <ArrowRight className="h-4 w-4 ml-1" />
               </a>
@@ -263,7 +263,7 @@ export function ClientDashboard() {
               </a>
             </Button>
             <Button variant="outline" className="h-20 flex-col gap-2" asChild>
-              <a href="/mes-commandes">
+              <a href="/dashboard/mes-commandes">
                 <ShoppingBag className="h-6 w-6" />
                 Mes commandes
               </a>

@@ -201,7 +201,7 @@ export function Header() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/commandes">
+                    <Link href="/dashboard/mes-commandes">
                       <Package className="mr-2 h-4 w-4" />
                       Mes Commandes
                     </Link>

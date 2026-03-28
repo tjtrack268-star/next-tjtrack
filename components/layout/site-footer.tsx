@@ -16,7 +16,7 @@ export function SiteFooter() {
                 <Link href="/conditions-utilisation" className="hover:text-white transition-colors">Expédition</Link>
               </li>
               <li>
-                <Link href="/mes-commandes" className="hover:text-white transition-colors">Annulation et retour</Link>
+                <Link href="/dashboard/mes-commandes" className="hover:text-white transition-colors">Annulation et retour</Link>
               </li>
               <li>
                 <Link href="/contact" className="hover:text-white transition-colors">Signaler un souci</Link>
@@ -36,7 +36,7 @@ export function SiteFooter() {
                 <Link href="/conditions-utilisation" className="hover:text-white transition-colors">Politique de livraison</Link>
               </li>
               <li>
-                <Link href="/mes-commandes" className="hover:text-white transition-colors">Vérifier le statut de livraison</Link>
+                <Link href="/dashboard/mes-commandes" className="hover:text-white transition-colors">Vérifier le statut de livraison</Link>
               </li>
             </ul>
           </div>
