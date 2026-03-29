@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
+import Image from "next/image"
 import { 
   Package, 
   Clock, 
@@ -24,6 +25,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { apiClient } from "@/lib/api"
 import type { Commande } from "@/types/api"
+import { buildImageUrl } from "@/lib/image-utils"
 
 function useUserOrders() {
   const { user } = useAuth()
@@ -58,6 +60,7 @@ export default function MyOrdersPage() {
   const { toast } = useToast()
   const { data: orders, isLoading, error, refetch } = useUserOrders()
   const [selectedTab, setSelectedTab] = useState("all")
+  const [brokenImages, setBrokenImages] = useState<Record<number, boolean>>({})
 
   const formatPrice = (price: number) => new Intl.NumberFormat("fr-FR").format(price) + " XAF"
   const formatDate = (date: string) => new Date(date).toLocaleDateString("fr-FR")
@@ -243,11 +246,27 @@ export default function MyOrdersPage() {
                       <div className="space-y-3">
                         {order.items?.map((item: any) => (
                           <div key={item.id} className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg">
-                            <img
-                              src={item.article.photo || "/placeholder.svg"}
-                              alt={item.article.designation}
-                              className="h-16 w-16 rounded-lg object-cover"
-                            />
+                            {(() => {
+                              const itemId = Number(item?.id || item?.article?.id || 0)
+                              const imgSrc = brokenImages[itemId]
+                                ? "/placeholder.svg"
+                                : (buildImageUrl(item?.article?.photo) || item?.article?.photo || "/placeholder.svg")
+                              return (
+                                <div className="relative h-16 w-16 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
+                                  <Image
+                                    src={imgSrc}
+                                    alt={item.article.designation}
+                                    fill
+                                    className="object-cover"
+                                    onError={() => {
+                                      if (itemId > 0 && !brokenImages[itemId]) {
+                                        setBrokenImages((prev) => ({ ...prev, [itemId]: true }))
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              )
+                            })()}
                             <div className="flex-1">
                               <h4 className="font-medium">{item.article.designation}</h4>
                               <p className="text-sm text-muted-foreground">

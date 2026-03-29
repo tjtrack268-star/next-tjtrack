@@ -1,6 +1,7 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.tjtracks.com/api/v1.0"
 const API_TIMEOUT = parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000') // Réduit à 30s
 const IMAGE_TIMEOUT = 30000 // 10s pour les images
+const IS_DEV = process.env.NODE_ENV !== "production"
 
 interface RequestConfig extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>
@@ -52,10 +53,7 @@ class ApiClient {
     const url = this.buildUrl(endpoint, params)
 
     const headers: HeadersInit = {
-      'Cache-Control': 'no-cache',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      Accept: "application/json",
       ...config.headers,
     }
 
@@ -67,13 +65,10 @@ class ApiClient {
     // Toujours envoyer le token s'il existe (même pour les endpoints publics comme /commandes/creer)
     if (this.token) {
       ;(headers as Record<string, string>)["Authorization"] = `Bearer ${this.token}`
-      console.log('🔑 Token envoyé:', this.token.substring(0, 20) + '...')
     } else {
-      console.warn('⚠️ Aucun token disponible pour', endpoint)
       // Essayer de récupérer le token depuis localStorage
       const storedToken = typeof window !== 'undefined' ? localStorage.getItem('tj-track-token') : null
       if (storedToken) {
-        console.log('🔄 Token récupéré depuis localStorage')
         this.token = storedToken
         ;(headers as Record<string, string>)["Authorization"] = `Bearer ${storedToken}`
       }
@@ -84,7 +79,9 @@ class ApiClient {
     const timeout = isImageRequest ? IMAGE_TIMEOUT : API_TIMEOUT
     
     const timeoutId = setTimeout(() => {
-      console.warn(`Request timeout for ${endpoint} after ${timeout}ms`)
+      if (IS_DEV) {
+        console.warn(`Request timeout for ${endpoint} after ${timeout}ms`)
+      }
       controller.abort()
     }, timeout)
 
@@ -98,7 +95,7 @@ class ApiClient {
       const endTime = performance.now()
       const duration = endTime - startTime
       
-      if (duration > 1000) {
+      if (IS_DEV && duration > 1000) {
         console.warn(`Slow request detected: ${endpoint} took ${duration.toFixed(2)}ms`)
       }
 
@@ -116,7 +113,7 @@ class ApiClient {
         }
         
         // Log détaillé pour debug (seulement si errorData contient un message)
-        if (errorData?.message) {
+        if (IS_DEV && errorData?.message) {
           console.error('❌ API Error:', {
             endpoint,
             status: response.status,
@@ -149,7 +146,9 @@ class ApiClient {
         
         // Retry on server errors (5xx) or network issues
         if (response.status >= 500 && retries > 0) {
-          console.warn(`Retrying request to ${endpoint}, attempts left: ${retries - 1}`)
+          if (IS_DEV) {
+            console.warn(`Retrying request to ${endpoint}, attempts left: ${retries - 1}`)
+          }
           await new Promise(resolve => setTimeout(resolve, Math.min(1000 * (4 - retries), 3000)))
           return this.request<T>(endpoint, config, retries - 1)
         }
@@ -176,7 +175,9 @@ class ApiClient {
       // Retry on network errors with exponential backoff
       if (retries > 0 && error instanceof TypeError) {
         const delay = Math.min(1000 * (4 - retries), 3000)
-        console.warn(`Network error, retrying ${endpoint} in ${delay}ms, attempts left: ${retries - 1}`)
+        if (IS_DEV) {
+          console.warn(`Network error, retrying ${endpoint} in ${delay}ms, attempts left: ${retries - 1}`)
+        }
         await new Promise(resolve => setTimeout(resolve, delay))
         return this.request<T>(endpoint, config, retries - 1)
       }
