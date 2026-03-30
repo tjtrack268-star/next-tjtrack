@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Spinner } from "@/components/ui/spinner"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
+import { useCart } from "@/contexts/cart-context"
 import { apiClient } from "@/lib/api"
 import type { Commande } from "@/types/api"
 import { buildImageUrl } from "@/lib/image-utils"
@@ -58,6 +59,7 @@ const paymentStatusConfig = {
 
 export default function MyOrdersPage() {
   const { toast } = useToast()
+  const { addItem, openCart } = useCart()
   const { data: orders, isLoading, error, refetch } = useUserOrders()
   const [selectedTab, setSelectedTab] = useState("all")
   const [brokenImages, setBrokenImages] = useState<Record<number, boolean>>({})
@@ -79,13 +81,47 @@ export default function MyOrdersPage() {
     window.open(`/suivi/${orderNumber}`, '_blank')
   }
 
-  const handleReorder = async (orderId: number) => {
+  const handleReorder = async (order: any) => {
     try {
-      // Add all items from this order to cart
+      const items = Array.isArray(order?.items) ? order.items : []
+      if (items.length === 0) {
+        toast({
+          title: "Aucun article",
+          description: "Cette commande ne contient pas d'articles à recommander.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      let addedCount = 0
+      for (const item of items) {
+        const articleId = Number(item?.article?.id || 0)
+        const quantity = Number(item?.quantite || 0)
+        if (!Number.isFinite(articleId) || articleId <= 0 || !Number.isFinite(quantity) || quantity <= 0) {
+          continue
+        }
+        await addItem(articleId, quantity, {
+          name: item?.article?.designation || "Produit",
+          price: Number(item?.prixUnitaire || 0),
+          image: buildImageUrl(item?.article?.photo) || item?.article?.photo || "/placeholder.svg",
+        })
+        addedCount += 1
+      }
+
+      if (addedCount === 0) {
+        toast({
+          title: "Impossible de recommander",
+          description: "Aucun article valide n'a pu être ajouté au panier.",
+          variant: "destructive",
+        })
+        return
+      }
+
       toast({
         title: "Commande ajoutée au panier",
-        description: "Tous les articles ont été ajoutés à votre panier",
+        description: `${addedCount} article(s) ajouté(s) à votre panier`,
       })
+      openCart()
     } catch (error) {
       toast({
         title: "Erreur",
@@ -358,7 +394,7 @@ export default function MyOrdersPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleReorder(order.id)}
+                              onClick={() => handleReorder(order)}
                             >
                               <RefreshCw className="h-4 w-4 mr-2" />
                               Recommander
