@@ -95,8 +95,18 @@ export default function MyOrdersPage() {
     window.open(`${process.env.NEXT_PUBLIC_API_URL}/commandes/${orderId}/facture`, '_blank')
   }
 
-  const handleLeaveReview = (orderId: number) => {
-    window.location.href = `/commandes/${orderId}/avis`
+  const handleLeaveReview = (order: any) => {
+    const firstArticleId = Number(order?.items?.[0]?.article?.id || 0)
+    if (!Number.isFinite(firstArticleId) || firstArticleId <= 0) {
+      toast({
+        title: "Impossible d'évaluer",
+        description: "Produit introuvable pour cette commande.",
+        variant: "destructive",
+      })
+      return
+    }
+    // Use the same review flow as product description page.
+    window.location.href = `/produit/${firstArticleId}?tab=reviews&writeReview=1`
   }
 
   const handleConfirmDelivery = async (orderId: number) => {
@@ -342,7 +352,7 @@ export default function MyOrdersPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleLeaveReview(order.id)}
+                            onClick={() => handleLeaveReview(order)}
                           >
                             <Star className="h-4 w-4 mr-2" />
                             Évaluer
