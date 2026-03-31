@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { 
   Star, 
@@ -56,6 +56,7 @@ function useRelatedProducts(categoryId: number, currentId: number) {
 export default function ProductPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const { addItem } = useCart()
   const { isAuthenticated } = useAuth()
@@ -70,6 +71,7 @@ export default function ProductPage() {
   const [quantity, setQuantity] = useState(1)
   const [isFavorite, setIsFavorite] = useState(false)
   const [showReviewForm, setShowReviewForm] = useState(false)
+  const [activeTab, setActiveTab] = useState("description")
   const [reviewData, setReviewData] = useState({ note: 5, commentaire: "", recommande: false })
   const [selectedVariant, setSelectedVariant] = useState<number | null>(null)
 
@@ -91,6 +93,12 @@ export default function ProductPage() {
     ])
     return collected.length > 0 ? collected : ["/placeholder.svg"]
   }, [product])
+  const openReviewsFromQuery =
+    searchParams.get("tab") === "reviews" ||
+    searchParams.get("avis") === "1"
+  const openReviewFormFromQuery =
+    searchParams.get("writeReview") === "1" ||
+    searchParams.get("openReviewForm") === "1"
 
   const handleAddToCart = async () => {
     if (!product) return
@@ -219,6 +227,15 @@ export default function ProductPage() {
       setSelectedVariant(firstAvailable)
     }
   }, [product, selectedVariant])
+
+  useEffect(() => {
+    if (openReviewsFromQuery || openReviewFormFromQuery) {
+      setActiveTab("reviews")
+    }
+    if (openReviewFormFromQuery) {
+      setShowReviewForm(true)
+    }
+  }, [openReviewsFromQuery, openReviewFormFromQuery])
 
   if (isLoading) {
     return (
@@ -577,14 +594,14 @@ export default function ProductPage() {
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <RotateCcw className="h-4 w-4 text-primary" />
-                <span>Retour 14 jours</span>
+                <span>Retour 7 jours</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Product Details Tabs */}
-        <Tabs defaultValue="description" className="mb-12">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-12">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="description">Description</TabsTrigger>
             <TabsTrigger value="reviews">Avis ({product.nombreEvaluations || 0})</TabsTrigger>

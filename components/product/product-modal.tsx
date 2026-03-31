@@ -321,7 +321,7 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <Clock className="h-4 w-4 text-primary" />
-                <span>Retour gratuit sous 14 jours</span>
+                <span>Retour gratuit sous 7 jours</span>
               </div>
             </div>
 
