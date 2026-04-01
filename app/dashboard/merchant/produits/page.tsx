@@ -146,6 +146,17 @@ export default function MerchantProductsPage() {
             quantiteEnLigne: quantiteActuelle + quantiteAAjouter,
           })
         } else {
+          const quantiteDemandee = Number(newProduct.quantiteEnLigne || 0)
+          const stockDisponible = Number(selectedArticle.quantiteStock || 0)
+          if (quantiteDemandee > stockDisponible) {
+            toast({
+              title: "Quantité invalide",
+              description: `Quantité demandée (${quantiteDemandee}) > stock disponible (${stockDisponible})`,
+              variant: "destructive",
+            })
+            return
+          }
+
           await addProductMutation.mutateAsync({
             produitDto: {
               articleId: selectedArticle.id,
@@ -187,8 +198,13 @@ export default function MerchantProductsPage() {
       setSelectedImages([])
       setVariants([])
       refetch()
-    } catch (err) {
-      toast({ title: "Erreur", description: "Impossible d'ajouter le produit", variant: "destructive" })
+    } catch (err: any) {
+      const message =
+        err?.message ||
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        "Impossible d'ajouter le produit"
+      toast({ title: "Erreur", description: message, variant: "destructive" })
     }
   }
 
@@ -244,7 +260,7 @@ export default function MerchantProductsPage() {
               {/* Mode Selection */}
               <div className="space-y-3">
                 <Label>Mode d'ajout</Label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Button
                     type="button"
                     variant={mode === "existing" ? "default" : "outline"}
@@ -432,7 +448,7 @@ export default function MerchantProductsPage() {
               {/* Mode: Nouveau Produit */}
               {mode === "new" && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Nom du produit</Label>
                       <Input
@@ -476,7 +492,7 @@ export default function MerchantProductsPage() {
                       {newProduct.descriptionLongue.length}/5000 caractères
                     </p>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Quantité en stock</Label>
                       <Input
