@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Trash2, Edit2, Check, X } from "lucide-react"
+import { COLOR_OPTIONS } from "@/lib/color-options"
 
 interface Variant {
   id?: number
@@ -21,6 +23,14 @@ interface ProductVariantsProps {
 }
 
 export function ProductVariants({ variants, onChange }: ProductVariantsProps) {
+  const OTHER_COLOR_VALUE = "__OTHER__"
+  const isPredefinedColor = (value: string) => COLOR_OPTIONS.includes(value as (typeof COLOR_OPTIONS)[number])
+  const getColorSelectValue = (value: string) => {
+    if (!value) return "__EMPTY__"
+    if (isPredefinedColor(value)) return value
+    return OTHER_COLOR_VALUE
+  }
+
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [newVariant, setNewVariant] = useState<Variant>({
     couleur: "",
@@ -64,8 +74,45 @@ export function ProductVariants({ variants, onChange }: ProductVariantsProps) {
                   placeholder="Couleur"
                   value={variant.couleur}
                   onChange={(e) => updateVariant(index, { ...variant, couleur: e.target.value })}
-                  className="w-full sm:flex-1"
+                  className="hidden"
                 />
+                <div className="w-full sm:flex-1">
+                  <Select
+                    value={getColorSelectValue(variant.couleur)}
+                    onValueChange={(value) => {
+                      if (value === "__EMPTY__") {
+                        updateVariant(index, { ...variant, couleur: "" })
+                        return
+                      }
+                      if (value === OTHER_COLOR_VALUE) {
+                        updateVariant(index, { ...variant, couleur: isPredefinedColor(variant.couleur) ? "" : variant.couleur })
+                        return
+                      }
+                      updateVariant(index, { ...variant, couleur: value })
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Couleur" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__EMPTY__">Aucune</SelectItem>
+                      <SelectItem value={OTHER_COLOR_VALUE}>Autre couleur</SelectItem>
+                      {COLOR_OPTIONS.map((color) => (
+                        <SelectItem key={color} value={color}>
+                          {color}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {getColorSelectValue(variant.couleur) === OTHER_COLOR_VALUE && (
+                    <Input
+                      placeholder="Saisir une couleur personnalisée"
+                      value={variant.couleur}
+                      onChange={(e) => updateVariant(index, { ...variant, couleur: e.target.value })}
+                      className="mt-2"
+                    />
+                  )}
+                </div>
                 <Input
                   placeholder="Taille"
                   value={variant.taille}
@@ -120,11 +167,40 @@ export function ProductVariants({ variants, onChange }: ProductVariantsProps) {
       {/* Ajouter une variante */}
       <div className="grid grid-cols-1 gap-2 p-3 border-2 border-dashed rounded-lg sm:grid-cols-12 sm:items-end">
         <div className="space-y-2 sm:col-span-3">
-          <Input
-            placeholder="Couleur (ex: Rouge, Bleu...)"
-            value={newVariant.couleur}
-            onChange={(e) => setNewVariant({ ...newVariant, couleur: e.target.value })}
-          />
+          <Select
+            value={getColorSelectValue(newVariant.couleur)}
+            onValueChange={(value) => {
+              if (value === "__EMPTY__") {
+                setNewVariant({ ...newVariant, couleur: "" })
+                return
+              }
+              if (value === OTHER_COLOR_VALUE) {
+                setNewVariant({ ...newVariant, couleur: isPredefinedColor(newVariant.couleur) ? "" : newVariant.couleur })
+                return
+              }
+              setNewVariant({ ...newVariant, couleur: value })
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Couleur" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__EMPTY__">Aucune</SelectItem>
+              <SelectItem value={OTHER_COLOR_VALUE}>Autre couleur</SelectItem>
+              {COLOR_OPTIONS.map((color) => (
+                <SelectItem key={color} value={color}>
+                  {color}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {getColorSelectValue(newVariant.couleur) === OTHER_COLOR_VALUE && (
+            <Input
+              placeholder="Saisir une couleur personnalisée"
+              value={newVariant.couleur}
+              onChange={(e) => setNewVariant({ ...newVariant, couleur: e.target.value })}
+            />
+          )}
         </div>
         <div className="space-y-2 sm:col-span-3">
           <Input
