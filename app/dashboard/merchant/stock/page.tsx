@@ -21,8 +21,12 @@ import { ReorderSuggestions } from "@/components/stock/reorder-suggestions"
 import { MovementAnalytics } from "@/components/stock/movement-analytics"
 import { buildImageUrl } from "@/lib/image-utils"
 import { compressImage } from "@/lib/image-compress"
+import { COLOR_OPTIONS } from "@/lib/color-options"
 
 export default function MerchantStockPage() {
+  const OTHER_COLOR_VALUE = "__OTHER__"
+  const isPredefinedColor = (value: string) => COLOR_OPTIONS.includes(value as (typeof COLOR_OPTIONS)[number])
+
   const [searchQuery, setSearchQuery] = useState("")
   const [adjustDialog, setAdjustDialog] = useState<{
     open: boolean
@@ -45,6 +49,11 @@ export default function MerchantStockPage() {
     marque: "",
     modele: ""
   })
+  const selectedColorValue = !newArticle.couleur
+    ? "__EMPTY__"
+    : isPredefinedColor(newArticle.couleur)
+      ? newArticle.couleur
+      : OTHER_COLOR_VALUE
   const [articleImages, setArticleImages] = useState<File[]>([])
   const [productImages, setProductImages] = useState<File[]>([])
   const [brokenArticleImages, setBrokenArticleImages] = useState<Record<number, boolean>>({})
@@ -919,11 +928,40 @@ export default function MerchantStockPage() {
                   {getCategorySpecificFields().includes("couleur") && (
                     <div className="space-y-2">
                       <Label>Couleur</Label>
-                      <Input
-                        value={newArticle.couleur}
-                        onChange={(e) => setNewArticle({ ...newArticle, couleur: e.target.value })}
-                        placeholder="Ex: Rouge, Bleu, Noir"
-                      />
+                      <Select
+                        value={selectedColorValue}
+                        onValueChange={(value) =>
+                          setNewArticle({
+                            ...newArticle,
+                            couleur:
+                              value === "__EMPTY__"
+                                ? ""
+                                : value === OTHER_COLOR_VALUE
+                                  ? (isPredefinedColor(newArticle.couleur) ? "" : newArticle.couleur)
+                                  : value,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner une couleur" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__EMPTY__">Aucune</SelectItem>
+                          <SelectItem value={OTHER_COLOR_VALUE}>Autre couleur</SelectItem>
+                          {COLOR_OPTIONS.map((color) => (
+                            <SelectItem key={color} value={color}>
+                              {color}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {selectedColorValue === OTHER_COLOR_VALUE && (
+                        <Input
+                          value={newArticle.couleur}
+                          onChange={(e) => setNewArticle({ ...newArticle, couleur: e.target.value })}
+                          placeholder="Saisir une couleur personnalisée"
+                        />
+                      )}
                     </div>
                   )}
                   {getCategorySpecificFields().includes("taille") && (
